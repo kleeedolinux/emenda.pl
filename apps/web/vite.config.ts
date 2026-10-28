@@ -4,10 +4,14 @@ import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 
 // Em dev, /api e /data vão para o Worker local (wrangler dev :8787).
+// EMENDA_PROXY=https://emenda.online usa os dados de produção sem Worker local.
+const proxyAlvo = process.env.EMENDA_PROXY || "http://127.0.0.1:8787";
+const proxy = { target: proxyAlvo, changeOrigin: true };
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-  server: { proxy: { "/api": "http://127.0.0.1:8787", "/data": "http://127.0.0.1:8787" } },
+  server: { proxy: { "/api": proxy, "/data": proxy } },
   build: {
     target: "es2022",
     cssCodeSplit: true,

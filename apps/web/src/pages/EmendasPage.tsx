@@ -1,71 +1,85 @@
-import { dataPath, TIPOS_EMENDA, UFS, type AutorResumo, type Brasil, type SiglaUf, type TipoEmenda } from "@emenda/contracts";
-import { useSearchParams } from "react-router";
-import { COR_TIPO, nomeTipoCurto, TIP_TIPO } from "@/features/emendas/tipos";
-import { AutoresTable } from "@/features/emendas/tables";
-import { TotaisGrid } from "@/features/emendas/Totais";
+import { dataPath, type AutorResumo, type Brasil, type Meta, type Uf } from "@emenda/contracts";
+import { ArrowRight, BookOpen, Clock, Database, GitFork, Zap, type LucideIcon } from "lucide-react";
+import { motion } from "motion/react";
+import { AutoresGrid } from "@/features/emendas/AutoresGrid";
+import { Comparar } from "@/features/emendas/Comparar";
+import { CarrosselRankings, Descubra } from "@/features/emendas/Descubra";
+import { useFiltros, useNaVista } from "@/features/emendas/explorador";
+import { FiltrosBar } from "@/features/emendas/Filtros";
+import { HeroEmendas } from "@/features/emendas/Hero";
+import { Repositorio } from "@/features/emendas/Repositorio";
 import { useApi } from "@/lib/data";
-import { formatBRL, formatNumber } from "@/lib/format";
-import { Bars, NextSteps, Card, DataTable, ErrorState, PageHeader, Section, Skeleton, Tabs, Term, type Column } from "@/ui";
+import { ErrorState, liftable, Reveal, Section, Skeleton, TransitionLink } from "@/ui";
 import { Link } from "react-router";
 
-type UfRow = Brasil["porUf"][number];
+const ANOS_PADRAO = Array.from({ length: 13 }, (_, i) => 2014 + i);
+
+const CTAS: Array<{ to: string; icon: LucideIcon; t: string; d: string; cor: string }> = [
+  { to: "/pix", icon: Zap, t: "Emenda Pix", d: "O dinheiro que cai direto na conta da prefeitura.", cor: "#e0b800" },
+  { to: "/ultimas", icon: Clock, t: "Últimos pagamentos", d: "O feed do que foi pago mês a mês.", cor: "#009c3b" },
+  { to: "/entenda/o-que-e-emenda", icon: BookOpen, t: "O que é emenda?", d: "Explicado em 2 minutos, sem juridiquês.", cor: "#2f80ed" },
+  { to: "/dinheiro", icon: GitFork, t: "Siga o dinheiro", d: "Do tipo de emenda à área e ao estado.", cor: "#002776" },
+];
 
 export default function EmendasPage() {
+  const meta = useApi<Meta>(dataPath.meta());
   const brasil = useApi<Brasil>(dataPath.brasil());
   const autores = useApi<AutorResumo[]>(dataPath.autores());
-  const [sp, setSp] = useSearchParams();
-  const tipo = (sp.get("tipo") ?? "") as TipoEmenda | "";
-  const setTipo = (t: string) => setSp((p) => { const n = new URLSearchParams(p); if (t) n.set("tipo", t); else n.delete("tipo"); return n; }, { replace: true, preventScrollReset: true });
-  const d = brasil.data;
-  const t = tipo && d ? d.porTipo.find((x) => x.tipo === tipo) : null;
-  const brl = (n: number) => formatBRL(n, true);
-
-  const ufFiltrado: UfRow[] = d
-    ? tipo
-      ? Object.entries(d.fluxo.filter((f) => f.tipo === tipo).reduce<Record<string, number>>((a, f) => ((a[f.uf] = (a[f.uf] ?? 0) + f.pago), a), {}))
-          .map(([uf, pago]) => ({ uf, nome: UFS[uf as SiglaUf] ?? uf, pago, empenhado: 0, liquidado: 0, rapPago: 0, n: 0 }))
-      : d.porUf
-    : [];
-
-  const ufCols: Column<UfRow>[] = [
-    { key: "nome", header: "Estado", sort: true, cell: (r) => <Link className="link font-medium" to={`/uf/${r.uf}`}>{r.nome}</Link> },
-    { key: "uf", header: "UF", sort: true },
-    ...(tipo ? [] : [
-      { key: "n", header: "Emendas", sort: true, align: "right" as const, cell: (r: UfRow) => formatNumber(r.n) },
-      { key: "empenhado", header: "Empenhado", sort: true, align: "right" as const, tip: "empenhado", cell: (r: UfRow) => formatBRL(r.empenhado) },
-    ]),
-    { key: "pago", header: "Pago", sort: true, align: "right", tip: "pago", cell: (r) => formatBRL(r.pago) },
-  ];
+  const { f, set } = useFiltros();
+  const ufQ = useApi<Uf>(f.uf ? dataPath.uf(f.uf) : null);
+  const uf = f.uf ? (ufQ.data ?? null) : null;
+  const anos = meta.data?.anos ?? ANOS_PADRAO;
+  const [repoRef, repoVisto] = useNaVista<HTMLDivElement>("600px");
 
   return (
     <>
-      <PageHeader eyebrow="Explorador nacional" title="Emendas parlamentares" subtitle="Todas as emendas ao Orçamento da União, por tipo, autor e estado. Clique em qualquer nome para ver cada registro." breadcrumbs={[{ label: "Início", to: "/" }, { label: "Emendas" }]} />
+      <nav aria-label="Trilha de navegação" className="mb-4 text-sm text-muted">
+        <Link className="hover:text-fg hover:underline" to="/">Início</Link> <span aria-hidden>›</span> <span aria-current="page" className="text-fg">Emendas</span>
+      </nav>
 
-      <div role="radiogroup" aria-label="Filtrar por tipo" className="mb-6 flex flex-wrap gap-2">
-        {(["", ...Object.keys(TIPOS_EMENDA)] as const).map((k) => (
-          <button key={k || "todos"} role="radio" aria-checked={tipo === k} onClick={() => setTipo(k)}
-            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition ${tipo === k ? "border-accent bg-verde/10 text-fg" : "border-line bg-surface text-muted hover:text-fg"}`}>
-            {k && <span className="size-2 rounded-full" style={{ background: COR_TIPO[k as TipoEmenda] }} aria-hidden />}
-            {k ? nomeTipoCurto(k) : "Todos os tipos"}
-          </button>
-        ))}
-      </div>
-      {tipo && <p className="-mt-3 mb-6 text-sm text-muted"><Term k={TIP_TIPO[tipo]}>{TIPOS_EMENDA[tipo]}</Term></p>}
+      <HeroEmendas meta={meta.data} />
+      <FiltrosBar f={f} set={set} anos={anos} brasil={brasil.data} uf={uf} />
+      {(brasil.isError || ufQ.isError) && <div className="mt-4"><ErrorState error={brasil.error ?? ufQ.error} retry={() => { void brasil.refetch(); void ufQ.refetch(); }} /></div>}
 
-      {brasil.isError ? <ErrorState error={brasil.error} retry={() => brasil.refetch()} /> : d ? <TotaisGrid t={t ?? d.totais} /> : <Skeleton className="h-28" />}
-
-      <Section title="Explorar">
-        <Tabs tabs={[
-          { id: "autores", label: "Ranking de autores", count: autores.data?.length, content: autores.isError ? <ErrorState error={autores.error} /> : autores.data ? <AutoresTable rows={autores.data} exportName="emendas-autores" /> : <Skeleton className="h-64" /> },
-          { id: "estados", label: "Por estado", count: ufFiltrado.length, content: <DataTable rows={ufFiltrado} columns={ufCols} exportName={`emendas-uf${tipo ? `-${tipo}` : ""}`} initialSort={{ key: "pago", dir: "desc" }} search={(r) => `${r.nome} ${r.uf}`} pageSize={27} /> },
-          { id: "funcoes", label: "Por área", count: d?.porFuncao.length, content: d ? <Card><Bars data={[...d.porFuncao].sort((a, b) => b.pago - a.pago).map((f) => ({ label: f.funcao, value: f.pago }))} format={brl} /></Card> : <Skeleton className="h-64" /> },
-        ]} />
+      <Section id="descubra" title="Descubra">
+        <Descubra f={f} brasil={brasil.data} autores={autores.data} uf={uf} />
       </Section>
-      <NextSteps items={[
-        { to: "/dinheiro", label: "Fluxo do dinheiro", desc: "Tipo → área de gasto → estado." },
-        { to: "/deputados", label: "Deputados", desc: "Votações, gastos e projetos." },
-        { to: "/proposicoes", label: "Leis em tramitação", desc: "PLs, PECs e MPs." },
-      ]} />
+
+      <Section id="agora" title="Quem está recebendo agora" tip="Pagamentos de emendas por mês, do Portal da Transparência. Deslize para ver 1, 3 e 12 meses.">
+        <CarrosselRankings f={f} />
+      </Section>
+
+      <Section id="comparar" title="Compare" tip="Escolha dois parlamentares ou dois municípios. O link compartilhado abre a mesma comparação.">
+        <Comparar autores={autores.data} />
+      </Section>
+
+      <Section id="autores" title="Quem mais indicou" tip="Parlamentares pelo valor pago. Bancadas, comissões e relator aparecem ao filtrar pelo tipo — ou no modo repositório.">
+        <AutoresGrid f={f} autores={autores.data} uf={uf} anos={anos} />
+      </Section>
+
+      <Section title="Continue explorando">
+        <Reveal className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {CTAS.map((c) => (
+            <Reveal.Item key={c.to}>
+              <motion.div {...liftable} className="h-full">
+                <TransitionLink to={c.to} className="card press group relative flex h-full flex-col gap-2 overflow-hidden p-4 transition-colors hover:border-accent sm:gap-3 sm:p-5">
+                  <span className="inline-flex size-10 items-center justify-center rounded-xl text-white" style={{ background: c.cor }}><c.icon className="size-5" aria-hidden /></span>
+                  <span className="font-bold sm:text-lg">{c.t}</span>
+                  <span className="text-xs text-muted sm:text-sm">{c.d}</span>
+                  <ArrowRight className="mt-auto size-5 text-accent transition-transform group-hover:translate-x-1" aria-hidden />
+                </TransitionLink>
+              </motion.div>
+            </Reveal.Item>
+          ))}
+        </Reveal>
+      </Section>
+
+      <Section id="repositorio" title={<span className="inline-flex items-center gap-2"><Database className="size-5 text-muted" aria-hidden />Modo repositório</span>} tip="Tabelas completas com ordenação, busca e download em CSV.">
+        <p className="-mt-2 mb-4 text-sm text-muted">Para quem quer os dados brutos: todas as linhas, ordenáveis e exportáveis.</p>
+        <div ref={repoRef} className="min-h-[32rem]">
+          {repoVisto ? <Repositorio brasil={brasil.data} autores={autores.data} autoresErro={autores.error} tipo={f.tipo} /> : <Skeleton className="h-[32rem]" />}
+        </div>
+      </Section>
     </>
   );
 }
