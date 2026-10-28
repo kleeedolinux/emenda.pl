@@ -4,7 +4,10 @@ import { graphemeCount, truncate, truncateWeighted, tweetWeight, URL_WEIGHT } fr
 
 export type ShareKind =
   | "proposicao" | "votacao" | "voto" | "emenda" | "municipio" | "uf"
-  | "deputado" | "senador" | "autor" | "partido" | "pix" | "pagina";
+  | "deputado" | "senador" | "autor" | "partido" | "pix" | "pagina"
+  | "agenda" | "resultado";
+
+export interface ShareItem { hora: string; sigla: string; titulo: string }
 
 export interface ShareMetric {
   /** centavos quando `format` = "brl" */
@@ -32,6 +35,16 @@ export interface ShareData {
   /** kind "voto": quem votou e como. */
   pessoa?: string;
   voto?: string;
+  /** agenda: "Hoje", "Amanhã", "Na sexta-feira (30/10)". */
+  quando?: string;
+  /** agenda: "Plenário da Câmara". */
+  casa?: string;
+  /** agenda: itens em pauta (lista na arte). */
+  items?: ShareItem[];
+  /** agenda: contagem regressiva em destaque ("HOJE · 13:55", "EM 2 DIAS"). */
+  destaque?: string;
+  /** resultado de votação. */
+  resultado?: "aprovada" | "rejeitada";
 }
 
 export const SITE_NAME = "emenda.online";
@@ -75,6 +88,21 @@ export function buildMessage(d: ShareData): string {
       return v ? `🔎 ${t} indicou ${v} em emendas ${d.metric!.label || "pagas"}. Para onde foi o dinheiro?` : `🔎 ${t}: emendas, votos e gastos públicos. Confira:`;
     case "partido":
       return v ? `🏛️ ${t}: ${v} em emendas pagas pelos parlamentares do partido. Confira:` : `🏛️ ${t}: bancada, votos e emendas. Confira:`;
+    case "agenda": {
+      const quem = `${d.quando ?? "Nesta semana"} o ${d.casa ?? "Congresso"}`;
+      const its = d.items ?? [];
+      if (its.length > 1) {
+        const head = its.slice(0, 3).map((i) => i.sigla).join(", ");
+        return `🗳️ ${quem} vota: ${head}${its.length > 3 ? ` e mais ${its.length - 3}` : ""}. Acompanhe:`;
+      }
+      const alvo = its[0]?.sigla && !d.title.startsWith(its[0].sigla) ? `${its[0].sigla} — ${t}` : t;
+      return `🗳️ ${quem} vota ${artigo(alvo)}${alvo}. Acompanhe:`;
+    }
+    case "resultado": {
+      const placar = d.votes ? ` ${d.votes.sim}×${d.votes.nao}` : "";
+      const st = d.resultado ?? "votada";
+      return `${d.resultado === "rejeitada" ? "❌" : "✅"} Resultado: ${t} ${st}${placar}. Veja como cada deputado votou:`;
+    }
     case "pix":
       return v ? `⚡ Emenda Pix: ${t} — ${v} transferidos direto, sem convênio. Confira:` : `⚡ Emenda Pix: ${t}. Confira para onde foi o dinheiro:`;
     case "emenda":
@@ -83,6 +111,29 @@ export function buildMessage(d: ShareData): string {
       return `${t}${v ? ` — ${v}` : ""}. Dados públicos no ${SITE_NAME}:`;
   }
 }
+
+/** Artigo para siglas de proposição: "a PEC", "o PL"; vazio se não for sigla. */
+function artigo(t: string): string {
+  const sig = /^([A-Z]{2,5})\s+\d/.exec(t)?.[1];
+  if (!sig) return "";
+  return ["PEC", "MPV", "MP", "EMC"].includes(sig) ? "a " : "o ";
+}
+
+const SEMANA = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+const diaUTC = (d: string) => new Date(`${d}T12:00:00Z`);
+
+/** "Hoje", "Amanhã", "Ontem" ou "Na sexta-feira (30/10)". Datas YYYY-MM-DD (Brasília). */
+export function quandoLabel(dia: string, hoje: string): string {
+  const diff = Math.round((diaUTC(dia).getTime() - diaUTC(hoje).getTime()) / 86_400_000);
+  if (diff === 0) return "Hoje";
+  if (diff === 1) return "Amanhã";
+  if (diff === -1) return "Ontem";
+  const wd = diaUTC(dia).getUTCDay();
+  const dm = `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
+  return `${wd === 0 || wd === 6 ? "No" : "Na"} ${SEMANA[wd]} (${dm})`;
+}
+
+export const agendaEventoUrl = (dia: string, evento: string) => `/agenda?${new URLSearchParams({ dia, evento })}`;
 
 const q = (o: Record<string, string>) => new URLSearchParams(o).toString();
 
@@ -113,13 +164,16 @@ export function shareTargets(d: ShareData, origin?: string): ShareTarget[] {
 /** Tipos com imagem OG no servidor (crates/og). */
 const OG_KINDS: Partial<Record<ShareKind, string>> = {
   deputado: "deputado", senador: "senador", municipio: "municipio", uf: "uf", autor: "autor",
-  proposicao: "proposicao", votacao: "votacao", voto: "votacao", partido: "partido",
+  proposicao: "proposicao", votacao: "votacao", voto: "voto", partido: "partido",
+  agenda: "agenda", resultado: "votacao",
 };
 
 export function ogImagePath(d: ShareData): string {
   if (d.image) return d.image;
   const k = OG_KINDS[d.kind];
-  return k && d.ogId ? `/og/${k}/${encodeURIComponent(d.ogId)}.png` : "/og/default.png";
+  const segs = d.ogId?.split("/") ?? [];
+  const ok = segs.length > 0 && segs.every((x) => /^[A-Za-z0-9-]+$/.test(x));
+  return k && ok ? `/og/${k}/${segs.join("/")}.png` : "/og/default.png";
 }
 
 /** Nome de arquivo seguro: "emenda-online-municipio-campinas". */

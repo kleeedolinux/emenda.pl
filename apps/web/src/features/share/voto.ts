@@ -10,7 +10,7 @@ export function votoShare(o: {
   const { deputado: p } = o;
   const tag = [p.siglaPartido, p.siglaUf].filter(Boolean).join("-");
   return {
-    kind: "voto", title: o.titulo, url: `/votacao/${o.votacaoId}?dep=${p.id}`, ogId: o.votacaoId,
+    kind: "voto", title: o.titulo, url: `/votacao/${o.votacaoId}?dep=${p.id}`, ogId: `${o.votacaoId}/${p.id}`,
     pessoa: tag ? `${p.nome} (${tag})` : p.nome, voto: o.voto, votes: o.placar,
     subtitle: tag ? `${p.nome} · ${tag}` : p.nome,
   };

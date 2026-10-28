@@ -25,6 +25,7 @@ export const KIND_LABEL: Record<ShareKind, string> = {
   proposicao: "Proposição", votacao: "Votação na Câmara", voto: "Como votou", emenda: "Emenda parlamentar",
   municipio: "Município", uf: "Estado", deputado: "Deputado(a) federal", senador: "Senador(a)", autor: "Autor de emendas",
   partido: "Partido", pix: "Emenda Pix", pagina: "emenda.online",
+  agenda: "Agenda do Congresso", resultado: "Resultado da votação",
 };
 
 type Ctx = CanvasRenderingContext2D;
@@ -111,7 +112,24 @@ export function drawScene(ctx: Ctx, W: number, H: number, d: ShareData, t: numbe
   // Número principal
   const pc = phase(t, ...REEL_PHASES.count);
   y += story ? 90 : 40;
-  if (d.kind === "voto" && d.voto) {
+  let listTop = 0;
+  if (d.kind === "agenda") {
+    const p = easeOutCubic(pc);
+    if (d.destaque) {
+      const fit = fitFont(d.destaque, { maxWidth: maxW, maxLines: 1, sizes: story ? [130, 112, 96, 80] : [104, 92, 80, 68], measureAt: measureAt((z) => SANS(800, z)) });
+      const pulse = 1 + 0.04 * Math.sin(Math.PI * phase(t, REEL_PHASES.count[1], REEL_PHASES.hold[1]));
+      ctx.save(); ctx.globalAlpha = p; ctx.translate(pad, y + fit.size * 0.9); ctx.scale(pulse, pulse);
+      ctx.font = SANS(800, fit.size); ctx.fillStyle = C.amarelo; ctx.fillText(fit.lines[0] ?? "", 0, 0);
+      ctx.restore();
+      y += fit.size * 0.9 + 18;
+    }
+    if (d.casa) {
+      ctx.font = SANS(600, 32); ctx.fillStyle = C.branco; ctx.globalAlpha = p;
+      ctx.fillText(truncate(d.casa, 48), pad, y + 32); ctx.globalAlpha = 1;
+      y += 50;
+    }
+    listTop = y + 24;
+  } else if (d.kind === "voto" && d.voto) {
     const side: VoteSide = /^sim/i.test(d.voto) ? "sim" : /^n[ãa]o/i.test(d.voto) ? "nao" : "outros";
     const p = easeOutCubic(pc);
     ctx.font = SANS(600, 36); ctx.fillStyle = C.branco; ctx.globalAlpha = p;
@@ -128,6 +146,18 @@ export function drawScene(ctx: Ctx, W: number, H: number, d: ShareData, t: numbe
     y += 60 + size * 1.15 + 30;
   } else if (d.votes) {
     const v = d.votes;
+    if (d.resultado) {
+      const word = d.resultado === "aprovada" ? "APROVADA" : "REJEITADA";
+      const p = easeOutCubic(phase(t, REEL_PHASES.count[0], REEL_PHASES.count[0] + 0.15));
+      const bs = story ? 76 : 60;
+      ctx.font = SANS(800, bs);
+      const bw = ctx.measureText(word).width + 56;
+      ctx.save(); ctx.globalAlpha = p; ctx.translate(pad, y); ctx.scale(0.85 + 0.15 * p, 0.85 + 0.15 * p);
+      ctx.fillStyle = d.resultado === "aprovada" ? C.verde : C.nao; rrect(ctx, 0, 0, bw, bs * 1.35, 20); ctx.fill();
+      ctx.fillStyle = C.branco; ctx.fillText(word, 28, bs * 1.05);
+      ctx.restore();
+      y += bs * 1.35 + 30;
+    }
     const size = story ? 150 : 112;
     ctx.font = SANS(800, size);
     const sim = String(countUp(v.sim, pc)), nao = String(countUp(v.nao, pc));
@@ -162,7 +192,8 @@ export function drawScene(ctx: Ctx, W: number, H: number, d: ShareData, t: numbe
   // Gráfico
   const pChart = phase(t, ...REEL_PHASES.chart);
   const region = { top: y + 30, bottom: footTop - (story ? 80 : 40) };
-  if (d.votes && region.bottom - region.top > 150) drawHemicycle(ctx, d.votes, pChart, region, DW);
+  if (d.kind === "agenda" && d.items?.length) drawItems(ctx, d.items, pChart, { top: listTop, bottom: footTop - 40 }, pad, maxW);
+  else if (d.votes && region.bottom - region.top > 150) drawHemicycle(ctx, d.votes, pChart, region, DW);
   else if (d.bars?.length && region.bottom - region.top > 150) drawBars(ctx, d, pChart, region, pad, maxW);
 
   // Abertura: sai do mesmo fundo liso em que a vinheta termina.
@@ -251,4 +282,38 @@ function drawSting(ctx: Ctx, p: number, DW: number, DH: number, a: Assets) {
   ctx.font = SANS(500, 32); ctx.fillStyle = C.muted; ctx.textAlign = "center";
   ctx.fillText("Siga o dinheiro público.", 0, 110);
   ctx.restore();
+}
+
+function drawItems(ctx: Ctx, items: NonNullable<ShareData["items"]>, p: number, r: { top: number; bottom: number }, pad: number, maxW: number) {
+  const rowH = 104;
+  const note = 48;
+  let fit = Math.max(0, Math.floor((r.bottom - r.top) / rowH));
+  if (fit < items.length) fit = Math.max(0, Math.floor((r.bottom - r.top - note) / rowH));
+  const shown = items.slice(0, Math.min(fit, 5));
+  shown.forEach((it, i) => {
+    const q = easeOutCubic(phase(p, i * 0.12, 0.5 + i * 0.12));
+    if (q <= 0) return;
+    const y = r.top + i * rowH;
+    ctx.save(); ctx.globalAlpha = q; ctx.translate((1 - q) * 60, 0);
+    ctx.fillStyle = "rgba(255,255,255,0.06)"; rrect(ctx, pad, y, maxW, rowH - 14, 18); ctx.fill();
+    ctx.fillStyle = C.amarelo; rrect(ctx, pad, y, 8, rowH - 14, 4); ctx.fill();
+    ctx.font = SANS(700, 30); ctx.fillStyle = C.amarelo;
+    const hw = it.hora ? ctx.measureText(it.hora).width + 22 : 0;
+    if (it.hora) ctx.fillText(it.hora, pad + 28, y + 40);
+    ctx.font = SANS(800, 34); ctx.fillStyle = C.branco;
+    ctx.fillText(truncate(it.sigla, 28), pad + 28 + hw, y + 40, maxW - 56 - hw);
+    if (it.titulo) {
+      ctx.font = SANS(400, 26); ctx.fillStyle = C.muted;
+      const l = wrapText(it.titulo, maxW - 56, (x) => ctx.measureText(x).width, 1);
+      ctx.fillText(l[0] ?? "", pad + 28, y + 76);
+    }
+    ctx.restore();
+  });
+  const rest = items.length - shown.length;
+  if (rest > 0) {
+    ctx.globalAlpha = easeOutCubic(phase(p, 0.6, 1));
+    ctx.font = SANS(600, 28); ctx.fillStyle = C.verdeClaro;
+    ctx.fillText(`+${rest} ${rest === 1 ? "item" : "itens"} na pauta`, pad, r.top + shown.length * rowH + 30);
+    ctx.globalAlpha = 1;
+  }
 }

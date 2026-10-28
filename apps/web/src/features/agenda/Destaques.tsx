@@ -1,80 +1,92 @@
-import { motion } from "motion/react";
 import { Gavel, History } from "lucide-react";
-import { Link } from "react-router";
-import { Badge, Card, ExternalLink, Skeleton, stagger } from "@/ui";
+import type { ReactNode } from "react";
+import { Skeleton, Tip } from "@/ui";
+import { ShareButton } from "@/features/share";
 import { type AgendaEvento } from "./agenda";
-import { Bloco, CASA_LABEL, MateriaList, TIPS, VotacoesCamara } from "./AgendaParts";
-import { usePautaCamara } from "./useAgenda";
+import { CasaChip, MateriaList, PautaCamara, TIPS, VotacoesCamara } from "./AgendaParts";
+import { semanaShare } from "./compartilhar";
+import { useVotacoesEvento } from "./useAgenda";
 
 const diaCurto = (d: string) =>
-  new Date(`${d}T12:00:00Z`).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "UTC" });
+  new Date(`${d}T12:00:00Z`).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "UTC" }).replace(".", "");
 
-function PautaResumo({ ev }: { ev: AgendaEvento }) {
-  const q = usePautaCamara(ev.camaraId);
-  if (ev.camaraId == null) return ev.materias.length ? <MateriaList materias={ev.materias} limit={4} /> : <SemPauta ev={ev} />;
-  if (q.isLoading) return <Skeleton className="h-16" />;
-  return q.materias?.length ? <MateriaList materias={q.materias} limit={4} /> : <SemPauta ev={ev} />;
-}
-
-const SemPauta = ({ ev }: { ev: AgendaEvento }) => (
-  <p className="text-sm text-muted">Pauta ainda não publicada. <ExternalLink href={ev.fonte}>Acompanhe na fonte</ExternalLink></p>
-);
-
-function Cabecalho({ ev }: { ev: AgendaEvento }) {
+function Painel({ icon, titulo, tip, acao, children }: { icon: ReactNode; titulo: ReactNode; tip?: string; acao?: ReactNode; children: ReactNode }) {
   return (
-    <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
-      <Badge tone={ev.casa === "camara" ? "verde" : "azul"}>{CASA_LABEL[ev.casa]}</Badge>
-      <span className="font-semibold capitalize">{diaCurto(ev.dia)} · {ev.hora}</span>
-      <span className="text-muted">{ev.titulo}</span>
-    </div>
+    <section className="card p-3">
+      <header className="mb-1.5 flex items-center gap-1.5">
+        {icon}<h2 className="text-sm font-semibold">{titulo}</h2>{tip && <Tip content={tip} />}
+        {acao && <span className="ml-auto">{acao}</span>}
+      </header>
+      {children}
+    </section>
   );
 }
 
-/** "O que será votado esta semana": sessões deliberativas de Plenário ainda por acontecer. */
-export function VotaraoSemana({ eventos, loading }: { eventos: AgendaEvento[]; loading: boolean }) {
+function Cab({ ev }: { ev: AgendaEvento }) {
   return (
-    <Card title={<span className="inline-flex items-center gap-2"><Gavel className="size-5 text-accent" aria-hidden />O que será votado esta semana</span>} tip={TIPS.deliberativa}
-      className="bg-gradient-to-br from-verde/8 via-transparent to-amarelo/8">
-      {loading ? <Skeleton className="h-32" /> : !eventos.length ? (
-        <p className="text-sm text-muted">Nenhuma sessão deliberativa de Plenário marcada para o resto da semana.</p>
-      ) : (
-        <motion.div variants={stagger} initial="hidden" animate="show" className="grid gap-5 lg:grid-cols-2">
-          {eventos.map((ev) => (
-            <div key={ev.id}>
-              <Cabecalho ev={ev} />
-              <Bloco titulo="Na pauta" tip={TIPS.pauta}><PautaResumo ev={ev} /></Bloco>
+    <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted">
+      <CasaChip casa={ev.casa} /><span className="shrink-0 whitespace-nowrap font-semibold capitalize text-fg">{diaCurto(ev.dia)} · {ev.hora}</span><span className="truncate">{ev.titulo}</span>
+    </p>
+  );
+}
+
+/** "Nesta semana": contagens + sessões de Plenário com votação e a pauta resumida. */
+export function ResumoSemana({ titulo, eventos, votarao, loading, onDia }: {
+  titulo: string; eventos: AgendaEvento[]; votarao: AgendaEvento[]; loading: boolean; onDia: (d: string) => void;
+}) {
+  const n = (f: (e: AgendaEvento) => boolean) => eventos.filter(f).length;
+  const stats: [string, number, string?][] = [
+    ["eventos", eventos.length], ["Plenário", n((e) => e.ambito === "plenario"), TIPS.plenario],
+    ["comissões", n((e) => e.ambito === "comissao"), TIPS.comissao], ["com votação", n((e) => e.deliberativa), TIPS.deliberativa],
+  ];
+  return (
+    <Painel icon={<Gavel className="size-4 text-accent" aria-hidden />} titulo={titulo} tip={TIPS.deliberativa}
+      acao={votarao.length ? <ShareButton compact label="Compartilhar a semana" {...semanaShare(votarao, eventos[0]?.dia ?? "")} /> : undefined}>
+      {loading ? <Skeleton className="h-16" /> : (
+        <>
+          <dl className="mb-2 grid grid-cols-4 gap-1 text-center">
+            {stats.map(([l, v, tip]) => (
+              <div key={l} className="rounded-md bg-surface-2 px-1 py-1" title={tip}>
+                <dd className="text-base font-bold tabular-nums leading-tight">{v}</dd><dt className="text-[10px] leading-tight text-muted">{l}</dt>
+              </div>
+            ))}
+          </dl>
+          {votarao.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted">Vai a voto no Plenário</h3>
+              {votarao.map((ev) => (
+                <div key={ev.id}>
+                  <button type="button" onClick={() => onDia(ev.dia)} className="w-full text-left hover:underline"><Cab ev={ev} /></button>
+                  <div className="pl-6">{ev.camaraId != null ? <PautaCamara ev={ev} limit={3} /> : ev.materias.length ? <MateriaList materias={ev.materias} limit={3} ev={ev} /> : <p className="text-xs text-muted">Pauta ainda não publicada.</p>}</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </motion.div>
+          )}
+        </>
       )}
-    </Card>
+    </Painel>
   );
 }
 
-/** "Votado hoje/ontem": resultados de sessões encerradas. */
+function RecenteCamara({ ev }: { ev: AgendaEvento }) {
+  const q = useVotacoesEvento(ev.camaraId);
+  if (!q.data?.length) return null;
+  return <div><Cab ev={ev} /><div className="pl-6"><VotacoesCamara id={ev.camaraId!} compact limit={3} /></div></div>;
+}
+
+/** "Votado hoje e ontem". Some quando não há nada (sem cartão vazio). */
 export function VotadoRecente({ eventos, loading }: { eventos: AgendaEvento[]; loading: boolean }) {
+  if (!loading && !eventos.length) return null;
   return (
-    <Card title={<span className="inline-flex items-center gap-2"><History className="size-5 text-accent" aria-hidden />Votado hoje e ontem</span>}
-      tip="Resultados das votações registradas pelas Casas. Verde = aprovado, vermelho = rejeitado. Clique para ver como cada parlamentar votou.">
-      {loading ? <Skeleton className="h-24" /> : !eventos.length ? (
-        <p className="text-sm text-muted">Nenhuma sessão com votação encerrada hoje ou ontem.</p>
-      ) : (
-        <div className="space-y-5">
-          {eventos.map((ev) => (
-            <div key={ev.id}>
-              <Cabecalho ev={ev} />
-              <p className="mb-2 text-xs text-muted">{ev.orgao}</p>
-              {ev.camaraId != null ? <VotacoesCamara id={ev.camaraId} /> : (
-                <>
-                  {ev.materias.length ? <MateriaList materias={ev.materias} limit={4} /> : null}
-                  <p className="mt-2 text-sm"><ExternalLink href={ev.fonte}>Ver resultado no site do Senado</ExternalLink></p>
-                </>
-              )}
-            </div>
-          ))}
-          <p className="text-xs text-muted">Veja também <Link to="/proposicoes" className="text-accent hover:underline">proposições</Link>.</p>
+    <Painel icon={<History className="size-4 text-accent" aria-hidden />} titulo="Votado hoje e ontem"
+      tip="Resultados registrados pelas Casas. Verde = aprovado, vermelho = rejeitado. Toque para ver como cada parlamentar votou.">
+      {loading ? <Skeleton className="h-12" /> : (
+        <div className="space-y-2">
+          {eventos.slice(0, 4).map((ev) => ev.camaraId != null ? <RecenteCamara key={ev.id} ev={ev} /> : ev.materias.length ? (
+            <div key={ev.id}><Cab ev={ev} /><div className="pl-6"><MateriaList materias={ev.materias} limit={3} ev={ev} /></div></div>
+          ) : null)}
         </div>
       )}
-    </Card>
+    </Painel>
   );
 }

@@ -1,27 +1,28 @@
 import clsx from "clsx";
-import { motion } from "motion/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { useSearchParams } from "react-router";
-import { ErrorState, PageHeader, Section, Skeleton, Stat, StatGrid, Tip, stagger } from "@/ui";
+import { ErrorState, PageHeader, Skeleton, Tip } from "@/ui";
+import { ShareButton } from "@/features/share";
 import { diaSP, semanaSP, somarDias, type AgendaEvento } from "@/features/agenda/agenda";
 import { useAgendaSemana } from "@/features/agenda/useAgenda";
-import { ListaEventos, TIPS } from "@/features/agenda/AgendaParts";
-import { VotadoRecente, VotaraoSemana } from "@/features/agenda/Destaques";
+import { DiaGrupo, TIPS } from "@/features/agenda/AgendaParts";
+import { ResumoSemana, VotadoRecente } from "@/features/agenda/Destaques";
+import { semanaShare } from "@/features/agenda/compartilhar";
 
 type CasaF = "todas" | "camara" | "senado";
 type AmbitoF = "todos" | "plenario" | "comissao";
 
 const fmt = (d: string, o: Intl.DateTimeFormatOptions) => new Date(`${d}T12:00:00Z`).toLocaleDateString("pt-BR", { ...o, timeZone: "UTC" });
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 function Pills<T extends string>({ value, options, onChange, label }: { value: T; options: [T, ReactNode][]; onChange: (v: T) => void; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-full bg-surface-2 p-1 ring-1 ring-line">
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-full bg-surface-2 p-0.5 ring-1 ring-line">
       {options.map(([v, l]) => (
         <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(v)}
-          className={clsx("relative rounded-full px-3 py-1 text-sm font-medium transition-colors", value === v ? "text-fg" : "text-muted hover:text-fg")}>
-          {value === v && <motion.span layoutId={`pill-${label}`} className="absolute inset-0 rounded-full bg-surface shadow-sm ring-1 ring-line" />}
-          <span className="relative">{l}</span>
+          className={clsx("rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors", value === v ? "bg-surface text-fg shadow-sm ring-1 ring-line" : "text-muted hover:text-fg")}>
+          {l}
         </button>
       ))}
     </div>
@@ -35,14 +36,20 @@ export default function AgendaPage() {
   const now = useMemo(() => new Date(), []);
   const hoje = diaSP(now);
   const ontem = somarDias(hoje, -1);
-  const off = Number(sp.get("semana") ?? 0) || 0;
+  const diaParam = sp.get("dia");
+  const evento = sp.get("evento");
+  // Link compartilhado (?dia=…) abre a semana daquele dia.
+  const offDia = diaParam && ISO.test(diaParam)
+    ? Math.round((Date.parse(semanaSP(new Date(`${diaParam}T15:00:00Z`)).inicio) - Date.parse(semanaSP(now).inicio)) / (7 * 86_400_000))
+    : 0;
+  const off = sp.has("semana") ? Number(sp.get("semana")) || 0 : offDia;
   const casa = (sp.get("casa") ?? "todas") as CasaF;
   const ambito = (sp.get("ambito") ?? "todos") as AmbitoF;
   const soVotacao = sp.get("votacao") === "1";
   const busca = (sp.get("q") ?? "").toLowerCase();
 
   const semana = useMemo(() => semanaSP(now, off), [now, off]);
-  const dia = sp.get("dia") && semana.dias.includes(sp.get("dia")!) ? sp.get("dia")! : null;
+  const dia = diaParam && semana.dias.includes(diaParam) ? diaParam : null;
   const atual = useAgendaSemana(useMemo(() => semanaSP(now, 0), [now]));
   const sel = useAgendaSemana(semana);
   const anterior = useAgendaSemana(useMemo(() => semanaSP(new Date(`${ontem}T15:00:00Z`)), [ontem]));
@@ -55,99 +62,94 @@ export default function AgendaPage() {
   const lista = dia ? semanaFiltrada.filter((e) => e.dia === dia) : semanaFiltrada;
   const porDia = new Map<string, number>(semana.dias.map((d) => [d, semanaFiltrada.filter((e) => e.dia === d).length]));
 
-  const votarao = atual.eventos.filter((e) => e.ambito === "plenario" && e.deliberativa && e.dia >= hoje && (e.status === "agendada" || e.status === "em-andamento"));
+  const votarao = sel.eventos.filter((e) => e.ambito === "plenario" && e.deliberativa && (off !== 0 || e.dia >= hoje) && e.status !== "cancelada" && e.status !== "encerrada");
   const recentes = [...new Map([...anterior.eventos, ...atual.eventos].map((e) => [e.id, e])).values()]
     .filter((e) => (e.dia === hoje || e.dia === ontem) && e.deliberativa && e.status !== "cancelada" && e.status !== "agendada" && (e.ambito === "plenario" || e.casa === "camara"))
     .sort((a, b) => b.inicio.localeCompare(a.inicio));
-  const carregandoAtual = atual.camara.isLoading || atual.senado.isLoading;
   const carregando = sel.camara.isLoading || sel.senado.isLoading;
 
   const titulo = off === 0 ? "Esta semana" : off === 1 ? "Próxima semana" : off === -1 ? "Semana passada" : "Semana";
-  const intervalo = `${fmt(semana.inicio, { day: "2-digit", month: "short" })} – ${fmt(semana.fim, { day: "2-digit", month: "short", year: "numeric" })}`;
-  const navBtn = "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-line hover:bg-surface-2";
+  const intervalo = `${fmt(semana.inicio, { day: "2-digit", month: "short" })} – ${fmt(semana.fim, { day: "2-digit", month: "short" })}`;
+  const navBtn = "inline-flex items-center rounded-full p-1 ring-1 ring-line hover:bg-surface-2";
+  const irSemana = (o: number | null) => setSp((p) => { const n = new URLSearchParams(p); if (o == null) n.delete("semana"); else n.set("semana", String(o)); n.delete("dia"); n.delete("evento"); return n; }, { replace: true });
+  const verDia = (d: string) => setSp((p) => { const n = new URLSearchParams(p); n.set("dia", d); n.delete("evento"); return n; }, { replace: true });
+  const dias = (dia ? [dia] : semana.dias).filter((d) => porDia.get(d));
+  const comissoesAbertas = ambito === "comissao" || !!busca;
 
   return (
-    <motion.div variants={stagger} initial="hidden" animate="show">
+    <div>
       <PageHeader
         eyebrow="Congresso Nacional"
         title="Agenda do Congresso"
-        subtitle={<>O que a Câmara e o Senado vão discutir e votar: sessões do <Tip content={TIPS.plenario}>Plenário</Tip>, reuniões de <Tip content={TIPS.comissao}>comissões</Tip> e o resultado das votações. Horários de Brasília.</>}
+        subtitle={<>O que Câmara e Senado votam, em <Tip content={TIPS.plenario}>Plenário</Tip> e <Tip content={TIPS.comissao}>comissões</Tip>. Horários de Brasília.</>}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Agenda" }]}
+        actions={<ShareButton fab {...semanaShare(votarao, semana.inicio)} />}
       />
 
-      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
-        <VotaraoSemana eventos={votarao} loading={carregandoAtual} />
-        <VotadoRecente eventos={recentes} loading={carregandoAtual || anterior.camara.isLoading} />
-      </div>
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]">
 
-      <Section title={`${titulo} · ${intervalo}`} tip={TIPS.pauta} id="calendario">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <button type="button" className={navBtn} onClick={() => { set("semana", String(off - 1)); set("dia", null); }}><ChevronLeft className="size-4" aria-hidden />Anterior</button>
-          {off !== 0 && <button type="button" className={navBtn} onClick={() => { set("semana", null); set("dia", null); }}>Hoje</button>}
-          <button type="button" className={navBtn} onClick={() => { set("semana", String(off + 1)); set("dia", null); }}>Próxima<ChevronRight className="size-4" aria-hidden /></button>
-        </div>
-
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <Pills label="Casa" value={casa} onChange={(v) => set("casa", v === "todas" ? null : v)} options={[["todas", "Todas"], ["camara", "Câmara"], ["senado", "Senado"]]} />
-          <Pills label="Âmbito" value={ambito} onChange={(v) => set("ambito", v === "todos" ? null : v)} options={[["todos", "Tudo"], ["plenario", "Plenário"], ["comissao", "Comissões"]]} />
-          <label className="inline-flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={soVotacao} onChange={(e) => set("votacao", e.target.checked ? "1" : null)} className="accent-[var(--color-verde)]" />
-            Só com votação <Tip content={TIPS.deliberativa} />
-          </label>
-          <input type="search" value={sp.get("q") ?? ""} onChange={(e) => set("q", e.target.value || null)} placeholder="Filtrar por comissão, local, tema…"
-            aria-label="Filtrar eventos" className="min-w-0 flex-1 rounded-full bg-surface-2 px-4 py-1.5 text-sm ring-1 ring-line focus:outline-none focus:ring-2 focus:ring-accent sm:max-w-xs" />
-        </div>
-
-        <div className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Dia da semana">
-          <DiaBtn ativo={!dia} onClick={() => set("dia", null)} topo="Semana" baixo="toda" n={semanaFiltrada.length} />
-          {semana.dias.map((d) => (
-            <DiaBtn key={d} ativo={dia === d} hoje={d === hoje} onClick={() => set("dia", d)}
-              topo={fmt(d, { weekday: "short" }).replace(".", "")} baixo={fmt(d, { day: "2-digit", month: "2-digit" })} n={porDia.get(d) ?? 0} />
-          ))}
-        </div>
-
-        <StatGrid className="mb-5">
-          <Stat label="Eventos" value={carregando ? "…" : semanaFiltrada.length} />
-          <Stat label="Sessões de Plenário" value={carregando ? "…" : semanaFiltrada.filter((e) => e.ambito === "plenario").length} tip={TIPS.plenario} />
-          <Stat label="Reuniões de comissão" value={carregando ? "…" : semanaFiltrada.filter((e) => e.ambito === "comissao").length} tip={TIPS.comissao} />
-          <Stat label="Com votação" value={carregando ? "…" : semanaFiltrada.filter((e) => e.deliberativa).length} tip={TIPS.deliberativa} />
-        </StatGrid>
-
-        {sel.camara.error && <div className="mb-3"><ErrorState error={sel.camara.error} retry={() => sel.camara.refetch()} /></div>}
-        {sel.senado.error && <div className="mb-3"><ErrorState error={sel.senado.error} retry={() => sel.senado.refetch()} /></div>}
-        {carregando && !sel.eventos.length ? (
-          <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-28" />)}</div>
-        ) : dia ? (
-          <ListaEventos eventos={lista} vazio={`Nada marcado para ${fmt(dia, { weekday: "long", day: "2-digit", month: "long" })}.`} />
-        ) : (
-          <div className="space-y-8">
-            {semana.dias.filter((d) => porDia.get(d)).map((d) => (
-              <div key={d}>
-                <h3 className={clsx("sticky top-16 z-10 mb-3 bg-bg/85 py-1 text-sm font-semibold capitalize backdrop-blur", d === hoje && "text-accent")}>
-                  {fmt(d, { weekday: "long", day: "2-digit", month: "long" })}{d === hoje && " · hoje"}
-                </h3>
-                <ListaEventos eventos={lista.filter((e) => e.dia === d)} vazio="Nada marcado." />
-              </div>
-            ))}
-            {!lista.length && <ListaEventos eventos={[]} vazio="Nenhum evento nesta semana com esses filtros." />}
+        <div className="min-w-0" id="calendario">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <button type="button" aria-label="Semana anterior" className={navBtn} onClick={() => irSemana(off - 1)}><ChevronLeft className="size-4" aria-hidden /></button>
+            <h2 className="text-sm font-semibold">{titulo} <span className="font-normal text-muted">{intervalo}</span></h2>
+            <button type="button" aria-label="Próxima semana" className={navBtn} onClick={() => irSemana(off + 1)}><ChevronRight className="size-4" aria-hidden /></button>
+            {off !== 0 && <button type="button" className="text-xs font-medium text-accent hover:underline" onClick={() => irSemana(null)}>Hoje</button>}
           </div>
-        )}
-        <p className="mt-6 text-xs text-muted">
-          Fontes: API de Dados Abertos da Câmara dos Deputados e Dados Abertos do Senado Federal. A agenda pode mudar sem aviso; confira sempre o link oficial.
-        </p>
-      </Section>
-    </motion.div>
+
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <Pills label="Casa" value={casa} onChange={(v) => set("casa", v === "todas" ? null : v)} options={[["todas", "Todas"], ["camara", "Câmara"], ["senado", "Senado"]]} />
+            <Pills label="Âmbito" value={ambito} onChange={(v) => set("ambito", v === "todos" ? null : v)} options={[["todos", "Tudo"], ["plenario", "Plenário"], ["comissao", "Comissões"]]} />
+            <label className="inline-flex items-center gap-1.5 text-xs">
+              <input type="checkbox" checked={soVotacao} onChange={(e) => set("votacao", e.target.checked ? "1" : null)} className="accent-[var(--color-verde)]" />
+              Só com votação
+            </label>
+            <input type="search" value={sp.get("q") ?? ""} onChange={(e) => set("q", e.target.value || null)} placeholder="Filtrar…"
+              aria-label="Filtrar eventos" className="min-w-28 flex-1 rounded-full bg-surface-2 px-3 py-1 text-xs ring-1 ring-line focus:outline-none focus:ring-2 focus:ring-accent sm:max-w-56" />
+          </div>
+
+          <div className="-mx-1 mb-3 flex gap-1 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Dia da semana">
+            <DiaBtn ativo={!dia} onClick={() => set("dia", null)} topo="Semana" n={semanaFiltrada.length} />
+            {semana.dias.map((d) => (
+              <DiaBtn key={d} ativo={dia === d} hoje={d === hoje} onClick={() => verDia(d)}
+                topo={`${fmt(d, { weekday: "short" }).replace(".", "")} ${fmt(d, { day: "2-digit" })}`} n={porDia.get(d) ?? 0} />
+            ))}
+          </div>
+
+          {sel.camara.error && <div className="mb-3"><ErrorState error={sel.camara.error} retry={() => sel.camara.refetch()} /></div>}
+          {sel.senado.error && <div className="mb-3"><ErrorState error={sel.senado.error} retry={() => sel.senado.refetch()} /></div>}
+          {carregando && !sel.eventos.length ? (
+            <div className="space-y-1.5">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-8" />)}</div>
+          ) : !lista.length ? (
+            <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm text-muted">
+              {dia ? `Nada marcado para ${fmt(dia, { weekday: "long", day: "2-digit", month: "long" })}.` : "Nenhum evento nesta semana com esses filtros."}
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {dias.map((d) => (
+                <DiaGrupo key={`${d}-${comissoesAbertas}`} hoje={d === hoje} destaque={evento} comissoesAbertas={comissoesAbertas}
+                  titulo={<>{fmt(d, { weekday: "long", day: "2-digit", month: "long" })}{d === hoje && " · hoje"}</>}
+                  eventos={lista.filter((e) => e.dia === d)} />
+              ))}
+            </div>
+          )}
+          <p className="mt-4 text-xs text-muted">Fontes: Dados Abertos da Câmara e do Senado. A agenda pode mudar sem aviso; confira o link oficial.</p>
+        </div>
+        <aside className="space-y-3 lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto">
+          <VotadoRecente eventos={recentes} loading={atual.camara.isLoading || anterior.camara.isLoading} />
+          <ResumoSemana titulo={titulo} eventos={semanaFiltrada} votarao={votarao} loading={carregando} onDia={verDia} />
+        </aside>
+      </div>
+    </div>
   );
 }
 
-function DiaBtn({ ativo, hoje, onClick, topo, baixo, n }: { ativo: boolean; hoje?: boolean; onClick: () => void; topo: string; baixo: string; n: number }) {
+function DiaBtn({ ativo, hoje, onClick, topo, n }: { ativo: boolean; hoje?: boolean; onClick: () => void; topo: string; n: number }) {
   return (
     <button type="button" role="tab" aria-selected={ativo} onClick={onClick}
-      className={clsx("relative flex min-w-16 shrink-0 flex-col items-center rounded-xl px-3 py-2 text-sm ring-1 transition-colors",
-        ativo ? "bg-accent text-white ring-accent" : "ring-line hover:bg-surface-2", hoje && !ativo && "ring-2 ring-accent")}>
-      <span className="text-xs capitalize opacity-80">{topo}</span>
-      <span className="font-semibold tabular-nums">{baixo}</span>
-      <span className={clsx("mt-1 rounded-full px-1.5 text-[10px] tabular-nums", ativo ? "bg-white/25" : "bg-surface-2 text-muted", n === 0 && "opacity-50")}>{n}</span>
+      className={clsx("flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs ring-1 transition-colors",
+        ativo ? "bg-accent text-white ring-accent" : "ring-line hover:bg-surface-2", hoje && !ativo && "ring-2 ring-accent", n === 0 && !ativo && "opacity-50")}>
+      <span className="capitalize">{topo}</span>
+      <span className={clsx("rounded-full px-1 tabular-nums", ativo ? "bg-white/25" : "bg-surface-2 text-muted")}>{n}</span>
     </button>
   );
 }

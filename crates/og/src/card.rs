@@ -97,7 +97,7 @@ fn on(bg: &str) -> &'static str {
     }
 }
 
-fn photo_mime(bytes: &[u8]) -> Option<&'static str> {
+pub(crate) fn photo_mime(bytes: &[u8]) -> Option<&'static str> {
     if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
         Some("image/png")
     } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
@@ -109,7 +109,7 @@ fn photo_mime(bytes: &[u8]) -> Option<&'static str> {
     }
 }
 
-fn base64(data: &[u8]) -> String {
+pub(crate) fn base64(data: &[u8]) -> String {
     const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
     for chunk in data.chunks(3) {
@@ -130,7 +130,15 @@ fn base64(data: &[u8]) -> String {
     out
 }
 
-fn text(x: f32, y: f32, font: Font, size: f32, fill: &str, extra: &str, body: &str) -> String {
+pub(crate) fn text(
+    x: f32,
+    y: f32,
+    font: Font,
+    size: f32,
+    fill: &str,
+    extra: &str,
+    body: &str,
+) -> String {
     let weight = match font {
         Font::Regular => 400,
         Font::SemiBold => 600,
@@ -168,40 +176,7 @@ pub fn render(card: &OgCard) -> String {
     let stats: Vec<_> = card.stats.iter().take(3).collect();
 
     let mut s = String::with_capacity(16 * 1024);
-    let _ = write!(
-        s,
-        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}">"#
-    );
-
-    // Defs: background gradient, ledger grid, glow, photo clip.
-    let _ = write!(
-        s,
-        concat!(
-            "<defs>",
-            r##"<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">"##,
-            r##"<stop offset="0" stop-color="#001a4f"/><stop offset="1" stop-color="#000c26"/></linearGradient>"##,
-            r##"<radialGradient id="glow" cx="{gx}" cy="{gy}" r="520" gradientUnits="userSpaceOnUse">"##,
-            r##"<stop offset="0" stop-color="#009c3b" stop-opacity="0.30"/>"##,
-            r##"<stop offset="0.55" stop-color="#002776" stop-opacity="0.18"/>"##,
-            r##"<stop offset="1" stop-color="#002776" stop-opacity="0"/></radialGradient>"##,
-            r##"<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">"##,
-            r##"<path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.045" stroke-width="1"/></pattern>"##,
-            r##"<linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">"##,
-            r##"<stop offset="0" stop-color="#000c26" stop-opacity="0.85"/>"##,
-            r##"<stop offset="0.6" stop-color="#000c26" stop-opacity="0"/></linearGradient>"##,
-            r##"<clipPath id="pc"><circle cx="{cx}" cy="{cy}" r="{r}"/></clipPath>"##,
-            "</defs>"
-        ),
-        gx = PHOTO_CX,
-        gy = PHOTO_CY,
-        cx = PHOTO_CX,
-        cy = PHOTO_CY,
-        r = PHOTO_R
-    );
-    let _ = write!(
-        s,
-        r#"<rect width="{W}" height="{H}" fill="url(#bg)"/><rect width="{W}" height="{H}" fill="url(#glow)"/><rect width="{W}" height="{H}" fill="url(#grid)"/><rect width="{W}" height="{H}" fill="url(#fade)"/>"#
-    );
+    open(&mut s);
 
     // Geometric motif: nested losangos around the photo/glow center.
     for (half, color, op) in [
@@ -220,21 +195,7 @@ pub fn render(card: &OgCard) -> String {
         );
     }
 
-    // Header: mark + wordmark, optional badge on the right.
-    s.push_str(&mark_at(PAD, HEADER_Y, 48.0));
-    let wm_x = PAD + 64.0;
-    let wm_y = HEADER_Y + 35.0;
-    let wm = width("emenda", Font::Bold, 34.0);
-    s.push_str(&text(wm_x, wm_y, Font::Bold, 34.0, INK, "", "emenda"));
-    s.push_str(&text(
-        wm_x + wm,
-        wm_y,
-        Font::Bold,
-        34.0,
-        VERDE_LIGHT,
-        "",
-        ".online",
-    ));
+    header(&mut s);
 
     if let Some(badge) = card
         .badge
@@ -377,6 +338,69 @@ pub fn render(card: &OgCard) -> String {
         }
     }
 
+    close(&mut s);
+    s
+}
+
+/// SVG root, defs (background, glow at the photo center, grid, fade, photo clip) and background layers.
+pub(crate) fn open(s: &mut String) {
+    let _ = write!(
+        *s,
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}">"#
+    );
+
+    // Defs: background gradient, ledger grid, glow, photo clip.
+    let _ = write!(
+        *s,
+        concat!(
+            "<defs>",
+            r##"<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">"##,
+            r##"<stop offset="0" stop-color="#001a4f"/><stop offset="1" stop-color="#000c26"/></linearGradient>"##,
+            r##"<radialGradient id="glow" cx="{gx}" cy="{gy}" r="520" gradientUnits="userSpaceOnUse">"##,
+            r##"<stop offset="0" stop-color="#009c3b" stop-opacity="0.30"/>"##,
+            r##"<stop offset="0.55" stop-color="#002776" stop-opacity="0.18"/>"##,
+            r##"<stop offset="1" stop-color="#002776" stop-opacity="0"/></radialGradient>"##,
+            r##"<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">"##,
+            r##"<path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.045" stroke-width="1"/></pattern>"##,
+            r##"<linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">"##,
+            r##"<stop offset="0" stop-color="#000c26" stop-opacity="0.85"/>"##,
+            r##"<stop offset="0.6" stop-color="#000c26" stop-opacity="0"/></linearGradient>"##,
+            r##"<clipPath id="pc"><circle cx="{cx}" cy="{cy}" r="{r}"/></clipPath>"##,
+            "</defs>"
+        ),
+        gx = PHOTO_CX,
+        gy = PHOTO_CY,
+        cx = PHOTO_CX,
+        cy = PHOTO_CY,
+        r = PHOTO_R
+    );
+    let _ = write!(
+        *s,
+        r#"<rect width="{W}" height="{H}" fill="url(#bg)"/><rect width="{W}" height="{H}" fill="url(#glow)"/><rect width="{W}" height="{H}" fill="url(#grid)"/><rect width="{W}" height="{H}" fill="url(#fade)"/>"#
+    );
+}
+
+/// Mark + wordmark.
+pub(crate) fn header(s: &mut String) {
+    // Header: mark + wordmark, optional badge on the right.
+    s.push_str(&mark_at(PAD, HEADER_Y, 48.0));
+    let wm_x = PAD + 64.0;
+    let wm_y = HEADER_Y + 35.0;
+    let wm = width("emenda", Font::Bold, 34.0);
+    s.push_str(&text(wm_x, wm_y, Font::Bold, 34.0, INK, "", "emenda"));
+    s.push_str(&text(
+        wm_x + wm,
+        wm_y,
+        Font::Bold,
+        34.0,
+        VERDE_LIGHT,
+        "",
+        ".online",
+    ));
+}
+
+/// Footer rule, signature, tricolor band, and `</svg>`.
+pub(crate) fn close(s: &mut String) {
     // Footer: rule, signature, tricolor band (symmetric).
     let _ = write!(
         s,
@@ -420,10 +444,9 @@ pub fn render(card: &OgCard) -> String {
     );
 
     s.push_str("</svg>");
-    s
 }
 
-const VERDE_LIGHT: &str = "#1fc35f";
+pub(crate) const VERDE_LIGHT: &str = "#1fc35f";
 const FIGURE_SIZES: [f32; 6] = [56.0, 50.0, 44.0, 38.0, 32.0, 28.0];
 const CURRENCY: &str = "R$";
 const CURRENCY_SCALE: f32 = 0.56;

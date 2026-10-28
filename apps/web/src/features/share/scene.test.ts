@@ -25,6 +25,9 @@ const cases: ShareData[] = [
   { ...base, kind: "votacao", votes: { sim: 382, nao: 118, outros: 13 } },
   { ...base, kind: "voto", voto: "Não", pessoa: "Fulana (PSB-SP)", votes: { sim: 1, nao: 2, outros: 0 } },
   { ...base, kind: "proposicao", subtitle: "Ementa ".repeat(40) },
+  { ...base, kind: "agenda", title: "Pauta da semana", casa: "Plenário da Câmara", destaque: "HOJE · 13:55",
+    items: Array.from({ length: 7 }, (_, i) => ({ hora: "13:55", sigla: `PL ${i}/2026`, titulo: "Institui ".repeat(20) })) },
+  { ...base, kind: "resultado", resultado: "aprovada", votes: { sim: 375, nao: 113, outros: 4 } },
 ];
 
 describe("drawScene", () => {
@@ -53,5 +56,22 @@ describe("drawScene", () => {
     expect(all).toContain(".online");
     expect(all).toMatch(/R\$\s?98,8\smi/);
     expect(all).toContain("MUNICÍPIO");
+  });
+
+  test("agenda: destaque, até 5 itens e '+N'", () => {
+    const { ctx, texts } = fakeCtx();
+    drawScene(ctx, 1080, 1920, cases[4]!, 0.74, { logo: null, qr: qrMatrix("x") });
+    const all = texts.map((x) => x.s);
+    expect(all).toContain("HOJE · 13:55");
+    expect(all.filter((x) => /^PL \d\/2026$/.test(x)).length).toBe(5);
+    expect(all).toContain("+2 itens na pauta");
+  });
+
+  test("resultado: selo APROVADA e placar", () => {
+    const { ctx, texts } = fakeCtx();
+    drawScene(ctx, 1080, 1080, cases[5]!, 0.74, { logo: null, qr: qrMatrix("x") });
+    const all = texts.map((x) => x.s);
+    expect(all).toContain("APROVADA");
+    expect(all).toContain("375");
   });
 });

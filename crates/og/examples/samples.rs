@@ -104,4 +104,43 @@ fn main() {
         std::fs::write(&path, bytes).expect("write");
         println!("{path}");
     }
+    let voto = og::OgVoto {
+        deputado: "Fulana de Tal da Silva".into(),
+        partido_uf: "PSB-SP".into(),
+        voto: "Sim".into(),
+        titulo: "PEC 45/2019 · Altera o Sistema Tributário Nacional.".into(),
+        data: "07/07/2023".into(),
+        placar: Some((382, 118, 3)),
+        photo: Some(photo.clone()),
+    };
+    let nao = og::OgVoto {
+        voto: "Não".into(),
+        photo: None,
+        deputado: "Beltrano Souza".into(),
+        partido_uf: "PL-RJ".into(),
+        ..voto.clone()
+    };
+    let item = |h: &str, s: &str, t: &str| og::OgAgendaItem {
+        hora: h.into(),
+        sigla: s.into(),
+        titulo: t.into(),
+    };
+    let agenda = og::OgAgenda {
+        dia: "quarta-feira, 28 de outubro".into(), casa: "Plenário da Câmara".into(), total: 6,
+        items: vec![
+            item("13:55", "PL 2630/2020", "Institui a Lei Brasileira de Liberdade, Responsabilidade e Transparência na Internet."),
+            item("13:55", "PEC 45/2019", "Altera o Sistema Tributário Nacional."),
+            item("13:55", "MPV 1300/2025", "Dispõe sobre a tarifa social de energia elétrica."),
+            item("13:55", "REQ 12/2026", "Requer urgência para o PL 4/2025."),
+        ],
+    };
+    for (name, bytes) in [
+        ("voto-sim", og::voto_png(&voto)),
+        ("voto-nao", og::voto_png(&nao)),
+        ("agenda", og::agenda_png(&agenda)),
+    ] {
+        let path = format!("{out}/{name}.png");
+        std::fs::write(&path, bytes.expect("png")).expect("write");
+        println!("{path}");
+    }
 }

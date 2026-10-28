@@ -6,7 +6,10 @@
 pub mod brand;
 mod card;
 mod fonts;
+mod share;
 mod text;
+
+pub use share::{agenda_png, agenda_svg, voto_png, voto_svg, OgAgenda, OgAgendaItem, OgVoto};
 
 use std::sync::{Arc, OnceLock};
 
