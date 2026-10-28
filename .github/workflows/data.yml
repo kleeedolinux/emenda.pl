@@ -1,0 +1,28 @@
+# Atualização semanal dos dados: ETL -> branch órfão `data`. O Worker lê de lá (DATA_BASE_URL); sem redeploy.
+name: dados-semanal
+on:
+  schedule:
+    - cron: "0 9 * * 1" # segunda 06:00 BRT
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: { group: dados, cancel-in-progress: false }
+jobs:
+  etl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p etl
+      - run: scripts/build-data.sh --out data/out
+      - name: Publicar no branch data
+        run: |
+          cd data/out
+          git init -q -b data
+          git config user.name "emenda.pl bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "dados $(date -u +%F)"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data

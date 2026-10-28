@@ -1,8 +1,109 @@
 @import "tailwindcss";
-/* Tokens de tema: owned by src/ui (agente UI kit pode expandir). */
+
+/* Tema: tokens como CSS vars. Claro por padrão; escuro via [data-theme=dark] ou preferência do sistema. */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
 @theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Brasil */
   --color-verde: #009c3b;
+  --color-verde-700: #00702b;
   --color-amarelo: #ffdf00;
+  --color-amarelo-700: #8a6d00;
   --color-azul: #002776;
+  --color-azul-400: #3d6fd6;
   --color-branco: #ffffff;
+  --color-vermelho: #c62828;
+
+  /* Semânticos (sobrescritos no escuro) */
+  --color-bg: #f6f8f7;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f4f2;
+  --color-fg: #0b1220;
+  --color-muted: #4b5563;
+  --color-line: #e2e8e4;
+  --color-accent: #00803a;
+  --color-link: #0a4bbf;
+  --color-ring: #2563eb;
+  --color-mapa-vazio: #e5e9e7;
+  --color-glow: rgb(0 156 59 / 0.14);
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.12);
+  --radius-card: 1rem;
 }
+
+@layer base {
+  [data-theme="dark"] {
+    --color-bg: #070d0b;
+    --color-surface: #0e1714;
+    --color-surface-2: #14201c;
+    --color-fg: #e8efec;
+    --color-muted: #9fb0a9;
+    --color-line: #22312b;
+    --color-accent: #3ddc84;
+    --color-link: #8fb4ff;
+    --color-ring: #ffdf00;
+    --color-mapa-vazio: #1c2925;
+    --color-glow: rgb(61 220 132 / 0.12);
+    --shadow-card: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 8px 30px -12px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      --color-bg: #070d0b;
+      --color-surface: #0e1714;
+      --color-surface-2: #14201c;
+      --color-fg: #e8efec;
+      --color-muted: #9fb0a9;
+      --color-line: #22312b;
+      --color-accent: #3ddc84;
+      --color-link: #8fb4ff;
+      --color-ring: #ffdf00;
+      --color-mapa-vazio: #1c2925;
+      color-scheme: dark;
+    }
+  }
+
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body {
+    @apply bg-bg text-fg font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+    min-height: 100dvh;
+  }
+  h1, h2, h3 { @apply font-display tracking-tight; }
+  :focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; border-radius: 4px; }
+  a { text-underline-offset: 3px; }
+  ::selection { background: color-mix(in oklab, var(--color-amarelo) 60%, transparent); color: #0b1220; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+@utility tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum", "cv11"; }
+@utility glass {
+  background: color-mix(in oklab, var(--color-surface) 78%, transparent);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+}
+@utility card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+@utility link { color: var(--color-link); text-decoration: underline; text-decoration-thickness: 1px; &:hover { text-decoration-thickness: 2px; } }
+@utility bandeira {
+  background: linear-gradient(90deg, var(--color-verde) 0 40%, var(--color-amarelo) 40% 70%, var(--color-azul) 70% 100%);
+}
+@utility hero-glow {
+  background:
+    radial-gradient(60% 80% at 10% 0%, rgb(0 156 59 / 0.18), transparent 60%),
+    radial-gradient(50% 70% at 95% 10%, rgb(0 39 118 / 0.16), transparent 60%),
+    radial-gradient(40% 50% at 60% 100%, rgb(255 223 0 / 0.14), transparent 60%);
+}
+
+@keyframes shimmer { 100% { transform: translateX(100%); } }

@@ -102,7 +102,20 @@ export interface Favorecido {
   documento: string;
   nome: string;
   tipo: string; // Pessoa Jurídica / Física / Município...
+  /** natureza jurídica (Portal), quando informada */
+  naturezaJuridica?: string;
   valor: number; // centavos
+}
+
+/** Convênio vinculado a emenda, por município do gasto. */
+export interface Convenio {
+  numero: string;
+  objeto: string;
+  convenente: string;
+  data: string; // ISO yyyy-mm-dd (publicação)
+  valor: number; // centavos
+  /** código da emenda */
+  emenda: string;
 }
 
 export interface Prefeito {
@@ -110,6 +123,7 @@ export interface Prefeito {
   partido: string;
   eleicao: number; // ano
   situacao: string;
+  vice?: { nome: string; partido: string };
 }
 
 export interface Municipio {
@@ -121,7 +135,9 @@ export interface Municipio {
   porTipo: Array<{ tipo: TipoEmenda } & Totais>;
   autores: AutorResumo[];
   emendas: EmendaItem[];
+  /** top 200 favorecidos por valor recebido */
   favorecidos: Favorecido[];
+  convenios?: Convenio[];
 }
 
 export interface Autor {
@@ -133,6 +149,8 @@ export interface Autor {
   porUf: Array<{ uf: string } & Totais>;
   porTipo: Array<{ tipo: TipoEmenda } & Totais>;
   emendas: EmendaItem[];
+  /** top 100 favorecidos por valor recebido */
+  favorecidos?: Favorecido[];
 }
 
 // ---------- funções puras compartilhadas ----------

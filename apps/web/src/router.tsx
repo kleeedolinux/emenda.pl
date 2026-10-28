@@ -26,6 +26,7 @@ export const router = createBrowserRouter([
       { path: "votacao/:id", lazy: page(() => import("@/pages/VotacaoPage")) },
       { path: "partidos", lazy: page(() => import("@/pages/PartidosPage")) },
       { path: "partido/:sigla", lazy: page(() => import("@/pages/PartidoPage")) },
+      { path: "agenda", lazy: page(() => import("@/pages/AgendaPage")) },
       { path: "sobre", lazy: page(() => import("@/pages/SobrePage")) },
       { path: "*", lazy: page(() => import("@/pages/NotFound")) },
     ],
