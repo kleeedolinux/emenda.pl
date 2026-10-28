@@ -1,8 +1,8 @@
-# Atualização semanal dos dados: ETL -> branch órfão `data`. O Worker lê de lá (DATA_BASE_URL); sem redeploy.
-name: dados-semanal
+# Atualização diária dos dados: ETL -> branch órfão `data`. O Worker lê de lá (DATA_BASE_URL); sem redeploy.
+name: dados-diario
 on:
   schedule:
-    - cron: "0 9 * * 1" # segunda 06:00 BRT
+    - cron: "0 9 * * *" # todo dia 06:00 BRT
   workflow_dispatch:
 permissions:
   contents: write
