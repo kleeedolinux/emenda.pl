@@ -1,0 +1,13 @@
+{
+  "name": "@emenda/worker",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "cargo check -p emenda-worker"
+  },
+  "devDependencies": {
+    "wrangler": "^4.154.0"
+  }
+}

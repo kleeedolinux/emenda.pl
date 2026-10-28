@@ -1,0 +1,29 @@
+name = "emenda-pl"
+main = "../../crates/worker/build/index.js"
+compatibility_date = "2026-10-01"
+
+[build]
+command = "cd ../../crates/worker && worker-build --release"
+
+[assets]
+directory = "../web/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = [
+  "/", "/api/*", "/data/*", "/og/*",
+  "/deputado/*", "/senador/*", "/municipio/*", "/uf/*",
+  "/autor/*", "/proposicao/*", "/votacao/*", "/partido/*",
+]
+
+[vars]
+# Empty -> /data/* served from ASSETS (apps/web/dist/data); local dev: --var DATA_BASE_URL:""
+DATA_BASE_URL = "https://raw.githubusercontent.com/kleeedolinux/emenda.pl/data/"
+# ANALYTICS_SALT: set as a secret (`wrangler secret put ANALYTICS_SALT`) in production.
+
+[[durable_objects.bindings]]
+name = "ANALYTICS"
+class_name = "Analytics"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Analytics"]
