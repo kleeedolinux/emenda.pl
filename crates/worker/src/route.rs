@@ -266,7 +266,7 @@ pub const SECURITY_HEADERS: [(&str, &str); 5] = [
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; \
 font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.camara.leg.br https://*.camara.leg.br \
 https://www.senado.leg.br https://*.senado.leg.br https://legis.senado.leg.br; connect-src 'self'; \
-frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
+frame-ancestors 'none'; base-uri 'self'; object-src 'none'; media-src 'self' blob:",
     ),
     ("X-Content-Type-Options", "nosniff"),
     ("Referrer-Policy", "strict-origin-when-cross-origin"),
