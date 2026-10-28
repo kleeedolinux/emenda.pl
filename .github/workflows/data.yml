@@ -17,6 +17,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p etl
       - run: scripts/build-data.sh --out data/out
+      - run: scripts/gastos-fetch.sh
       - name: Publicar no branch data
         run: |
           cd data/out

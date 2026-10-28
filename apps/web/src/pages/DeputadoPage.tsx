@@ -16,6 +16,7 @@ import { VotosDeputado } from "@/features/legislativo/VotosDeputado";
 import { EmendasAutor } from "@/features/legislativo/EmendasAutor";
 import { formatBRL, isCNPJ } from "@/lib/format";
 import { ShareButton } from "@/features/share";
+import { GastosParlamentar } from "@/features/gastos";
 import { HandCoins, Repeat, Vote, Wallet } from "lucide-react";
 import { contarSim, perfilEmendas, resumoSimples, trocasCamara } from "@/features/perfil/resumo";
 import { BlocoEmendas, ResumoSimplesCard, SecaoLeiga } from "@/features/perfil/CardsPerfil";
@@ -174,8 +175,7 @@ function PerfilLeigo({ id, nome, sexo, partido, uf, mandatos, autorCodigo, semAu
       </SecaoLeiga>
       <SecaoLeiga id="gastos" icon={<Wallet className="size-5" aria-hidden />} titulo="Gastos do mandato"
         significa="Cota parlamentar, verba de gabinete e pessoal: dinheiro público para exercer o mandato.">
-        {/* SLOT gastos (outro agente): <GastosParlamentar kind="deputado" id={id} /> de "@/features/gastos" */}
-        <p className="text-sm text-muted">Veja a aba “Cota parlamentar” abaixo.</p>
+        <GastosParlamentar kind="deputado" id={id} />
       </SecaoLeiga>
     </>
   );

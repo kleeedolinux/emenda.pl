@@ -9,6 +9,7 @@ import { cam, dedupeDeputados, encontrarAutor, filtrarDeputados, fontes, type De
 import { useAutores, useCamaraTodas, useCamaraTodasVarias, useLegislaturas } from "@/features/legislativo/hooks";
 import { contarLegislaturas, formatDuracao, tempoEstimadoLegislaturas } from "@/features/legislativo/mandatos";
 import { Campo, ChipsMandato, Fontes, Segmentado, inputCls, selectCls } from "@/features/legislativo/components";
+import { QuemMaisGasta } from "@/features/gastos";
 
 const LEG_HIST = Array.from({ length: 11 }, (_, i) => 47 + i); // 1983 em diante
 
@@ -17,7 +18,7 @@ type Linha = DeputadoLista & { nLeg?: number; dias?: number; atualNaLista: boole
 export default function DeputadosPage() {
   const [sp, setSp] = useSearchParams();
   const leg = sp.get("leg") ?? "atual";
-  const view = sp.get("view") === "tabela" ? "tabela" : "grade";
+  const view = sp.get("view") === "tabela" ? "tabela" : sp.get("view") === "gastos" ? "gastos" : "grade";
   const ordem = sp.get("ordem") === "tempo" ? "tempo" : sp.get("ordem") === "emendas" ? "emendas" : "nome";
   const f = { q: sp.get("q") ?? "", uf: sp.get("uf") ?? "", partido: sp.get("partido") ?? "", sexo: sp.get("sexo") ?? "" };
   const [comTempo, setComTempo] = useState(ordem === "tempo");
@@ -137,13 +138,13 @@ export default function DeputadosPage() {
           </StatGrid>
 
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <Segmentado label="Visualização" value={view} onChange={(v) => set("view", v === "grade" ? "" : v)} options={[{ value: "grade", label: "Cartões" }, { value: "tabela", label: "Tabela" }]} />
+            <Segmentado label="Visualização" value={view} onChange={(v) => set("view", v === "grade" ? "" : v)} options={[{ value: "grade", label: "Cartões" }, { value: "tabela", label: "Tabela" }, { value: "gastos", label: "Quem mais gasta" }]} />
             {!usarTempo ? (
               <button type="button" onClick={() => setComTempo(true)} className="rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-2">Calcular tempo de casa</button>
             ) : !histPronto ? <Spinner label={`Lendo legislaturas desde 1983… ${histCarregados}/${LEG_HIST.length}`} /> : null}
           </div>
 
-          {lista.isPending ? (
+          {view === "gastos" ? <QuemMaisGasta casa="camara" /> : lista.isPending ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="h-28" />)}</div>
           ) : view === "tabela" ? (
             <DataTable rows={filtrados} columns={cols} pageSize={50} exportName={`deputados-${leg}`} rowKey={(r) => r.id} search={(r) => `${r.nome} ${r.siglaPartido} ${r.siglaUf}`} />

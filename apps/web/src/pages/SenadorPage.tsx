@@ -12,6 +12,7 @@ import { ChipsMandato, Fontes, PainelMandatos, SeletorMandato, resumoMandatos } 
 import { EmendasAutor } from "@/features/legislativo/EmendasAutor";
 import { categoriaVoto } from "@/features/legislativo/votacao";
 import { ShareButton } from "@/features/share";
+import { GastosParlamentar } from "@/features/gastos";
 import { HandCoins, Repeat, Vote, Wallet } from "lucide-react";
 import { useAutor } from "@/features/legislativo/hooks";
 import type { Mandato } from "@/features/legislativo/mandatos";
@@ -157,8 +158,7 @@ function PerfilLeigoSenador({ cod, s, mandatos, autorCodigo, semAutor, filiacoes
       </SecaoLeiga>
       <SecaoLeiga id="gastos" icon={<Wallet className="size-5" aria-hidden />} titulo="Gastos do mandato"
         significa="Cota parlamentar, verba de gabinete e pessoal: dinheiro público para exercer o mandato.">
-        {/* SLOT gastos (outro agente): <GastosParlamentar kind="senador" id={cod} /> de "@/features/gastos" */}
-        <p className="text-sm text-muted">Em breve.</p>
+        <GastosParlamentar kind="senador" id={cod} />
       </SecaoLeiga>
     </>
   );
