@@ -3,7 +3,7 @@ import { LineArea } from "./charts/LineArea";
 import { Card, Skeleton, Stat, StatGrid } from "./primitives";
 import { CountUp } from "./Money";
 
-/** Painel público de audiência (para transparência e patrocinadores). */
+/** Painel público de audiência. */
 export function Audiencia() {
   const s = useStats();
   if (s.isError) return <p className="text-sm text-muted">Estatísticas de audiência indisponíveis no momento.</p>;
