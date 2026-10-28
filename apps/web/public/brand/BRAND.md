@@ -1,4 +1,4 @@
-# emenda.pl — marca
+# emenda.online — marca
 
 Fonte única: `crates/og/src/brand.rs` (`MARK_BODY`). Regerar arquivos:
 `cargo run -p og --example brand -- apps/web/public`.
@@ -7,8 +7,8 @@ Fonte única: `crates/og/src/brand.rs` (`MARK_BODY`). Regerar arquivos:
 
 | token | hex | uso |
 |---|---|---|
-| verde | `#009c3b` | símbolo, theme-color, ".pl" em fundo claro |
-| verde-claro | `#1fc35f` | ".pl" e destaques em fundo escuro |
+| verde | `#009c3b` | símbolo, theme-color, ".online" em fundo claro |
+| verde-claro | `#1fc35f` | ".online" e destaques em fundo escuro |
 | amarelo | `#ffdf00` | coluna central, eyebrow, destaque de valor |
 | azul | `#002776` | texto do logo em fundo claro, linha-base |
 | marinho | `#001a4f` → `#000c26` | fundo OG / modo escuro |
@@ -23,7 +23,7 @@ Fonte única: `crates/og/src/brand.rs` (`MARK_BODY`). Regerar arquivos:
 ## Símbolo
 
 - Grade 64×64, módulo 4: colunas 12/16/12, linha-base 48×4, raio 16. Simétrico no eixo vertical.
-- Nítido em 16 e 32 px. Mínimo: 16 px (símbolo), 96 px de largura (logo completo).
+- Nítido em 16 e 32 px. Mínimo: 16 px (símbolo), 160 px de largura (logo completo, ~27 px de altura); abaixo disso use `variant="mark"`.
 - Área de proteção: 1/4 da altura do símbolo em todos os lados.
 
 ## Arquivos

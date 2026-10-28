@@ -171,7 +171,7 @@ fn single_stat_tile_is_not_full_width() {
 
 #[test]
 fn brand_outline_converts_text_to_paths() {
-    let src = r##"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60"><text x="0" y="44" font-family="Space Grotesk" font-weight="700" font-size="44">emenda.pl</text></svg>"##;
+    let src = r##"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60"><text x="0" y="44" font-family="Space Grotesk" font-weight="700" font-size="44">emenda.online</text></svg>"##;
     let out = og::brand::outline(src).expect("outline");
     assert!(!out.contains("<text"));
     assert!(out.contains("<path"));
@@ -188,4 +188,15 @@ fn site_default_card_is_generic_and_renders() {
     assert_eq!(c.kind, OgKind::Default);
     assert!(c.photo.is_none());
     parse(&svg(&c));
+}
+
+#[test]
+fn brand_name_is_emenda_online() {
+    for kind in [OgKind::Default, OgKind::Deputado, OgKind::Partido] {
+        let s = svg(&card(kind));
+        assert!(s.contains(">emenda.online<"), "footer signature");
+        assert!(s.contains(">.online<"), "wordmark accent");
+        assert!(!s.contains("emenda.pl"));
+        assert!(!s.contains(">.pl<"));
+    }
 }

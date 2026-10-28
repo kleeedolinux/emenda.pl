@@ -19,7 +19,7 @@ struct Wordmark {
 
 fn wordmark() -> Wordmark {
     let src = format!(
-        r##"<svg xmlns="http://www.w3.org/2000/svg" width="400" height="64"><text x="0" y="{WM_BASELINE}" font-family="Space Grotesk" font-weight="700" font-size="{WM_SIZE}" letter-spacing="-0.5"><tspan>emenda</tspan><tspan>.pl</tspan></text></svg>"##
+        r##"<svg xmlns="http://www.w3.org/2000/svg" width="600" height="64"><text x="0" y="{WM_BASELINE}" font-family="Space Grotesk" font-weight="700" font-size="{WM_SIZE}" letter-spacing="-0.5"><tspan>emenda</tspan><tspan>.online</tspan></text></svg>"##
     );
     let out = outline(&src).expect("outline");
     let ds: Vec<String> = out
@@ -27,7 +27,7 @@ fn wordmark() -> Wordmark {
         .skip(1)
         .map(|s| s[..s.find('"').unwrap()].to_string())
         .collect();
-    assert_eq!(ds.len(), 2, "two runs: emenda + .pl");
+    assert_eq!(ds.len(), 2, "two runs: emenda + .online");
     let tree = usvg::Tree::from_str(&out, &usvg::Options::default()).unwrap();
     let bb = tree.root().abs_bounding_box();
     Wordmark {
@@ -94,20 +94,20 @@ fn main() {
     let full_w = (64.0 + WM_GAP + wm.width + 2.0).ceil();
     let logo = |emenda_fill: &str, pl_fill: &str| {
         format!(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {full_w} 64" role="img" aria-label="emenda.pl"><title>emenda.pl</title>{MARK_BODY}<g transform="translate({tx:.2} 0)"><path fill="{emenda_fill}" d="{e}"/><path fill="{pl_fill}" d="{p}"/></g></svg>"#,
+            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {full_w} 64" role="img" aria-label="emenda.online"><title>emenda.online</title>{MARK_BODY}<g transform="translate({tx:.2} 0)"><path fill="{emenda_fill}" d="{e}"/><path fill="{pl_fill}" d="{p}"/></g></svg>"#,
             e = wm.emenda,
             p = wm.pl
         )
     };
     let logo_light = logo(AZUL, VERDE);
     let mono = format!(
-        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {full_w} 64" role="img" aria-label="emenda.pl"><title>emenda.pl</title><g fill="currentColor"><path fill-rule="evenodd" d="{MARK_MONO_D}"/><g transform="translate({tx:.2} 0)"><path d="{e}"/><path d="{p}"/></g></g></svg>"#,
+        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {full_w} 64" role="img" aria-label="emenda.online"><title>emenda.online</title><g fill="currentColor"><path fill-rule="evenodd" d="{MARK_MONO_D}"/><g transform="translate({tx:.2} 0)"><path d="{e}"/><path d="{p}"/></g></g></svg>"#,
         e = wm.emenda,
         p = wm.pl
     );
     let wm_w = (wm.width + 4.0).ceil();
     let wordmark_dark = format!(
-        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {wm_w} 64" role="img" aria-label="emenda.pl"><title>emenda.pl</title><g transform="translate({:.2} 0)"><path fill="{BRANCO}" d="{}"/><path fill="{VERDE_DARK_BG}" d="{}"/></g></svg>"#,
+        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {wm_w} 64" role="img" aria-label="emenda.online"><title>emenda.online</title><g transform="translate({:.2} 0)"><path fill="{BRANCO}" d="{}"/><path fill="{VERDE_DARK_BG}" d="{}"/></g></svg>"#,
         2.0 - wm.x0,
         wm.emenda,
         wm.pl

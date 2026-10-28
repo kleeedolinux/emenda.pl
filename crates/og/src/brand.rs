@@ -1,4 +1,4 @@
-//! Brand palette and the emenda.pl mark (single source for OG + brand assets).
+//! Brand palette and the emenda.online mark (single source for OG + brand assets).
 
 pub const VERDE: &str = "#009c3b";
 pub const AMARELO: &str = "#ffdf00";

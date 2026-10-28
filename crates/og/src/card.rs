@@ -233,7 +233,7 @@ pub fn render(card: &OgCard) -> String {
         34.0,
         VERDE_LIGHT,
         "",
-        ".pl",
+        ".online",
     ));
 
     if let Some(badge) = card
@@ -390,9 +390,9 @@ pub fn render(card: &OgCard) -> String {
         19.0,
         INK,
         "",
-        "emenda.pl",
+        "emenda.online",
     ));
-    let sig_x = PAD + width("emenda.pl ", Font::SemiBold, 19.0);
+    let sig_x = PAD + width("emenda.online ", Font::SemiBold, 19.0);
     s.push_str(&text(
         sig_x,
         FOOTER_BASE,

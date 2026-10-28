@@ -1,4 +1,4 @@
-//! Open Graph cards for emenda.pl (1200x630). Pure Rust; native and wasm32.
+//! Open Graph cards for emenda.online (1200x630). Pure Rust; native and wasm32.
 //!
 //! Fonts are embedded (Inter + Space Grotesk subsets, OFL); no system fonts,
 //! no threads, no I/O.
