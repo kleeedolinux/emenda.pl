@@ -437,3 +437,23 @@ fn inject_accepts_start_marker_with_trailing_note() {
     let out = emenda_worker::meta::inject(html, "NEW").expect("markers found");
     assert_eq!(out, "<head>\nNEW\n</head>");
 }
+
+#[test]
+fn upstream_status_disposition() {
+    use emenda_worker::route::{upstream_disposition, Disposition};
+    let cases = [
+        (Upstream::Camara, 200, Disposition::Ok),
+        (Upstream::Camara, 400, Disposition::PassThrough(400)),
+        (Upstream::Camara, 404, Disposition::PassThrough(404)),
+        (Upstream::Senado, 429, Disposition::PassThrough(429)),
+        (Upstream::Ibge, 422, Disposition::PassThrough(422)),
+        (Upstream::Data, 404, Disposition::NotFound),
+        (Upstream::Data, 403, Disposition::PassThrough(403)),
+        (Upstream::Camara, 500, Disposition::BadGateway),
+        (Upstream::Camara, 503, Disposition::BadGateway),
+        (Upstream::Camara, 301, Disposition::BadGateway),
+    ];
+    for (up, status, want) in cases {
+        assert_eq!(upstream_disposition(up, status), want, "{up:?} {status}");
+    }
+}

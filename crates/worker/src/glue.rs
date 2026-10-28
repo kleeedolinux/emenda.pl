@@ -2,7 +2,7 @@
 use crate::analytics::{self, Recent};
 use crate::cards::{self, CardSpec, Kind};
 use crate::meta;
-use crate::route::{self, CacheClass, DataSource, Route, Target, Upstream};
+use crate::route::{self, CacheClass, DataSource, Disposition, Route, Target, Upstream};
 use serde_json::{json, Value};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -34,6 +34,18 @@ impl Out {
 async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let url = req.url()?;
     let method = req.method().to_string();
+    let host = match (url.host_str(), url.port()) {
+        (Some(h), Some(p)) => format!("{h}:{p}"),
+        (h, _) => h.unwrap_or("localhost").to_string(),
+    };
+    match crate::api::scope(&host, url.path()) {
+        crate::api::Scope::Site => {}
+        sc => {
+            let mut resp = crate::glue_api::handle(&req, &env, &url, &host, sc).await?;
+            security_headers(&mut resp)?;
+            return Ok(resp);
+        }
+    }
     let r = route::route(&method, url.path(), url.query());
     let cors = matches!(
         r,
@@ -65,18 +77,12 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         _ => {
             let class = route::cache_class(&r).unwrap_or(CacheClass::CamaraList);
             let key = route::cache_key(url.as_str());
-            let host = match (url.host_str(), url.port()) {
-                (Some(h), Some(p)) => format!("{h}:{p}"),
-                (h, _) => h.unwrap_or("localhost").to_string(),
-            };
             let origin = route::public_origin(url.scheme(), &host);
             cached(&key, class, || produce(&r, &env, &origin, url.path())).await?
         }
     };
+    security_headers(&mut resp)?;
     let h = resp.headers_mut();
-    for (k, v) in route::SECURITY_HEADERS {
-        h.set(k, v)?;
-    }
     if cors {
         h.set("Access-Control-Allow-Origin", "*")?;
         h.set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")?;
@@ -84,6 +90,14 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         h.set("Access-Control-Max-Age", "86400")?;
     }
     Ok(resp)
+}
+
+fn security_headers(resp: &mut Response) -> Result<()> {
+    let h = resp.headers_mut();
+    for (k, v) in route::SECURITY_HEADERS {
+        h.set(k, v)?;
+    }
+    Ok(())
 }
 
 fn respond(o: Out) -> Result<Response> {
@@ -140,7 +154,7 @@ async fn produce(r: &Route, env: &Env, origin: &str, path: &str) -> Out {
     }
 }
 
-fn data_base(env: &Env) -> DataSource {
+pub(crate) fn data_base(env: &Env) -> DataSource {
     let v = env
         .var("DATA_BASE_URL")
         .map(|v| v.to_string())
@@ -148,7 +162,7 @@ fn data_base(env: &Env) -> DataSource {
     route::data_source(&v)
 }
 
-async fn get(url: &str, accept: &str) -> Result<Response> {
+pub(crate) async fn get(url: &str, accept: &str) -> Result<Response> {
     let headers = Headers::new();
     headers.set("Accept", accept)?;
     headers.set("User-Agent", UA)?;
@@ -175,9 +189,14 @@ async fn proxy(env: &Env, up: Upstream, rest: &str, query: Option<&str>) -> Out 
             .await
         }
     };
-    match res {
-        Ok(mut r) if r.status_code() == 200 => {
-            let up_ct = r.headers().get("Content-Type").ok().flatten();
+    let mut r = match res {
+        Ok(r) => r,
+        Err(_) => return Out::error(502, "upstream unreachable"),
+    };
+    let status = r.status_code();
+    let up_ct = r.headers().get("Content-Type").ok().flatten();
+    match route::upstream_disposition(up, status) {
+        Disposition::Ok => {
             let ctype = route::content_type(up, rest, up_ct.as_deref());
             if up == Upstream::Data && up_ct.as_deref().is_some_and(|c| c.starts_with("text/html"))
             {
@@ -193,13 +212,20 @@ async fn proxy(env: &Env, up: Upstream, rest: &str, query: Option<&str>) -> Out 
                 Err(_) => Out::error(502, "upstream read failed"),
             }
         }
-        Ok(r) if up == Upstream::Data && r.status_code() == 404 => Out::error(404, "not found"),
-        Ok(r) => Out::error(502, &format!("upstream status {}", r.status_code())),
-        Err(_) => Out::error(502, "upstream unreachable"),
+        Disposition::PassThrough(s) => match r.bytes().await {
+            Ok(body) if !body.is_empty() => Out {
+                status: s,
+                ctype: route::content_type(up, rest, up_ct.as_deref()),
+                body,
+            },
+            _ => Out::error(s, &format!("upstream status {s}")),
+        },
+        Disposition::NotFound => Out::error(404, "not found"),
+        Disposition::BadGateway => Out::error(502, &format!("upstream status {status}")),
     }
 }
 
-async fn from_assets(env: &Env, path: &str) -> Result<Response> {
+pub(crate) async fn from_assets(env: &Env, path: &str) -> Result<Response> {
     env.assets("ASSETS")?
         .fetch(format!("{ASSET_HOST}{path}"), None)
         .await
@@ -241,8 +267,9 @@ async fn camara(path: &str) -> Option<Value> {
     .await
 }
 
-async fn data(env: &Env, rest: &str) -> Option<Value> {
-    let r = match data_base(env) {
+/// ETL file (`rest` relative to the data base) from ASSETS or `DATA_BASE_URL`.
+pub(crate) async fn data_fetch(env: &Env, rest: &str) -> Result<Response> {
+    match data_base(env) {
         DataSource::Assets => from_assets(env, &format!("/data/{rest}")).await,
         DataSource::Remote(b) => {
             get(
@@ -251,8 +278,11 @@ async fn data(env: &Env, rest: &str) -> Option<Value> {
             )
             .await
         }
-    };
-    json_of(r).await
+    }
+}
+
+async fn data(env: &Env, rest: &str) -> Option<Value> {
+    json_of(data_fetch(env, rest).await).await
 }
 
 async fn card_for(env: &Env, t: &Target) -> Option<CardSpec> {

@@ -289,3 +289,25 @@ pub fn content_type(up: Upstream, rest: &str, upstream: Option<&str>) -> String 
     }
     upstream.filter(|c| !c.is_empty()).unwrap_or(JSON).into()
 }
+
+/// What to do with an upstream status.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Disposition {
+    /// 200: serve and cache.
+    Ok,
+    /// 4xx: forward status and upstream body, never cached.
+    PassThrough(u16),
+    /// Data 404: JSON `{error:"not found"}` (raw hosts answer 404 in plain text).
+    NotFound,
+    /// 5xx, redirects, anything else: 502.
+    BadGateway,
+}
+
+pub fn upstream_disposition(up: Upstream, status: u16) -> Disposition {
+    match status {
+        200 => Disposition::Ok,
+        404 if up == Upstream::Data => Disposition::NotFound,
+        400..=499 => Disposition::PassThrough(status),
+        _ => Disposition::BadGateway,
+    }
+}

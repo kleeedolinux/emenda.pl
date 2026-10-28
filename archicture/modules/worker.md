@@ -3,9 +3,10 @@
 Cloudflare Worker in Rust (workers-rs, `worker-build`). Config: `apps/worker/wrangler.toml`.
 The package is `emenda-worker` because `-p worker` would be ambiguous with the `worker` SDK crate.
 
-Pure modules, tested natively with `cargo test -p emenda-worker`: `route` (routing, URL map, TTL, cache key, headers),
+Pure modules, tested natively with `cargo test -p emenda-worker`: `route` (routing, URL map, TTL, cache key, headers, upstream status),
+`api` (public API routing/canonical key/envelope/ETag/limits), `api::map` (upstream -> API shapes),
 `meta` (HTML escaping and og block injection), `money` (centavos -> "R$ 32,4 mi"), `cards` (OG content), `analytics`.
-The wasm glue is in `src/glue.rs` (`cfg(target_arch = "wasm32")`).
+The wasm glue is in `src/glue.rs` and `src/glue_api.rs` (`cfg(target_arch = "wasm32")`).
 
 ## Routes (GET/HEAD; OPTIONS -> CORS 204; other methods -> 405)
 
@@ -26,7 +27,7 @@ The wasm glue is in `src/glue.rs` (`cfg(target_arch = "wasm32")`).
 
 Cache-Control: `public, max-age=min(ttl,3600), s-maxage=ttl, stale-while-revalidate=86400`.
 The Cache API key is the URL with its query sorted. Only 200s are cached. Header: `x-emenda-cache: HIT|MISS`.
-Upstream non-200 -> 502 `{error}`. Path segments must match `[A-Za-z0-9._,-]`, with no `..` and no empty segment. Query length <= 512.
+Upstream 4xx -> same status + upstream body, not cached (data 404 -> `{error}` 404). 5xx/redirect/unreachable -> 502 `{error}`. Path segments must match `[A-Za-z0-9._,-]`, with no `..` and no empty segment. Query length <= 512.
 
 ## Analytics (audiência pública/anônima)
 
@@ -35,3 +36,28 @@ Upstream non-200 -> 502 `{error}`. Path segments must match `[A-Za-z0-9._,-]`, w
   (the previous day is deleted on rollover), `counts {day: distinct}` (kept 400 days) and `total`. Online = in-memory map, 5 min window.
 - `hoje` = today's distinct visitors. `semana`/`mes` = sum of daily distinct visitors (the daily salt prevents linking across days).
   `total` = number of cookies issued. No IPs or raw ids are stored.
+
+## Public API `/v1` (`src/api`, `src/glue_api.rs`)
+
+Scope: host `api.*` -> API (`/` = index; non-`/v1` -> 404 JSON); any host -> `/v1*`. Hosts: `emenda.online` site, `api.emenda.online` API (custom domains in `wrangler.toml`).
+GET/HEAD; OPTIONS 204; others 405. Body `{data, meta:{fonte[], atualizado, licenca, docs}}`; errors `{error, status, docs}`. CORS `*`.
+
+| Path | Source | Edge TTL |
+|---|---|---|
+| `/v1` | static index | 24h |
+| `/v1/meta`, `/v1/pix[/{ano}]`, `/v1/feed[/{YYYYMM}]`, `/v1/abertas` | data `v1/<name>.json` (raw, wrapped) | 6h |
+| `/v1/brasil`, `/v1/ufs/{UF}`, `/v1/municipios/{ibge}`, `/v1/autores/{codigo}` | data `v1/{brasil,uf,municipio,autor}` | 12h |
+| `/v1/ufs` | `brasil.json` `porUf` | 12h |
+| `/v1/autores?q&limit&offset` | `autores.json` filtered (q: código or name key) | 12h |
+| `/v1/deputados[/{id}]` | Câmara + `autores.json` by `chave_nome` | 12h |
+| `/v1/senadores[/{codigo}]` | Senado + `autores.json` by `chave_nome` | 12h |
+| `/v1/proposicoes/{id}` | Câmara proposição + autores | 1h |
+| `/v1/votacoes/{id}` | Câmara votação + votos + orientações | 1h |
+
+- Cache key: request origin + `Endpoint::canonical()` (unknown params dropped, known sorted, `q` normalized).
+- Cache-Control: `public, max-age=min(ttl,300), s-maxage=ttl, stale-while-revalidate=86400, stale-if-error=86400`. Upstream 404 cached 5 min; 5xx `no-store`.
+- ETag: SHA-256[..16] of body; `If-None-Match` -> 304.
+- Order: parse (400/404, no upstream) -> cache -> `API_RL` (300/60s per `CF-Connecting-IP`, hits too) -> on miss `API_RL_MISS` (60/10s) -> upstream.
+- 429: `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining: 0`. Binding missing -> fail open.
+- Caps: query <= 512, `q` <= 64 chars, `limit` 1..=500 (default 50), `offset` <= 10000.
+- Docs page: `apps/web/src/pages/ApiDocsPage.tsx` (`/api`).
