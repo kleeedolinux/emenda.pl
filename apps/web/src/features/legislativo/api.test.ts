@@ -75,7 +75,7 @@ describe("filtros de proposições (URL <-> API)", () => {
   test("padrão: desde 2022, ordenado por id desc", () => {
     const f = parseFiltrosProposicoes(new URLSearchParams(""));
     expect(f).toMatchObject({ tipos: [], ano: "", desde: "2022-01-01", ordem: "DESC", ordenarPor: "id", pagina: 1 });
-    expect(filtrosToApi(f, 50)).toBe("/proposicoes?dataApresentacaoInicio=2022-01-01&ordem=DESC&ordenarPor=id&pagina=1&itens=50");
+    expect(filtrosToApi(f, 50, 2023)).toBe("/proposicoes?ano=2022&ano=2023&ordem=DESC&ordenarPor=id&pagina=1&itens=50");
   });
   test("ida e volta com tipos, ano, palavras-chave, autor, tema", () => {
     const sp = new URLSearchParams("tipo=PL,PEC&ano=2023&q=saúde&autor=Tabata&tema=40&numero=12&pagina=3&ordenarPor=ano&ordem=ASC");
@@ -83,7 +83,7 @@ describe("filtros de proposições (URL <-> API)", () => {
     expect(f.tipos).toEqual(["PL", "PEC"]);
     expect(filtrosToSearch(f).toString()).toBe(new URLSearchParams("tipo=PL,PEC&ano=2023&q=saúde&autor=Tabata&tema=40&numero=12&ordenarPor=ano&ordem=ASC&pagina=3").toString());
     expect(filtrosToApi(f, 20)).toBe(
-      "/proposicoes?siglaTipo=PL%2CPEC&numero=12&ano=2023&keywords=sa%C3%BAde&autor=Tabata&codTema=40&ordem=ASC&ordenarPor=ano&pagina=3&itens=20",
+      "/proposicoes?siglaTipo=PL%2CPEC&numero=12&keywords=sa%C3%BAde&autor=Tabata&codTema=40&ano=2023&ordem=ASC&ordenarPor=ano&pagina=3&itens=20",
     );
   });
   test("ordenarPor inválido cai no padrão", () => expect(parseFiltrosProposicoes(new URLSearchParams("ordenarPor=xx")).ordenarPor).toBe("id"));
@@ -133,4 +133,33 @@ test("paths e fontes apontam para o upstream real", () => {
   expect(fontes.materiaSenado(158930)[0]!.href).toBe("https://www25.senado.leg.br/web/atividade/materias/-/materia/158930");
   expect(fontes.camaraApi("/deputados?a=1")).toBe("https://dadosabertos.camara.leg.br/api/v2/deputados?a=1");
   expect(fontes.senadoApi("/senador/70")).toBe("https://legis.senado.leg.br/dadosabertos/senador/70");
+});
+
+describe("proposições: a Câmara recusa intervalos de datas > 3 meses", () => {
+  const span = (path: string) => {
+    const u = new URLSearchParams(path.split("?")[1] ?? "");
+    const ini = u.get("dataApresentacaoInicio");
+    const fim = u.get("dataApresentacaoFim");
+    if (!ini && !fim) return 0;
+    const a = Date.parse(ini ?? "1900-01-01");
+    const b = fim ? Date.parse(fim) : Date.now();
+    return (b - a) / 86_400_000;
+  };
+  const casos: Array<[string, string]> = [
+    ["autor por mandato", cam.proposicoesAutor(204554, 1, "2019-02-01", "2023-01-31")],
+    ["autor sem período", cam.proposicoesAutor(204554)],
+    ["contagem do autor", cam.proposicoesAutor(204554, 1, "2023-02-01", "2027-01-31", 1)],
+    ["busca padrão", filtrosToApi(parseFiltrosProposicoes(new URLSearchParams()), 50, 2026)],
+    ["busca desde", filtrosToApi(parseFiltrosProposicoes(new URLSearchParams("desde=2024-05-10")), 50, 2026)],
+  ];
+  test.each(casos)("%s não emite intervalo > 92 dias", (_, p) => expect(span(p)).toBeLessThanOrEqual(92));
+  test("mandato vira lista de anos", () =>
+    expect(cam.proposicoesAutor(204554, 2, "2019-02-01", "2023-01-31", 50, 2026)).toBe(
+      "/proposicoes?idDeputadoAutor=204554&ano=2019&ano=2020&ano=2021&ano=2022&ano=2023&ordem=DESC&ordenarPor=id&pagina=2&itens=50"));
+  test("anos não passam do ano corrente", () =>
+    expect(cam.proposicoesAutor(1, 1, "2023-02-01", "2027-01-31", 1, 2025)).toBe(
+      "/proposicoes?idDeputadoAutor=1&ano=2023&ano=2024&ano=2025&ordem=DESC&ordenarPor=id&pagina=1&itens=1"));
+  test("busca padrão usa anos desde DESDE_PADRAO", () =>
+    expect(filtrosToApi(parseFiltrosProposicoes(new URLSearchParams()), 50, 2024)).toBe(
+      "/proposicoes?ano=2022&ano=2023&ano=2024&ordem=DESC&ordenarPor=id&pagina=1&itens=50"));
 });

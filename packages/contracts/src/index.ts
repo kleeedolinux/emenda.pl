@@ -12,6 +12,12 @@ export const dataPath = {
   uf: (uf: string) => `/data/${DATA_VERSION}/uf/${uf.toUpperCase()}.json`,
   municipio: (ibge: string | number) => `/data/${DATA_VERSION}/municipio/${ibge}.json`,
   autor: (codigo: string) => `/data/${DATA_VERSION}/autor/${codigo}.json`,
+  pix: () => `/data/${DATA_VERSION}/pix.json`,
+  pixAno: (ano: number) => `/data/${DATA_VERSION}/pix/${ano}.json`,
+  feed: () => `/data/${DATA_VERSION}/feed.json`,
+  feedMes: (mes: number) => `/data/${DATA_VERSION}/feed/${mes}.json`,
+  abertas: () => `/data/${DATA_VERSION}/abertas.json`,
+  rankings: () => `/data/${DATA_VERSION}/rankings.json`,
 } as const;
 
 /** Tipos de emenda normalizados a partir de "Tipo de Emenda" do Portal da Transparência. */
@@ -151,6 +157,122 @@ export interface Autor {
   emendas: EmendaItem[];
   /** top 100 favorecidos por valor recebido */
   favorecidos?: Favorecido[];
+}
+
+// ---------- Emenda Pix (Transferências Especiais) ----------
+
+export interface Pix {
+  totais: Totais;
+  /** anos com arquivo pix/<ano>.json */
+  anos: number[];
+  porAno: Array<{ ano: number } & Totais>;
+  /** UF de destino */
+  porUf: Array<{ uf: string; nome: string } & Totais>;
+  /** top 100 municípios de destino */
+  municipios: Array<{ ibge: string; nome: string; uf: string } & Totais>;
+  /** top 100 autores */
+  autores: AutorResumo[];
+}
+
+export interface PixItem {
+  codigo: string;
+  numero: string;
+  autor: { codigo: string; nome: string };
+  localidade: string;
+  ibge: string | null;
+  uf: string | null;
+  funcao: string;
+  empenhado: number;
+  pago: number;
+  rapPago: number;
+}
+
+export interface PixAno {
+  ano: number;
+  totais: Totais;
+  itens: PixItem[];
+}
+
+// ---------- Últimas emendas (pagamentos por mês) ----------
+
+/** Pagamento a um favorecido (PorFavorecido.csv), consolidado por emenda+favorecido+mês. */
+export interface Pagamento {
+  /** YYYYMM */
+  mes: number;
+  codigoEmenda: string;
+  autor: { codigo: string; nome: string };
+  tipo: TipoEmenda;
+  favorecido: { nome: string; documento: string; tipo: string };
+  municipio: { ibge: string | null; nome: string; uf: string };
+  /** centavos */
+  valor: number;
+}
+
+export interface MesResumo { mes: number; n: number; valor: number }
+
+export interface Feed {
+  ultimoMes: number;
+  /** meses com arquivo feed/<YYYYMM>.json, do mais recente ao mais antigo (até 24) */
+  meses: MesResumo[];
+  /** últimos 6 meses, até 500 maiores por mês */
+  itens: Pagamento[];
+}
+
+export interface FeedMes extends MesResumo {
+  /** true quando o mês tem mais itens do que o arquivo comporta (6000 maiores) */
+  truncado: boolean;
+  itens: Pagamento[];
+}
+
+// ---------- O que está aberto (empenhado e ainda não pago) ----------
+
+export interface SaldoAberto { n: number; aberto: number }
+
+export interface ItemAberto {
+  codigo: string;
+  numero: string;
+  ano: number;
+  tipo: TipoEmenda;
+  autor: { codigo: string; nome: string };
+  localidade: string;
+  ibge: string | null;
+  uf: string | null;
+  funcao: string;
+  empenhado: number;
+  pago: number;
+  rapPago: number;
+  /** empenhado − pago − restos a pagar pagos − restos a pagar cancelados (≥ 0) */
+  aberto: number;
+}
+
+export interface Abertas {
+  totais: { n: number; empenhado: number; pago: number; rapPago: number; rapCancelado: number; aberto: number };
+  porTipo: Array<{ tipo: TipoEmenda } & SaldoAberto>;
+  porAno: Array<{ ano: number } & SaldoAberto>;
+  porUf: Array<{ uf: string; nome: string } & SaldoAberto>;
+  /** 300 maiores saldos */
+  top: ItemAberto[];
+}
+
+// ---------- Rankings por janela recente ----------
+
+export type JanelaRanking = "1m" | "3m" | "6m" | "12m";
+export interface RankingValor { valor: number; pagamentos: number }
+export interface RankingJanela extends RankingValor {
+  janela: JanelaRanking;
+  /** YYYYMM inclusivo */
+  desde: number;
+  ate: number;
+  tipos: Array<{ tipo: TipoEmenda } & RankingValor>;
+  /** top 100 */
+  autores: Array<{ codigo: string; nome: string; chave: string } & RankingValor>;
+  ufs: Array<{ uf: string; nome: string } & RankingValor>;
+  /** top 100 */
+  municipios: Array<{ ibge: string; nome: string; uf: string } & RankingValor>;
+}
+export interface Rankings {
+  ultimoMes: number;
+  janelas: RankingJanela[];
 }
 
 // ---------- funções puras compartilhadas ----------

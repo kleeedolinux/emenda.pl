@@ -8,6 +8,7 @@ import { cam, dedupeDeputados, encontrarAutor, fontes, mapSenadores, sen, type D
 import { useAutores, useCamaraTodas, useSenado } from "@/features/legislativo/hooks";
 import { normPartido } from "@/features/legislativo/votacao";
 import { Fontes, Parlamentar } from "@/features/legislativo/components";
+import { ShareButton } from "@/features/share";
 
 type Membro = DeputadoLista & { pago?: number; codigoAutor?: string };
 
@@ -60,6 +61,7 @@ export default function PartidoPage() {
         subtitle={d ? <>Sigla <PartyBadge sigla={d.sigla} link={false} /> · situação {d.status.situacao.toLowerCase()} · dados de {formatDate(d.status.data)}</> : undefined}
         media={<Avatar src={d?.urlLogo} name={sigla} size="lg" />}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Partidos", to: "/partidos" }, { label: sigla }]}
+        actions={<ShareButton fab kind="partido" title={d?.nome ? `${d.nome} (${sigla})` : sigla} url={`/partido/${sigla}`} ogId={sigla} metric={autores.data ? { value: totalPago, format: "brl", label: "em emendas pagas" } : undefined} />}
       />
       <StatGrid className="mb-6">
         <Stat label="Deputados (membros)" value={membros.data ? formatNumber(ms.length) : "…"} hint={d ? `${d.status.totalPosse} tomaram posse na legislatura` : undefined} tip="Membros atuais segundo a Câmara." />

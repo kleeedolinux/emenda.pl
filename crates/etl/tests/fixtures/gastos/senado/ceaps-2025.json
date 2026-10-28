@@ -1,0 +1,4 @@
+[
+{"id":1,"tipoDocumento":"Nota Fiscal Eletrônica","ano":2025,"mes":2,"codSenador":5672,"nomeSenador":"ALAN RICK","tipoDespesa":"Locomoção, hospedagem, alimentação, combustíveis e lubrificantes","cpfCnpj":"06.906.483/0001-74","fornecedor":"POSTO VILLAGE LTDA","documento":"73594","data":"2025-03-06","detalhamento":null,"valorReembolsado":5130.07},
+{"id":2,"tipoDocumento":"Recibo","ano":2025,"mes":7,"codSenador":5672,"nomeSenador":"ALAN RICK","tipoDespesa":"Aluguel de imóveis para escritório político, compreendendo despesas concernentes a eles.","cpfCnpj":"123.456.789-01","fornecedor":"JOSE LOCADOR","documento":"7","data":"2025-07-05","detalhamento":"Aluguel julho","valorReembolsado":3000}
+]

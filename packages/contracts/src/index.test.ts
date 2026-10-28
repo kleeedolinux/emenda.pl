@@ -30,3 +30,12 @@ test("dataPath é estável (contrato de URL)", () => {
   expect(dataPath.municipio(2914406)).toBe("/data/v1/municipio/2914406.json");
   expect(dataPath.uf("ba")).toBe("/data/v1/uf/BA.json");
 });
+
+test("dataPath das saídas novas (pix, feed, abertas, rankings)", () => {
+  expect(dataPath.pix()).toBe("/data/v1/pix.json");
+  expect(dataPath.pixAno(2024)).toBe("/data/v1/pix/2024.json");
+  expect(dataPath.feed()).toBe("/data/v1/feed.json");
+  expect(dataPath.feedMes(202610)).toBe("/data/v1/feed/202610.json");
+  expect(dataPath.abertas()).toBe("/data/v1/abertas.json");
+  expect(dataPath.rankings()).toBe("/data/v1/rankings.json");
+});

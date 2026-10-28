@@ -80,3 +80,28 @@ fn alias_tse_para_ibge() {
         chave_municipio("São Paulo", "SP")
     );
 }
+
+#[test]
+fn aritmetica_de_meses() {
+    for (m, n, o) in [
+        (202404, 0, 202404),
+        (202404, 3, 202401),
+        (202401, 1, 202312),
+        (202404, 5, 202311),
+        (202612, 23, 202501),
+    ] {
+        assert_eq!(mes_menos(m, n), o, "{m}-{n}");
+    }
+}
+
+#[test]
+fn saldo_aberto_nunca_negativo() {
+    for (emp, pago, rap, canc, o) in [
+        (1000, 400, 100, 0, 500),
+        (243750, 0, 243750, 0, 0),
+        (100, 0, 0, 100, 0),
+        (100, 200, 0, 0, 0),
+    ] {
+        assert_eq!(saldo_aberto(emp, pago, rap, canc), o);
+    }
+}

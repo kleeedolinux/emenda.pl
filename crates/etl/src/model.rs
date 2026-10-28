@@ -135,6 +135,9 @@ pub struct EmendaItem {
     pub liquidado: i64,
     pub pago: i64,
     pub rap_pago: i64,
+    /// interno: usado no saldo aberto (não serializado para manter o contrato)
+    #[serde(skip)]
+    pub rap_cancelado: i64,
 }
 
 #[derive(Serialize, Clone)]

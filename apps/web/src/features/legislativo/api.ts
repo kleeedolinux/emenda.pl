@@ -89,6 +89,14 @@ export interface LegislaturaApi { id: number; dataInicio: string; dataFim: strin
 export interface Tema { codTema: number; tema: string; relevancia: number }
 export interface Referencia { cod: string; sigla: string; nome: string; descricao: string }
 
+/** Anos (inclusivos) de `desde` até `ate` (ou o ano corrente), nunca além do ano corrente. */
+export function anosEntre(desde: string, ate?: string, anoAtual = new Date().getFullYear()): number[] {
+  const a = Number(desde.slice(0, 4));
+  const b = Math.min(ate ? Number(ate.slice(0, 4)) : anoAtual, anoAtual);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return [];
+  return Array.from({ length: Math.max(0, b - a + 1) }, (_, i) => a + i);
+}
+
 // ---------- Câmara: paths ----------
 export const cam = {
   deputados: (p: { idLegislatura?: number | number[]; pagina?: number; itens?: number; siglaUf?: string; siglaPartido?: string; nome?: string; id?: number[] } = {}) =>
@@ -100,8 +108,9 @@ export const cam = {
   historico: (id: number | string) => `/deputados/${id}/historico`,
   profissoes: (id: number | string) => `/deputados/${id}/profissoes`,
   ocupacoes: (id: number | string) => `/deputados/${id}/ocupacoes`,
-  proposicoesAutor: (id: number | string, pagina = 1, desde?: string, ate?: string) =>
-    qs("/proposicoes", { idDeputadoAutor: id, dataApresentacaoInicio: desde, dataApresentacaoFim: ate, ordem: "DESC", ordenarPor: "id", pagina, itens: 50 }),
+  /** Período vira lista de `ano` (a API recusa intervalos de datas > 3 meses). */
+  proposicoesAutor: (id: number | string, pagina = 1, desde?: string, ate?: string, itens = 50, anoAtual = new Date().getFullYear()) =>
+    qs("/proposicoes", { idDeputadoAutor: id, ano: desde ? anosEntre(desde, ate, anoAtual) : undefined, ordem: "DESC", ordenarPor: "id", pagina, itens }),
   proposicao: (id: number | string) => `/proposicoes/${id}`,
   autores: (id: number | string) => `/proposicoes/${id}/autores`,
   tramitacoes: (id: number | string) => `/proposicoes/${id}/tramitacoes`,
@@ -264,11 +273,14 @@ export function filtrosToSearch(f: FiltrosProposicoes): URLSearchParams {
   return s;
 }
 
-/** Sem ano/número a API só devolve os últimos 30 dias; por isso usamos `dataApresentacaoInicio`. */
-export function filtrosToApi(f: FiltrosProposicoes, itens = 50): string {
+/**
+ * Sem ano/número a API só devolve os últimos 30 dias, e recusa intervalos de datas > 3 meses;
+ * por isso `desde` vira a lista de anos até o corrente.
+ */
+export function filtrosToApi(f: FiltrosProposicoes, itens = 50, anoAtual = new Date().getFullYear()): string {
   return qs("/proposicoes", {
-    siglaTipo: f.tipos.join(","), numero: f.numero, ano: f.ano, keywords: f.q, autor: f.autor, codTema: f.tema,
-    dataApresentacaoInicio: f.ano || f.numero ? undefined : f.desde,
+    siglaTipo: f.tipos.join(","), numero: f.numero, keywords: f.q, autor: f.autor, codTema: f.tema,
+    ano: f.ano || (f.numero ? undefined : anosEntre(f.desde, undefined, anoAtual)),
     ordem: f.ordem, ordenarPor: f.ordenarPor, pagina: f.pagina, itens,
   });
 }

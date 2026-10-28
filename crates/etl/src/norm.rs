@@ -161,3 +161,15 @@ pub fn uf_nome(sigla: &str) -> Option<&'static str> {
 pub fn uf_sigla_valida(sigla: &str) -> Option<&'static str> {
     UFS.iter().find(|u| u.1 == sigla.trim()).map(|u| u.1)
 }
+
+/// YYYYMM menos `n` meses.
+pub fn mes_menos(mes: u32, n: u32) -> u32 {
+    let idx = (mes / 100) * 12 + (mes % 100 - 1);
+    let r = idx.saturating_sub(n);
+    (r / 12) * 100 + r % 12 + 1
+}
+
+/// Empenhado que ainda não foi pago nem cancelado (restos a pagar inclusos), nunca negativo.
+pub fn saldo_aberto(empenhado: i64, pago: i64, rap_pago: i64, rap_cancelado: i64) -> i64 {
+    (empenhado - pago - rap_pago - rap_cancelado).max(0)
+}

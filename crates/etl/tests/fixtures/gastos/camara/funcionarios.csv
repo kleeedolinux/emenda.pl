@@ -1,0 +1,6 @@
+"ponto";"codGrupo";"grupo";"nome";"cargo";"lotacao";"atoNomeacao";"dataNomeacao";"dataInicioHistorico";"dataPubNomeacao";"funcao";"uriLotacao"
+"P_1";"6";"Secretário Parlamentar";"MARIA DA SILVA";"SP18C";"GAB. 4/100 - ACÁCIO FAVACHO";"PORTARIA";"2026-02-18";"2019-03-11";"2026-02-18";"";"https://dadosabertos.camara.leg.br/api/v2/deputados/204379"
+"P_2";"5";"Cargo de Natureza Especial";"JOAO SOUZA";"CNE12";"GAB. 4/100 - ACÁCIO FAVACHO";"PORTARIA";"";"2025-07-09";"";"";"https://dadosabertos.camara.leg.br/api/v2/deputados/204379"
+"P_3";"6";"Secretário Parlamentar";"OUTRA PESSOA";"SP01C";"GAB. 4/200 - ADAIL FILHO";"PORTARIA";"2026-01-02";"2026-01-02";"2026-01-02";"";"https://dadosabertos.camara.leg.br/api/v2/deputados/220714"
+"P_4";"1";"Quadro Efetivo - RJU";"SERVIDOR";"Analista";"DETEC";"";"";"1996-11-07";"";"";"https://dadosabertos.camara.leg.br/api/v2/orgaos/100046"
+"P_0";"0";"Parlamentar";"ACÁCIO DA SILVA FAVACHO NETO";"";"GAB. 4/100 - ACÁCIO FAVACHO";"";"";"2023-02-01";"";"";"https://dadosabertos.camara.leg.br/api/v2/deputados/204379"

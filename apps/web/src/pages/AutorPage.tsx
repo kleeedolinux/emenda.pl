@@ -8,6 +8,7 @@ import { TotaisGrid } from "@/features/emendas/Totais";
 import { useApi, useCamara } from "@/lib/data";
 import { formatBRL } from "@/lib/format";
 import { Avatar, NextSteps, Bars, ButtonLink, Card, Donut, ErrorState, LineArea, PageHeader, PartyBadge, Section, Skeleton, Tabs, Term } from "@/ui";
+import { ShareButton } from "@/features/share";
 
 type AutorExt = Autor & { favorecidos?: FavorecidoExt[] };
 interface DepResumo { id: number; nome: string; siglaPartido: string; siglaUf: string; urlFoto: string }
@@ -41,10 +42,11 @@ export default function AutorPage() {
         media={<Avatar src={match?.urlFoto} name={d.nome} size="lg" />}
         actions={match ? (
           <>
+            <ShareButton fab kind="autor" title={d.nome} url={`/autor/${d.codigo}`} ogId={d.codigo} metric={{ value: d.totais.pago, format: "brl", label: "pagas" }} bars={[...d.porUf].sort((a, b) => b.pago - a.pago).slice(0, 5).map((x) => ({ label: x.uf, value: x.pago }))} />
             <PartyBadge sigla={match.siglaPartido} />
             <ButtonLink to={`/deputado/${match.id}`} primary>Perfil na Câmara</ButtonLink>
           </>
-        ) : null}
+        ) : <ShareButton fab kind="autor" title={d.nome} url={`/autor/${d.codigo}`} ogId={d.codigo} metric={{ value: d.totais.pago, format: "brl", label: "pagas" }} />}
       />
       {kind !== "pessoa" && (
         <p className="mb-6 flex items-start gap-2 rounded-2xl border border-line bg-surface-2 p-4 text-sm">

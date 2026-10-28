@@ -11,6 +11,14 @@ import { dentro, hojeISO, periodosSenado, type MandatoSenadoRaw, type Periodo } 
 import { ChipsMandato, Fontes, PainelMandatos, SeletorMandato, resumoMandatos } from "@/features/legislativo/components";
 import { EmendasAutor } from "@/features/legislativo/EmendasAutor";
 import { categoriaVoto } from "@/features/legislativo/votacao";
+import { ShareButton } from "@/features/share";
+import { HandCoins, Repeat, Vote, Wallet } from "lucide-react";
+import { useAutor } from "@/features/legislativo/hooks";
+import type { Mandato } from "@/features/legislativo/mandatos";
+import { contarSim, perfilEmendas, resumoSimples, trocasSenado } from "@/features/perfil/resumo";
+import { BlocoEmendas, ResumoSimplesCard, SecaoLeiga } from "@/features/perfil/CardsPerfil";
+import { CardPautas, pautasSenador } from "@/features/perfil/Pautas";
+import { CardTrocas } from "@/features/perfil/Trocas";
 
 type MandatoComPartidos = MandatoSenadoRaw & { Partidos?: { Partido?: unknown } };
 interface Filiacao { Sigla: string; Nome: string; DataFiliacao?: string; DataDesfiliacao?: string }
@@ -60,10 +68,18 @@ export default function SenadorPage() {
         actions={s && (
           <div className="flex flex-col items-end gap-2">
             <span className="flex items-center gap-2"><PartyBadge sigla={s.partido} /><Link className="link text-sm" to={`/uf/${s.uf}`}>{UFS[s.uf as SiglaUf] ?? s.uf}</Link></span>
+            <ShareButton fab kind="senador" title={nome} subtitle={`${s.partido}-${s.uf}`} url={`/senador/${cod}`} ogId={cod} metric={autor ? { value: autor.pago, format: "brl", label: "pagas" } : undefined} />
             {mandatos.length > 0 && <ChipsMandato {...resumo} />}
           </div>
         )}
       />
+
+      {s && (
+        <PerfilLeigoSenador cod={cod} s={s} mandatos={mandatos} autorCodigo={autor?.codigo} semAutor={!!autores.data && !autor} filiacoes={filiacoes} />
+      )}
+
+      <h2 className="mb-1 mt-10 text-xl font-bold">Modo repositório: todos os detalhes</h2>
+      <p className="mb-4 text-sm text-muted">Dados completos e tabelas para quem quer conferir cada registro.</p>
 
       {s && (
         <div className="mb-6 grid gap-4 lg:grid-cols-2">
@@ -100,6 +116,50 @@ export default function SenadorPage() {
           { id: "comissoes", label: "Comissões", content: <Comissoes cod={cod} janela={m ? janela : null} /> },
         ]} />
       )}
+    </>
+  );
+}
+
+/** Topo "para leigos" do senador. */
+function PerfilLeigoSenador({ cod, s, mandatos, autorCodigo, semAutor, filiacoes }: {
+  cod: string; s: SenadorDetalhe; mandatos: Mandato[]; autorCodigo?: string; semAutor: boolean; filiacoes: Filiacao[];
+}) {
+  const r = resumoMandatos(mandatos);
+  const desde = mandatos[0]?.inicio ?? null;
+  const hoje = hojeISO();
+  const fim = mandatos.length ? (mandatos[mandatos.length - 1]!.fim < hoje ? mandatos[mandatos.length - 1]!.fim : hoje) : hoje;
+  const autor = useAutor(autorCodigo);
+  const vot = useSenado<VotacaoSenado[]>(desde ? sen.votacoes(cod, desde, fim) : null);
+  const aut = useSenado<ProcessoSenado[]>(sen.autorias(cod));
+  const votos = useMemo(() => contarSim((vot.data ?? []).map((v) => v.votos?.[0]?.siglaVotoParlamentar)), [vot.data]);
+  const pautas = useMemo(() => pautasSenador(vot.data ?? []), [vot.data]);
+  const trocas = useMemo(() => trocasSenado(filiacoes), [filiacoes]);
+  const frases = resumoSimples({
+    nome: s.nome, sexo: s.sexo, cargo: "senador", partido: s.partido, uf: s.uf, desde, nMandatos: r.n, tempo: r.tempo, atual: r.atual,
+    emendas: autor.data ? perfilEmendas(autor.data.emendas) : semAutor ? { pago: 0, pctPix: 0, funcao: null, municipios: 0 } : null,
+    proposicoes: aut.data ? aut.data.length : null,
+    votos: vot.data ? { ...votos, fonte: "nominais" } : null,
+  });
+  return (
+    <>
+      <ResumoSimplesCard frases={frases} carregando={(autor.isPending && !!autorCodigo) || vot.isPending} />
+      <SecaoLeiga id="dinheiro" icon={<HandCoins className="size-5" aria-hidden />} titulo="Dinheiro que indicou (emendas)"
+        significa="Emendas são a parte do Orçamento da União que o parlamentar escolhe para onde vai. “Pago” é o que de fato chegou ao destino. Emenda Pix cai direto na conta da prefeitura ou do estado.">
+        <BlocoEmendas autor={autor.data} carregando={autor.isPending} semCorrespondencia={semAutor} />
+      </SecaoLeiga>
+      <SecaoLeiga id="votos" icon={<Vote className="size-5" aria-hidden />} titulo="Como votou no que mais repercutiu"
+        significa="Em votação nominal cada voto fica registrado. Siglas do Senado como AP, NCom e LS indicam ausência ou licença, não voto contra.">
+        <CardPautas itens={pautas} carregando={vot.isPending} />
+      </SecaoLeiga>
+      <SecaoLeiga id="partidos" icon={<Repeat className="size-5" aria-hidden />} titulo="Partidos"
+        significa="Senadores são eleitos pelo voto majoritário e, segundo o STF, não perdem o mandato ao trocar de partido.">
+        <CardTrocas trocas={trocas} atual={s.partido} fonte={<p className="mt-2 text-xs"><Link className="link" to="/entenda/troca-de-partido">Entenda a troca de partido →</Link></p>} />
+      </SecaoLeiga>
+      <SecaoLeiga id="gastos" icon={<Wallet className="size-5" aria-hidden />} titulo="Gastos do mandato"
+        significa="Cota parlamentar, verba de gabinete e pessoal: dinheiro público para exercer o mandato.">
+        {/* SLOT gastos (outro agente): <GastosParlamentar kind="senador" id={cod} /> de "@/features/gastos" */}
+        <p className="text-sm text-muted">Em breve.</p>
+      </SecaoLeiga>
     </>
   );
 }

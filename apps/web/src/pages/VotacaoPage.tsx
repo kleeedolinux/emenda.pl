@@ -7,6 +7,7 @@ import {
 import { cam, fontes, type VotacaoDetalhe } from "@/features/legislativo/api";
 import { categoriaVoto, mapaOrientacoes, normPartido, placar, porPartido, porUf, type LinhaGrupo, type Orientacao, type VotoCamara } from "@/features/legislativo/votacao";
 import { Fontes, GradeFotos, HemicicloVotacao, Parlamentar } from "@/features/legislativo/components";
+import { ShareButton, ShareVoto, VotoDestaque } from "@/features/share";
 
 export default function VotacaoPage() {
   const id = useParams().id ?? "";
@@ -20,6 +21,7 @@ export default function VotacaoPage() {
   const partidos = useMemo(() => porPartido(votos, ori), [votos, ori]);
   const ufs = useMemo(() => porUf(votos), [votos]);
   const mapa = useMemo(() => mapaOrientacoes(ori), [ori]);
+  const votosShare = { sim: p.sim, nao: p.nao, outros: p.total - p.sim - p.nao };
   const contraSet = useMemo(() => new Set(partidos.flatMap((r) => r.contraIds)), [partidos]);
 
   if (!valido) return <EmptyState title="Identificador de votação inválido." hint="O formato é parecido com 2196833-395." />;
@@ -53,6 +55,7 @@ export default function VotacaoPage() {
       cell: (r) => { const o = mapa.partidos.get(normPartido(r.deputado_.siglaPartido)); return o ? <VoteBadge voto={o} /> : "—"; } },
     { key: "contra", header: "Contra orientação?", sort: (r) => (contraSet.has(r.deputado_.id) ? 1 : 0), csv: (r) => (contraSet.has(r.deputado_.id) ? "sim" : ""),
       cell: (r) => (contraSet.has(r.deputado_.id) ? <Badge tone="amarelo">votou contra</Badge> : "") },
+    { key: "share", header: "", csv: () => "", cell: (r) => <ShareVoto votacaoId={id} titulo={d ? d.descUltimaAberturaVotacao || d.descricao : `Votação ${id}`} v={r} placar={votosShare} /> },
   ];
 
   return (
@@ -62,7 +65,7 @@ export default function VotacaoPage() {
         title={d ? (d.descUltimaAberturaVotacao || d.descricao) : <Skeleton className="h-9 w-2/3" />}
         subtitle={d ? `${formatDate(d.data)} · ${d.siglaOrgao}${d.descUltimaAberturaVotacao ? ` · ${d.descricao}` : ""}` : undefined}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Proposições", to: "/proposicoes" }, { label: `Votação ${id}` }]}
-        actions={d && (d.aprovacao === 1 ? <Badge tone="verde">Aprovada</Badge> : d.aprovacao === 0 ? <Badge tone="vermelho">Rejeitada</Badge> : <Badge>Resultado no texto</Badge>)}
+        actions={d && <>{d.aprovacao === 1 ? <Badge tone="verde">Aprovada</Badge> : d.aprovacao === 0 ? <Badge tone="vermelho">Rejeitada</Badge> : <Badge>Resultado no texto</Badge>}<ShareButton fab kind="votacao" title={d.descUltimaAberturaVotacao || d.descricao} subtitle={formatDate(d.data)} url={`/votacao/${id}`} ogId={id} votes={votos.length ? votosShare : undefined} /></>}
       />
 
       {d && (
@@ -83,6 +86,7 @@ export default function VotacaoPage() {
         <EmptyState title="Esta votação não tem votos individuais registrados." hint="Votações simbólicas (por aclamação) não registram como cada deputado votou." />
       ) : (
         <>
+          <VotoDestaque votacaoId={id} titulo={d ? d.descUltimaAberturaVotacao || d.descricao : `Votação ${id}`} votos={votos} placar={votosShare} />
           <StatGrid className="mb-6">
             <Stat label="Sim" value={formatNumber(p.sim)} />
             <Stat label="Não" value={formatNumber(p.nao)} />

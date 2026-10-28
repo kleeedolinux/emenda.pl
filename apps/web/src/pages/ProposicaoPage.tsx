@@ -15,6 +15,7 @@ import { desfecho, linksNorma, normaDaTramitacao, type Desfecho } from "@/featur
 import { pautaPorCamaraId } from "@/features/legislativo/pautas";
 import { placarDaDescricao, votosSenado, type VotoCamara } from "@/features/legislativo/votacao";
 import { Campo, Fontes, GradeFotos, HemicicloVotacao, Parlamentar, selectCls } from "@/features/legislativo/components";
+import { ShareButton } from "@/features/share";
 
 const TOM: Record<Desfecho["tipo"], Tone> = { lei: "verde", vetada: "vermelho", rejeitada: "vermelho", arquivada: "neutro", tramitando: "amarelo" };
 const idDeputado = (uri: string) => /\/deputados\/(\d+)/.exec(uri)?.[1];
@@ -62,7 +63,7 @@ export default function ProposicaoPage() {
         title={p ? <>{titulo}{pauta ? <span className="block text-xl font-semibold text-muted">{pauta.apelido}</span> : null}</> : <Skeleton className="h-9 w-48" />}
         subtitle={p?.ementa}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Proposições", to: "/proposicoes" }, { label: titulo || String(id) }]}
-        actions={des && <Badge tone={TOM[des.tipo]}>{des.rotulo}{des.veto ? ` (veto ${des.veto})` : ""}</Badge>}
+        actions={<>{des && <Badge tone={TOM[des.tipo]}>{des.rotulo}{des.veto ? ` (veto ${des.veto})` : ""}</Badge>}{p && <ShareButton fab kind="proposicao" title={pauta ? `${titulo} — ${pauta.apelido}` : titulo} subtitle={p.ementa} url={`/proposicao/${id}`} ogId={String(id)} />}</>}
       />
 
       {pauta && (

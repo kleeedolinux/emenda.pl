@@ -11,6 +11,7 @@ import { formatBRL, formatNumber } from "@/lib/format";
 import { Avatar, NextSteps, Card, Donut, EmptyState, ErrorState, LineArea, PartyBadge, PageHeader, Section, Skeleton, Tabs } from "@/ui";
 import { Link } from "react-router";
 import NotFound from "./NotFound";
+import { ShareButton } from "@/features/share";
 
 interface DeputadoCamara { id: number; nome: string; siglaPartido: string; siglaUf: string; urlFoto: string; email?: string }
 interface SenadoresLista {
@@ -39,6 +40,7 @@ function UfView({ uf }: { uf: SiglaUf }) {
         title={nome}
         subtitle={`Emendas parlamentares destinadas a ${nome} e aos seus municípios, com os parlamentares eleitos pelo estado.`}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Estados" }, { label: uf }]}
+        actions={<ShareButton fab kind="uf" title={nome} url={`/uf/${uf}`} ogId={uf} metric={d ? { value: d.totais.pago, format: "brl", label: "pagos em emendas parlamentares" } : undefined} bars={d && [...d.municipios].sort((a, b) => b.pago - a.pago).slice(0, 5).map((m) => ({ label: nomeMun.get(m.ibge) ?? m.nome, value: m.pago }))} />}
         media={<span className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-verde to-azul font-display text-xl font-bold text-white shadow-lg">{uf}</span>}
       />
       {q.isError ? <ErrorState error={q.error} retry={() => q.refetch()} /> : d ? <TotaisGrid t={d.totais} /> : <Skeleton className="h-28" />}

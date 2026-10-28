@@ -6,6 +6,7 @@ import { TotaisGrid } from "@/features/emendas/Totais";
 import { ufDoMunicipio, useApi, type IbgeMunicipio } from "@/lib/data";
 import { formatBRL, formatNumber, formatPct } from "@/lib/format";
 import { Avatar, NextSteps, Badge, Bars, Card, Donut, EmptyState, ErrorState, ExternalLink, KeyValue, PageHeader, PartyBadge, Section, Skeleton, Tabs, Term } from "@/ui";
+import { ShareButton } from "@/features/share";
 
 /** Campos opcionais que o ETL pode publicar além do contrato mínimo. */
 type MunicipioExt = Municipio & { vice?: Prefeito | null; convenios?: Convenio[]; favorecidos: FavorecidoExt[]; populacao?: number };
@@ -26,6 +27,7 @@ export default function MunicipioPage() {
         title={nome}
         subtitle={uf ? `${UFS[uf as SiglaUf] ?? uf}` : undefined}
         breadcrumbs={[{ label: "Início", to: "/" }, ...(uf ? [{ label: UFS[uf as SiglaUf] ?? uf, to: `/uf/${uf}` }] : []), { label: nome }]}
+        actions={<ShareButton fab kind="municipio" title={nome} subtitle={uf ? UFS[uf as SiglaUf] ?? uf : undefined} url={`/municipio/${ibgeId}`} ogId={ibgeId} metric={d ? { value: d.totais.pago, format: "brl", label: "pagos em emendas parlamentares" } : undefined} bars={d?.autores.slice(0, 5).map((a) => ({ label: a.nome, value: a.pago }))} />}
       />
 
       <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_1fr]">

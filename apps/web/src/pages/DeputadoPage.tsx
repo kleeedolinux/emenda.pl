@@ -15,6 +15,13 @@ import { ChipsMandato, Campo, Fontes, PainelMandatos, Paginador, SeletorMandato,
 import { VotosDeputado } from "@/features/legislativo/VotosDeputado";
 import { EmendasAutor } from "@/features/legislativo/EmendasAutor";
 import { formatBRL, isCNPJ } from "@/lib/format";
+import { ShareButton } from "@/features/share";
+import { HandCoins, Repeat, Vote, Wallet } from "lucide-react";
+import { contarSim, perfilEmendas, resumoSimples, trocasCamara } from "@/features/perfil/resumo";
+import { BlocoEmendas, ResumoSimplesCard, SecaoLeiga } from "@/features/perfil/CardsPerfil";
+import { CardPautas, usePautasDeputado } from "@/features/perfil/Pautas";
+import { CardTrocas } from "@/features/perfil/Trocas";
+import type { Mandato } from "@/features/legislativo/mandatos";
 
 export default function DeputadoPage() {
   const id = Number(useParams().id);
@@ -57,9 +64,18 @@ export default function DeputadoPage() {
               <Badge tone={s!.situacao === "Exercício" ? "verde" : "neutro"}>{s!.situacao ?? "—"}</Badge>
             </span>
             {mandatos.length > 0 && <ChipsMandato {...resumo} />}
+            <ShareButton fab kind="deputado" title={nome} subtitle={`${s!.siglaPartido}-${s!.siglaUf}`} url={`/deputado/${id}`} ogId={String(id)} metric={autor ? { value: autor.pago, format: "brl", label: "pagas" } : undefined} />
           </div>
         )}
       />
+
+      {d && s && (
+        <PerfilLeigo id={id} nome={nome} sexo={d.sexo} partido={s.siglaPartido} uf={s.siglaUf} mandatos={mandatos} autorCodigo={autor?.codigo}
+          semAutor={!!autores.data && !autor} historico={hist.data ?? []} />
+      )}
+
+      <h2 className="mb-1 mt-10 text-xl font-bold">Modo repositório: todos os detalhes</h2>
+      <p className="mb-4 text-sm text-muted">Dados completos e tabelas para quem quer conferir cada registro.</p>
 
       {dep.isPending ? <Skeleton className="h-40" /> : d && s && (
         <div className="mb-6 grid gap-4 lg:grid-cols-2">
@@ -120,9 +136,54 @@ export default function DeputadoPage() {
   );
 }
 
+/** Topo "para leigos": frases simples + seções com ícones e "o que isso significa?". */
+function PerfilLeigo({ id, nome, sexo, partido, uf, mandatos, autorCodigo, semAutor, historico }: {
+  id: number; nome: string; sexo: string; partido: string; uf: string; mandatos: Mandato[]; autorCodigo?: string; semAutor: boolean; historico: HistoricoDeputado[];
+}) {
+  const r = resumoMandatos(mandatos);
+  const desde = mandatos[0]?.inicio ?? null;
+  const autor = useAutor(autorCodigo);
+  const props = useCamaraPagina<ProposicaoLista>(desde ? cam.proposicoesAutor(id, 1, desde, undefined, 1) : null);
+  const nProps = props.data ? (props.data.dados.length ? lastPage(props.data.links) : 0) : null;
+  const pautas = usePautasDeputado(id);
+  const trocas = useMemo(() => trocasCamara(historico), [historico]);
+  const votos = contarSim(pautas.itens.map((x) => x.voto));
+  const frases = resumoSimples({
+    nome, sexo: sexo === "F" ? "F" : sexo === "M" ? "M" : "", cargo: "deputado", partido, uf, desde, nMandatos: r.n, tempo: r.tempo, atual: r.atual,
+    emendas: autor.data ? perfilEmendas(autor.data.emendas) : semAutor ? { pago: 0, pctPix: 0, funcao: null, municipios: 0 } : null,
+    proposicoes: nProps,
+    votos: pautas.carregando ? null : { ...votos, fonte: "pautas" },
+  });
+  return (
+    <>
+      <ResumoSimplesCard frases={frases} carregando={autor.isPending && !!autorCodigo} />
+      <nav aria-label="Seções do perfil" className="mb-6 flex flex-wrap gap-2 text-sm">
+        {[["#dinheiro", "Dinheiro"], ["#votos", "Votos"], ["#partidos", "Partidos"], ["#gastos", "Gastos"]].map(([h, l]) => <a key={h} href={h} className="rounded-full border border-line px-3 py-1 hover:bg-surface-2">{l}</a>)}
+      </nav>
+      <SecaoLeiga id="dinheiro" icon={<HandCoins className="size-5" aria-hidden />} titulo="Dinheiro que indicou (emendas)"
+        significa="Emendas são a parte do Orçamento da União que o parlamentar escolhe para onde vai. “Pago” é o que de fato chegou ao destino. Emenda Pix cai direto na conta da prefeitura ou do estado.">
+        <BlocoEmendas autor={autor.data} carregando={autor.isPending} semCorrespondencia={semAutor} />
+      </SecaoLeiga>
+      <SecaoLeiga id="votos" icon={<Vote className="size-5" aria-hidden />} titulo="Como votou no que mais repercutiu"
+        significa="Em votação nominal cada voto fica registrado. Ausência não é voto contra. Para ver todas as votações, use a aba “Votações” abaixo.">
+        <CardPautas itens={pautas.itens} carregando={pautas.carregando} />
+      </SecaoLeiga>
+      <SecaoLeiga id="partidos" icon={<Repeat className="size-5" aria-hidden />} titulo="Partidos"
+        significa="Deputados só podem trocar de partido sem perder o mandato na janela partidária ou com justa causa.">
+        <CardTrocas trocas={trocas} atual={partido} fonte={<p className="mt-2 text-xs"><Link className="link" to="/entenda/troca-de-partido">Entenda a janela partidária →</Link></p>} />
+      </SecaoLeiga>
+      <SecaoLeiga id="gastos" icon={<Wallet className="size-5" aria-hidden />} titulo="Gastos do mandato"
+        significa="Cota parlamentar, verba de gabinete e pessoal: dinheiro público para exercer o mandato.">
+        {/* SLOT gastos (outro agente): <GastosParlamentar kind="deputado" id={id} /> de "@/features/gastos" */}
+        <p className="text-sm text-muted">Veja a aba “Cota parlamentar” abaixo.</p>
+      </SecaoLeiga>
+    </>
+  );
+}
+
 function Resumo({ id, janela, autorCodigo, pagoTotal }: { id: number; janela: Periodo; autorCodigo?: string; pagoTotal?: number }) {
   const ano = Math.min(Number(janela.fim.slice(0, 4)), new Date().getFullYear());
-  const props = useCamaraPagina<ProposicaoLista>(qs("/proposicoes", { idDeputadoAutor: id, dataApresentacaoInicio: janela.inicio, dataApresentacaoFim: janela.fim, itens: 1 }));
+  const props = useCamaraPagina<ProposicaoLista>(cam.proposicoesAutor(id, 1, janela.inicio, janela.fim, 1));
   const desp = useCamaraTodas<Despesa>(`/deputados/${id}/despesas?ano=${ano}&itens=100`);
   const autor = useAutor(autorCodigo);
   const pago = autor.data ? emendasPorAno(autor.data.emendas, janela).reduce((s, x) => s + x.pago, 0) : pagoTotal;
@@ -131,7 +192,7 @@ function Resumo({ id, janela, autorCodigo, pagoTotal }: { id: number; janela: Pe
     <StatGrid>
       <Stat label="Emendas pagas no período" tip="pago" value={pago != null ? <Money centavos={pago} compact /> : autorCodigo === undefined ? "—" : "…"}
         hint={autorCodigo ? <Link className="link" to={`/autor/${autorCodigo}`}>ver todas as emendas</Link> : "Sem correspondência no Portal da Transparência"} />
-      <Stat label="Proposições apresentadas" value={nProps != null ? formatNumber(nProps) : "…"} hint={`${formatDate(janela.inicio)} a ${formatDate(janela.fim)}`} tip="Projetos, requerimentos e outros documentos em que aparece como autor(a)." />
+      <Stat label="Proposições apresentadas" value={nProps != null ? formatNumber(nProps) : "…"} hint={`apresentadas de ${janela.inicio.slice(0, 4)} a ${Math.min(Number(janela.fim.slice(0, 4)), new Date().getFullYear())}`} tip="Projetos, requerimentos e outros documentos em que aparece como autor(a). A API da Câmara filtra por ano de apresentação." />
       <Stat label={`Cota parlamentar em ${ano}`} tip="CEAP" value={desp.data ? <Money centavos={totalDespesas(desp.data)} compact /> : desp.isError ? "—" : "…"} hint={desp.data ? `${formatNumber(desp.data.length)} despesas` : undefined} />
       <Stat label="Emendas (quantidade)" tip="emenda" value={autor.data ? formatNumber(emendasPorAno(autor.data.emendas, janela).reduce((s, x) => s + x.n, 0)) : "—"} />
     </StatGrid>

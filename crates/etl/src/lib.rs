@@ -1,7 +1,11 @@
 //! emenda.pl ETL: Portal da Transparência + TSE + IBGE -> JSON estático v1.
 
+pub mod abertas;
+pub mod feed;
+pub mod gastos;
 pub mod model;
 pub mod norm;
+pub mod pix;
 pub mod read;
 
 use anyhow::Result;
@@ -43,7 +47,7 @@ struct Mun {
 }
 
 /// Soma totais por chave.
-fn agrupa<'a, K: Hash + Eq, I: IntoIterator<Item = &'a EmendaItem>>(
+pub(crate) fn agrupa<'a, K: Hash + Eq, I: IntoIterator<Item = &'a EmendaItem>>(
     it: I,
     key: impl Fn(&EmendaItem) -> Option<K>,
 ) -> Vec<(K, Totais)> {
@@ -56,7 +60,7 @@ fn agrupa<'a, K: Hash + Eq, I: IntoIterator<Item = &'a EmendaItem>>(
     m.into_iter().collect()
 }
 
-fn por_pago<K>(mut v: Vec<(K, Totais)>) -> Vec<(K, Totais)> {
+pub(crate) fn por_pago<K>(mut v: Vec<(K, Totais)>) -> Vec<(K, Totais)> {
     v.sort_by(|a, b| {
         b.1.pago
             .cmp(&a.1.pago)
@@ -65,7 +69,7 @@ fn por_pago<K>(mut v: Vec<(K, Totais)>) -> Vec<(K, Totais)> {
     v
 }
 
-fn por_ano<'a>(it: impl IntoIterator<Item = &'a EmendaItem>) -> Vec<Com<Ano>> {
+pub(crate) fn por_ano<'a>(it: impl IntoIterator<Item = &'a EmendaItem>) -> Vec<Com<Ano>> {
     let mut v = agrupa(it, |e| Some(e.ano));
     v.sort_by_key(|x| x.0);
     v.into_iter()
@@ -83,17 +87,17 @@ fn por_tipo<'a>(it: impl IntoIterator<Item = &'a EmendaItem>) -> Vec<Com<Tipo>> 
         .collect()
 }
 
-fn totais<'a>(it: impl IntoIterator<Item = &'a EmendaItem>) -> Totais {
+pub(crate) fn totais<'a>(it: impl IntoIterator<Item = &'a EmendaItem>) -> Totais {
     let mut t = Totais::default();
     it.into_iter().for_each(|e| t.add(e));
     t
 }
 
-fn autor_valido(c: &str) -> bool {
+pub(crate) fn autor_valido(c: &str) -> bool {
     !c.is_empty() && c.chars().all(|c| c.is_ascii_alphanumeric())
 }
 
-fn autores<'a>(it: impl IntoIterator<Item = &'a EmendaItem>) -> Vec<AutorResumo> {
+pub(crate) fn autores<'a>(it: impl IntoIterator<Item = &'a EmendaItem>) -> Vec<AutorResumo> {
     let mut nomes: HashMap<&str, &str> = HashMap::new();
     let items: Vec<&EmendaItem> = it
         .into_iter()
@@ -142,7 +146,7 @@ fn top_favorecidos(m: HashMap<(String, String), FavAcc>, n: usize) -> Vec<Favore
         .collect()
 }
 
-fn write<T: serde::Serialize>(p: &Path, v: &T) -> Result<()> {
+pub(crate) fn write<T: serde::Serialize>(p: &Path, v: &T) -> Result<()> {
     if let Some(d) = p.parent() {
         std::fs::create_dir_all(d)?;
     }
@@ -234,6 +238,7 @@ pub fn run(o: &Opts) -> Result<Relatorio> {
             liquidado: parse_valor_br(&r.get("Valor Liquidado")),
             pago: parse_valor_br(&r.get("Valor Pago")),
             rap_pago: parse_valor_br(&r.get("Valor Restos A Pagar Pagos")),
+            rap_cancelado: parse_valor_br(&r.get("Valor Restos A Pagar Cancelados")),
         });
     }
     emendas.sort_by(|a, b| {
@@ -247,6 +252,7 @@ pub fn run(o: &Opts) -> Result<Relatorio> {
     // favorecidos
     type FavMap = HashMap<String, HashMap<(String, String), FavAcc>>;
     let (mut fav_mun, mut fav_aut): (FavMap, FavMap) = Default::default();
+    let mut pagamentos: Vec<feed::Pagamento> = Vec::new();
     let fp = o.input.join("EmendasParlamentares_PorFavorecido.csv");
     if fp.exists() {
         let mut r = Rows::open(&fp)?;
@@ -262,16 +268,40 @@ pub fn run(o: &Opts) -> Result<Relatorio> {
                 }
                 a.valor += valor;
             };
-            match chave_mun.get(&chave_municipio(
-                &r.get("Município Favorecido"),
-                &r.get("UF Favorecido"),
-            )) {
+            let (mun_nome, mun_uf) = (r.get("Município Favorecido"), r.get("UF Favorecido"));
+            let ibge = chave_mun.get(&chave_municipio(&mun_nome, &mun_uf)).cloned();
+            match &ibge {
                 Some(i) => acc(&mut fav_mun, i.clone()),
                 None => rel.favorecidos_sem_municipio += 1,
             }
             let a = r.get("Código do Autor da Emenda");
             if autor_valido(&a) {
-                acc(&mut fav_aut, a);
+                acc(&mut fav_aut, a.clone());
+            }
+            if let Ok(mes) = r.get("Ano/Mês").parse::<u32>() {
+                pagamentos.push(feed::Pagamento {
+                    mes,
+                    codigo_emenda: r.get("Código da Emenda"),
+                    autor: AutorRef {
+                        codigo: a,
+                        nome: r.get("Nome do Autor da Emenda"),
+                    },
+                    tipo: classificar_tipo(&r.get("Tipo de Emenda")),
+                    favorecido: feed::FavRef {
+                        nome: k.1.clone(),
+                        documento: k.0.clone(),
+                        tipo,
+                    },
+                    municipio: feed::MunRef {
+                        nome: ibge
+                            .as_ref()
+                            .and_then(|i| muns.get(i))
+                            .map_or(mun_nome, |m| m.nome.clone()),
+                        uf: mun_uf,
+                        ibge,
+                    },
+                    valor,
+                });
             }
         }
     }
@@ -361,6 +391,9 @@ pub fn run(o: &Opts) -> Result<Relatorio> {
         },
     )?;
     write(&v1.join("autores.json"), &autores(&emendas))?;
+    pix::escrever(&v1, &emendas, |i| muns.get(i).map(|m| m.nome.clone()))?;
+    abertas::escrever(&v1, &emendas)?;
+    feed::escrever(&v1, pagamentos)?;
 
     // índices
     let mut by_uf: HashMap<&str, Vec<&EmendaItem>> = HashMap::new();
