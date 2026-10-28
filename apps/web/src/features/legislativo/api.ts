@@ -59,7 +59,7 @@ export interface ProposicaoDetalhe extends ProposicaoLista {
 }
 export interface Autor { uri: string; nome: string; codTipo: number; tipo: string; ordemAssinatura: number; proponente: number }
 export interface Tramitacao {
-  dataHora: string; sequencia: number; siglaOrgao: string; descricaoTramitacao: string; descricaoSituacao: string | null; despacho: string; url: string | null; regime?: string;
+  dataHora: string; sequencia: number; siglaOrgao: string; uriOrgao?: string | null; descricaoTramitacao: string; descricaoSituacao: string | null; despacho: string; url: string | null; regime?: string;
 }
 export interface VotacaoLista {
   id: string; data: string; dataHoraRegistro: string; siglaOrgao: string; descricao: string; aprovacao: number | null; proposicaoObjeto?: string | null;

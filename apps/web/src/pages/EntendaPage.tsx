@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { Link, useParams } from "react-router";
 import { Card, EmptyState, ExternalLink, NextSteps, PageHeader, Reveal } from "@/ui";
+import { AutoLink } from "@/features/links";
 import { TEMAS, temaPorSlug, vizinhos, type Tema } from "@/features/entenda/temas";
 import { DiagramaPassos } from "@/features/entenda/Diagrama";
 import { NumerosTema } from "@/features/entenda/Numeros";
@@ -74,7 +75,7 @@ function TemaView({ t }: { t: Tema }) {
             <motion.li key={p.titulo} className="rounded-xl border border-line bg-surface-2/40 p-4"
               initial={reduce ? false : { opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08, duration: 0.4 }}>
               <p className="mb-1 flex items-center gap-2 font-semibold"><span className="grid size-6 place-items-center rounded-full bg-verde text-xs text-white">{i + 1}</span>{p.titulo}</p>
-              <p className="text-sm text-muted">{p.texto}</p>
+              <AutoLink as="p" className="text-sm text-muted" text={p.texto} />
             </motion.li>
           ))}
         </ol>
@@ -82,7 +83,7 @@ function TemaView({ t }: { t: Tema }) {
 
       {t.detalhes?.length ? (
         <Card className="mb-6" title="Para entender o debate">
-          <div className="max-w-3xl space-y-3 text-pretty">{t.detalhes.map((d) => <p key={d}>{d}</p>)}</div>
+          <div className="max-w-3xl space-y-3 text-pretty">{t.detalhes.map((d) => <AutoLink as="p" key={d} text={d} />)}</div>
         </Card>
       ) : null}
 

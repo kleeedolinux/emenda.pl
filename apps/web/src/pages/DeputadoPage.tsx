@@ -12,6 +12,8 @@ import {
 import { useAutor, useAutores, useCamaraPagina, useCamaraTodas, useLegislaturas } from "@/features/legislativo/hooks";
 import { anosDoPeriodo, dentro, mandatosCamara, type Periodo } from "@/features/legislativo/mandatos";
 import { ChipsMandato, Campo, Fontes, PainelMandatos, Paginador, SeletorMandato, resumoMandatos, selectCls } from "@/features/legislativo/components";
+import { AutoLink, OrgaoLink } from "@/features/links";
+import { hrefOrgao } from "@/features/comissoes/catalogo";
 import { VotosDeputado } from "@/features/legislativo/VotosDeputado";
 import { EmendasAutor } from "@/features/legislativo/EmendasAutor";
 import { formatBRL, isCNPJ } from "@/lib/format";
@@ -207,7 +209,7 @@ function Proposicoes({ id, janela }: { id: number; janela: Periodo }) {
   const cols: Column<ProposicaoLista>[] = [
     { key: "siglaTipo", header: "Tipo", sort: true, cell: (r) => <Badge tone="azul"><Term k={r.siglaTipo}>{r.siglaTipo}</Term></Badge> },
     { key: "numero", header: "Nº/Ano", sort: (r) => r.ano * 1e6 + r.numero, cell: (r) => <Link className="link tabular" to={`/proposicao/${r.id}`}>{r.numero}/{r.ano}</Link> },
-    { key: "ementa", header: "Ementa", cell: (r) => <span className="line-clamp-3">{r.ementa}</span> },
+    { key: "ementa", header: "Ementa", cell: (r) => <AutoLink className="line-clamp-3" text={r.ementa} /> },
     { key: "dataApresentacao", header: "Apresentada", sort: true, cell: (r) => formatDate(r.dataApresentacao) },
   ];
   if (q.isError) return <ErrorState error={q.error} retry={() => q.refetch()} />;
@@ -299,8 +301,8 @@ function Orgaos({ id, janela }: { id: number; janela: Periodo | null }) {
     <div>
       <DataTable rows={rows} rowKey={(r, i) => `${r.idOrgao}-${i}`} exportName={`orgaos-${id}`} search={(r) => `${r.siglaOrgao} ${r.nomeOrgao} ${r.titulo}`} empty="Nenhuma participação registrada."
         columns={[
-          { key: "siglaOrgao", header: "Sigla", sort: true },
-          { key: "nomeOrgao", header: "Comissão / órgão", sort: true, cell: (r) => <ExternalLink href={fontes.camaraApi(`/orgaos/${r.idOrgao}`)}>{r.nomePublicacao || r.nomeOrgao}</ExternalLink> },
+          { key: "siglaOrgao", header: "Sigla", sort: true, cell: (r) => <OrgaoLink sigla={r.siglaOrgao} uri={r.idOrgao} nome={r.nomeOrgao} /> },
+          { key: "nomeOrgao", header: "Comissão / órgão", sort: true, cell: (r) => (hrefOrgao(r.siglaOrgao, r.idOrgao) ? <OrgaoLink sigla={r.siglaOrgao} uri={r.idOrgao} nome={r.nomeOrgao}>{r.nomePublicacao || r.nomeOrgao}</OrgaoLink> : <ExternalLink href={fontes.camaraApi(`/orgaos/${r.idOrgao}`)}>{r.nomePublicacao || r.nomeOrgao}</ExternalLink>) },
           { key: "titulo", header: "Cargo", sort: true, tip: "Titular vota sempre; suplente vota quando o titular falta." },
           { key: "dataInicio", header: "Início", sort: true, cell: (r) => formatDate(r.dataInicio) },
           { key: "dataFim", header: "Fim", sort: true, cell: (r) => (r.dataFim ? formatDate(r.dataFim) : <Badge tone="verde">atual</Badge>) },

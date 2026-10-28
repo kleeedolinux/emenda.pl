@@ -17,6 +17,8 @@ import { placarDaDescricao, votosSenado, type Orientacao, type VotoCamara } from
 import { VotacaoInterativa } from "@/features/legislativo/VotacaoInterativa";
 import { Campo, Fontes, Parlamentar, selectCls } from "@/features/legislativo/components";
 import { ShareButton } from "@/features/share";
+import { AutoLink, OrgaoLink } from "@/features/links";
+import { pdfProposicao } from "@/lib/cdn";
 
 const TOM: Record<Desfecho["tipo"], Tone> = { lei: "verde", vetada: "vermelho", rejeitada: "vermelho", arquivada: "neutro", tramitando: "amarelo" };
 const idDeputado = (uri: string) => /\/deputados\/(\d+)/.exec(uri)?.[1];
@@ -62,7 +64,7 @@ export default function ProposicaoPage() {
       <PageHeader
         eyebrow={p ? <><Term k={p.siglaTipo}>{p.siglaTipo}</Term> · {p.descricaoTipo}</> : "Proposição"}
         title={p ? <>{titulo}{pauta ? <span className="block text-xl font-semibold text-muted">{pauta.apelido}</span> : null}</> : <Skeleton className="h-9 w-48" />}
-        subtitle={p?.ementa}
+        subtitle={p ? <AutoLink text={p.ementa} /> : undefined}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Proposições", to: "/proposicoes" }, { label: titulo || String(id) }]}
         actions={<>{des && <Badge tone={TOM[des.tipo]}>{des.rotulo}{des.veto ? ` (veto ${des.veto})` : ""}</Badge>}{p && <ShareButton fab kind="proposicao" title={pauta ? `${titulo} — ${pauta.apelido}` : titulo} subtitle={p.ementa} url={`/proposicao/${id}`} ogId={String(id)} />}</>}
       />
@@ -81,12 +83,12 @@ export default function ProposicaoPage() {
             <KeyValue items={[
               ["Apresentada em", formatDate(p.dataApresentacao)],
               ["Situação na Câmara", p.statusProposicao.descricaoSituacao],
-              ["Onde está", `${p.statusProposicao.siglaOrgao} · ${formatDate(p.statusProposicao.dataHora)}`],
+              ["Onde está", <><OrgaoLink sigla={p.statusProposicao.siglaOrgao} /> · {formatDate(p.statusProposicao.dataHora)}</>],
               ["Regime", p.statusProposicao.regime, "regime de urgência"],
               ["Apreciação", p.statusProposicao.apreciacao, "Plenário: todos os deputados votam. Conclusiva: basta a aprovação nas comissões, salvo recurso."],
-              ["Último despacho", <span className="line-clamp-4">{p.statusProposicao.despacho}</span>],
+              ["Último despacho", <span className="line-clamp-4"><AutoLink text={p.statusProposicao.despacho} /></span>],
               ["Temas", temas.data?.length ? <span className="flex flex-wrap gap-1">{temas.data.map((t) => <Badge key={t.codTema}>{t.tema}</Badge>)}</span> : null],
-              ["Inteiro teor", p.urlInteiroTeor ? <ExternalLink href={p.urlInteiroTeor}>texto original (PDF)</ExternalLink> : null],
+              ["Inteiro teor", p.urlInteiroTeor ? <ExternalLink href={pdfProposicao(p.id) ?? p.urlInteiroTeor}>texto original (PDF)</ExternalLink> : null],
             ]} />
             <Fontes items={fontes.proposicao(id)} />
           </Card>
@@ -95,7 +97,7 @@ export default function ProposicaoPage() {
 
       {p && (p.ementaDetalhada || p.keywords) && (
         <Card title="Explicação e palavras-chave" className="mb-6">
-          {p.ementaDetalhada && <p className="mb-3 text-sm">{p.ementaDetalhada}</p>}
+          {p.ementaDetalhada && <p className="mb-3 text-sm"><AutoLink text={p.ementaDetalhada} /></p>}
           {p.keywords && <ul className="flex flex-wrap gap-1.5">{p.keywords.split(/[,;]/).map((k) => k.replace(/^[\s_.]+|[\s.]+$/g, "")).filter(Boolean).map((k) => <li key={k}><Badge>{k}</Badge></li>)}</ul>}
         </Card>
       )}
@@ -130,7 +132,7 @@ export default function ProposicaoPage() {
               initialSort={{ key: "dataHoraRegistro", dir: "desc" }}
               columns={[
                 { key: "dataHoraRegistro", header: "Data", sort: true, cell: (r) => formatDate(r.data) },
-                { key: "siglaOrgao", header: "Onde", sort: true },
+                { key: "siglaOrgao", header: "Onde", sort: true, cell: (r) => <OrgaoLink sigla={r.siglaOrgao} /> },
                 { key: "descricao", header: "Resultado", cell: (r) => <Link className="link" to={`/votacao/${r.id}`}>{r.descricao}</Link> },
                 { key: "nominal", header: "Nominal?", sort: (r) => (placarDaDescricao(r.descricao) ? 1 : 0), cell: (r) => (placarDaDescricao(r.descricao) ? <Badge tone="azul">sim</Badge> : "simbólica"), tip: "votação nominal" },
               ]} />
@@ -150,7 +152,7 @@ export default function ProposicaoPage() {
               columns={[
                 { key: "siglaTipo", header: "Tipo", sort: true, cell: (r) => <Badge>{r.siglaTipo}</Badge> },
                 { key: "numero", header: "Nº/Ano", sort: (r) => r.ano * 1e6 + Number(r.numero), cell: (r) => <Link className="link" to={`/proposicao/${r.id}`}>{r.numero}/{r.ano}</Link> },
-                { key: "ementa", header: "Ementa", cell: (r) => <span className="line-clamp-2">{r.ementa}</span> },
+                { key: "ementa", header: "Ementa", cell: (r) => <AutoLink className="line-clamp-2" text={r.ementa} /> },
                 { key: "dataApresentacao", header: "Data", sort: true, cell: (r) => formatDate(r.dataApresentacao) },
               ]} />
             <Fontes items={[{ label: "Relacionadas (API da Câmara)", href: fontes.camaraApi(cam.relacionadas(id)) }]} />
@@ -259,9 +261,9 @@ function Tramitacoes({ itens, carregando }: { itens?: Tramitacao[]; carregando: 
   return (
     <>
       <Timeline items={vis.map((t) => ({
-        date: `${formatDate(t.dataHora)} · ${t.siglaOrgao}`,
+        date: <>{formatDate(t.dataHora)} · <OrgaoLink sigla={t.siglaOrgao} uri={t.uriOrgao} /></>,
         title: t.descricaoTramitacao,
-        desc: t.despacho,
+        desc: t.despacho ? <AutoLink text={t.despacho} /> : undefined,
         href: t.url ?? undefined,
       }))} />
       {s.length > 15 && (

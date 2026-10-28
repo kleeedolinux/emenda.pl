@@ -9,6 +9,7 @@ import { arr, encontrarAutor, fontes, mapSenadorDetalhe, sen, type ProcessoSenad
 import { useAutores, useSenado } from "@/features/legislativo/hooks";
 import { dentro, hojeISO, periodosSenado, type MandatoSenadoRaw, type Periodo } from "@/features/legislativo/mandatos";
 import { ChipsMandato, Fontes, PainelMandatos, SeletorMandato, resumoMandatos } from "@/features/legislativo/components";
+import { AutoLink } from "@/features/links";
 import { EmendasAutor } from "@/features/legislativo/EmendasAutor";
 import { categoriaVoto } from "@/features/legislativo/votacao";
 import { ShareButton } from "@/features/share";
@@ -208,7 +209,7 @@ function Autorias({ cod, janela }: { cod: string; janela: Periodo }) {
         <DataTable rows={rows} rowKey={(r) => r.id} exportName={`autorias-senador-${cod}`} search={(r) => `${r.identificacao} ${r.ementa}`} empty="Nenhuma autoria no período."
           columns={[
             { key: "identificacao", header: "Matéria", sort: true, cell: (r) => <ExternalLink href={fontes.materiaSenado(r.codigoMateria)[0]!.href}>{r.identificacao}</ExternalLink> },
-            { key: "ementa", header: "Ementa", cell: (r) => <span className="line-clamp-3">{r.ementa}</span> },
+            { key: "ementa", header: "Ementa", cell: (r) => <AutoLink className="line-clamp-3" casa="senado" text={r.ementa} /> },
             { key: "dataApresentacao", header: "Apresentada", sort: true, cell: (r) => formatDate(r.dataApresentacao) },
             { key: "situacaoAtual", header: "Situação", sort: true, cell: (r) => r.situacaoAtual?.toLowerCase() ?? (r.tramitando === "Sim" ? "em tramitação" : "—") },
             { key: "normaGerada", header: "Virou norma", cell: (r) => r.normaGerada ?? "—" },
@@ -230,8 +231,8 @@ function Comissoes({ cod, janela }: { cod: string; janela: Periodo | null }) {
       <DataTable rows={rows} rowKey={(r, i) => `${r.IdentificacaoComissao.CodigoComissao}-${i}`} exportName={`comissoes-senador-${cod}`}
         search={(r) => `${r.IdentificacaoComissao.SiglaComissao} ${r.IdentificacaoComissao.NomeComissao}`}
         columns={[
-          { key: "sigla", header: "Sigla", sort: (r) => r.IdentificacaoComissao.SiglaComissao, cell: (r) => r.IdentificacaoComissao.SiglaComissao },
-          { key: "nome", header: "Comissão", sort: (r) => r.IdentificacaoComissao.NomeComissao, cell: (r) => r.IdentificacaoComissao.NomeComissao },
+          { key: "sigla", header: "Sigla", sort: (r) => r.IdentificacaoComissao.SiglaComissao, cell: (r) => <Link className="link" to={`/comissao/senado-${r.IdentificacaoComissao.CodigoComissao}`}>{r.IdentificacaoComissao.SiglaComissao}</Link> },
+          { key: "nome", header: "Comissão", sort: (r) => r.IdentificacaoComissao.NomeComissao, cell: (r) => <Link className="link" to={`/comissao/senado-${r.IdentificacaoComissao.CodigoComissao}`}>{r.IdentificacaoComissao.NomeComissao}</Link> },
           { key: "casa", header: "Casa", cell: (r) => (r.IdentificacaoComissao.SiglaCasaComissao === "CN" ? "Congresso" : "Senado") },
           { key: "DescricaoParticipacao", header: "Participação", sort: true },
           { key: "DataInicio", header: "Início", sort: true, cell: (r) => formatDate(r.DataInicio) },

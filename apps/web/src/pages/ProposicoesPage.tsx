@@ -10,6 +10,7 @@ import { useCamaraPagina } from "@/features/legislativo/hooks";
 import { PAUTAS, type Pauta } from "@/features/legislativo/pautas";
 import { desfecho } from "@/features/legislativo/normas";
 import { Campo, Fontes, Paginador, inputCls, selectCls } from "@/features/legislativo/components";
+import { AutoLink } from "@/features/links";
 
 const TIPOS: { sigla: string; nome: string }[] = [
   { sigla: "PL", nome: "Projeto de Lei" },
@@ -60,7 +61,7 @@ export default function ProposicoesPage() {
   const cols: Column<ProposicaoLista>[] = [
     { key: "siglaTipo", header: "Tipo", cell: (r) => <Badge tone="azul"><Term k={r.siglaTipo}>{r.siglaTipo}</Term></Badge> },
     { key: "numero", header: "Nº/Ano", cell: (r) => <Link className="link tabular font-medium" to={`/proposicao/${r.id}`}>{r.numero}/{r.ano}</Link> },
-    { key: "ementa", header: "Ementa", cell: (r) => <span className="line-clamp-3">{r.ementa}</span> },
+    { key: "ementa", header: "Ementa", cell: (r) => <AutoLink className="line-clamp-3" text={r.ementa} /> },
     { key: "dataApresentacao", header: "Apresentada", cell: (r) => formatDate(r.dataApresentacao) },
   ];
 

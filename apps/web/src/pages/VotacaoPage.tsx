@@ -7,6 +7,7 @@ import {
 import { cam, fontes, type VotacaoDetalhe } from "@/features/legislativo/api";
 import { categoriaVoto, mapaOrientacoes, normPartido, placar, porPartido, porUf, type LinhaGrupo, type Orientacao, type VotoCamara } from "@/features/legislativo/votacao";
 import { Fontes, Parlamentar } from "@/features/legislativo/components";
+import { AutoLink, OrgaoLink } from "@/features/links";
 import { VotacaoInterativa } from "@/features/legislativo/VotacaoInterativa";
 import { ShareButton, ShareVoto, VotoDestaque } from "@/features/share";
 
@@ -64,7 +65,7 @@ export default function VotacaoPage() {
       <PageHeader
         eyebrow={<>Votação na Câmara · <Term k="votação nominal" /></>}
         title={d ? (d.descUltimaAberturaVotacao || d.descricao) : <Skeleton className="h-9 w-2/3" />}
-        subtitle={d ? `${formatDate(d.data)} · ${d.siglaOrgao}${d.descUltimaAberturaVotacao ? ` · ${d.descricao}` : ""}` : undefined}
+        subtitle={d ? <>{formatDate(d.data)} · <OrgaoLink sigla={d.siglaOrgao} uri={d.idOrgao} />{d.descUltimaAberturaVotacao ? <> · <AutoLink text={d.descricao} /></> : null}</> : undefined}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Proposições", to: "/proposicoes" }, { label: `Votação ${id}` }]}
         actions={d && <>{d.aprovacao === 1 ? <Badge tone="verde">Aprovada</Badge> : d.aprovacao === 0 ? <Badge tone="vermelho">Rejeitada</Badge> : <Badge>Resultado no texto</Badge>}<ShareButton fab kind="votacao" title={d.descUltimaAberturaVotacao || d.descricao} subtitle={formatDate(d.data)} url={`/votacao/${id}`} ogId={id} votes={votos.length ? votosShare : undefined} /></>}
       />
@@ -127,12 +128,12 @@ export default function VotacaoPage() {
           <div className="mt-3">
           <KeyValue items={[
             ["Data e hora", d.dataHoraRegistro ? new Date(d.dataHoraRegistro).toLocaleString("pt-BR") : formatDate(d.data)],
-            ["Onde", d.siglaOrgao === "PLEN" ? "Plenário da Câmara" : d.siglaOrgao],
-            ["Resultado registrado", d.descricao],
+            ["Onde", d.siglaOrgao === "PLEN" ? "Plenário da Câmara" : <OrgaoLink sigla={d.siglaOrgao} uri={d.idOrgao} />],
+            ["Resultado registrado", <AutoLink text={d.descricao} />],
             ["Proposições envolvidas", props.length ? (
               <span className="flex flex-col gap-1">{props.slice(0, 8).map((x) => <Link key={x.id} className="link" to={`/proposicao/${x.id}`}>{x.siglaTipo} {x.numero}/{x.ano} — {x.ementa.slice(0, 90)}</Link>)}</span>
             ) : null],
-            ...(d.ultimaApresentacaoProposicao?.descricao ? [["Último parecer apresentado", <span className="line-clamp-4">{d.ultimaApresentacaoProposicao.descricao}</span>] as [string, React.ReactNode]] : []),
+            ...(d.ultimaApresentacaoProposicao?.descricao ? [["Último parecer apresentado", <AutoLink className="line-clamp-4" text={d.ultimaApresentacaoProposicao.descricao} />] as [string, React.ReactNode]] : []),
           ]} />
           </div>
         </details>

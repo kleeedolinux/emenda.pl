@@ -7,6 +7,7 @@ import { PartyBadge, VoteBadge, formatNumber, hemicycleLayout, partyColor } from
 import { Segmentado } from "./components";
 import { assentosVotacao, categoriaVoto, placar, VOTO_COR, VOTO_LABEL, type Orientacao, type VotoCamara } from "./votacao";
 import { enriquecerVotos, filtrarVotos, gruposVoto, LADO_LABEL, opcoesFiltro, type Lado, type VotoItem } from "./painelVotos";
+import { cdnImg, imagemCdn, trocarParaOriginal } from "@/lib/cdn";
 
 const COR_LADO: Record<Lado, string> = { sim: VOTO_COR.sim, nao: VOTO_COR.nao, outro: VOTO_COR.outro };
 const LIMITE = 200; // acima disso, cada grupo mostra só os primeiros POR_GRUPO até o usuário pedir todos
@@ -275,7 +276,7 @@ function Foto({ src, nome }: { src: string; nome: string }) {
   const [err, setErr] = useState(false);
   const ini = nome.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
   return src && !err ? (
-    <img src={src} alt="" width={32} height={32} loading="lazy" decoding="async" onError={() => setErr(true)}
+    <img {...cdnImg(src, 32)} alt="" width={32} height={32} loading="lazy" decoding="async" onError={(e) => trocarParaOriginal(e.currentTarget, imagemCdn(src)?.fallbackSrc) || setErr(true)}
       className="size-8 shrink-0 rounded-full bg-surface-2 object-cover object-top" />
   ) : (
     <span aria-hidden className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-verde to-azul text-[11px] font-bold text-white">{ini}</span>
@@ -293,7 +294,7 @@ function CartaoVoto({ a, temOrientacao }: { a: NonNullable<Ativo>; temOrientacao
       className="pointer-events-none fixed z-[100] rounded-xl border border-line bg-surface p-3 text-[13px] leading-snug text-fg shadow-xl"
       style={{ width: W, left, ...(acima ? { bottom: window.innerHeight - rect.top + 8 } : { top: rect.bottom + 8 }) }}>
       <div className="flex items-center gap-2.5">
-        {i.foto ? <img src={i.foto} alt="" width={44} height={44} className="size-11 shrink-0 rounded-full bg-surface-2 object-cover object-top" /> : null}
+        {i.foto ? <img {...cdnImg(i.foto, 44)} onError={(e) => trocarParaOriginal(e.currentTarget, imagemCdn(i.foto)?.fallbackSrc)} alt="" width={44} height={44} className="size-11 shrink-0 rounded-full bg-surface-2 object-cover object-top" /> : null}
         <div className="min-w-0">
           <p className="font-semibold">{i.nome}</p>
           <p className="mt-0.5 flex items-center gap-1 text-xs text-muted"><span className="inline-block size-2 rounded-full" style={{ background: partyColor(i.partido) }} aria-hidden />{i.partido}-{i.uf}</p>

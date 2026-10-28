@@ -9,6 +9,7 @@ import { useCamaraTodas, useSenado } from "@/features/legislativo/hooks";
 import { Campo, inputCls, selectCls } from "@/features/legislativo/components";
 import { ShareButton } from "@/features/share";
 import { BoletimView } from "@/features/auditar/Boletim";
+import { MaisVotados } from "@/features/auditar/MaisVotados";
 import { useBoletimDeputado, useBoletimSenador, type Boletim } from "@/features/auditar/dados";
 import { MAX_COMPARAR, parseComparar, serializarComparar, type Alvo, type CasaParam } from "@/features/auditar/regras";
 
@@ -41,7 +42,10 @@ export default function AuditarPage() {
       {unico ? <Unico alvo={unico} /> : comparar.length ? (
         <Comparar alvos={comparar} onChange={setComparar} />
       ) : (
-        <Seletor comparar={comparar} onComparar={setComparar} />
+        <>
+          <MaisVotados />
+          <Seletor comparar={comparar} onComparar={setComparar} />
+        </>
       )}
       <Metodo />
     </>
