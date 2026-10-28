@@ -1,4 +1,4 @@
-import { Audiencia, Card, ExternalLink, PageHeader, Section, Term } from "@/ui";
+import { Audiencia, Card, ExternalLink, PageHeader, PrivacidadeControle, Section, Term } from "@/ui";
 import { GLOSSARIO } from "@/ui";
 
 const FONTES = [
@@ -52,6 +52,28 @@ export default function SobrePage() {
             <div key={k} className="card p-4"><dt className="font-semibold">{k}</dt><dd className="mt-1 text-sm text-muted">{v}</dd></div>
           ))}
         </dl>
+      </Section>
+
+      <Section title="Privacidade" id="privacidade" tip="Como medimos a audiência e como desativar.">
+        <div className="card space-y-4 p-5 leading-relaxed">
+          <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[max-content_1fr]">
+            <dt className="font-semibold">O que coletamos</dt>
+            <dd>Um cookie próprio <code className="rounded bg-surface-2 px-1">ep_vid</code> com um identificador aleatório. No servidor, ele é combinado com o dia e um segredo (hash diário) e só esse hash é usado. Não guardamos IP, nome, e-mail nem dados do navegador. Guardamos apenas totais agregados: online agora, visitantes por dia, semana e mês.</dd>
+            <dt className="font-semibold">Para quê</dt>
+            <dd>Mostrar a audiência pública do projeto. Sem terceiros, sem perfis individuais e sem compartilhamento de dados.</dd>
+            <dt className="font-semibold">Base legal</dt>
+            <dd>Legítimo interesse (LGPD art. 7º, IX), com teste de balanceamento (art. 10): finalidade legítima e concreta, dados mínimos e anonimizados, expectativa razoável de quem visita um site público, e direito de oposição fácil, a qualquer momento.</dd>
+            <dt className="font-semibold">Retenção</dt>
+            <dd>Cookie: até 12 meses. Hashes diários: apagados no dia seguinte. Presença "online": cerca de 5 minutos, só em memória. Contagens agregadas por dia: até ~400 dias.</dd>
+            <dt className="font-semibold">Como desativar</dt>
+            <dd>Use o botão abaixo (a escolha fica salva neste navegador) ou ative Do Not Track / Global Privacy Control: nesses casos nenhuma visita é enviada.</dd>
+            <dt className="font-semibold">Controladora</dt>
+            <dd>Júlia Klee — contato: <ExternalLink href="https://x.com/klee00z">@klee00z</ExternalLink> ou issue no <ExternalLink href="https://github.com/kleeedolinux/emenda.pl/issues">repositório</ExternalLink>.</dd>
+            <dt className="font-semibold">Transparência</dt>
+            <dd>Os números de audiência são públicos: veja o <a className="link" href="#audiencia">painel abaixo</a>.</dd>
+          </dl>
+          <PrivacidadeControle />
+        </div>
       </Section>
 
       <Section title="Audiência" id="audiencia" tip="Números públicos de visitas, contados de forma anônima.">
