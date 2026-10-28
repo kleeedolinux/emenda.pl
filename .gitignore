@@ -6,3 +6,4 @@ target
 data/out
 *.zip
 apps/web/tsconfig.tsbuildinfo
+media/*.mp4

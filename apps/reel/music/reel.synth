@@ -1,0 +1,113 @@
+# emenda.online reel - baile/samba-tech 128 BPM, 64 beats = 30.0s.
+# Render a partir da raiz do lutier (imports relativos ao cwd):
+#   lutier <abs>/reel.synth <abs>/reel.score -o out/reel.wav
+import "presets/funk.synth"
+import "presets/sfx.synth"
+import "presets/drums.synth"
+import "presets/mix.synth"
+
+# Agogô: duas campanas de metal (toque e5 grave / b5 agudo).
+synth agogo {
+  poly 4 steal oldest
+  gain -10db
+  kill after 1s
+  voice {
+    let f = hz(note)
+    let bell = sine(freq: f, gain: 0.7) + sine(freq: f * 2.76, gain: 0.25) + sine(freq: f * 5.4, gain: 0.08)
+    let tick = highpass(noise(gain: 0.6), cutoff: 5khz, q: 0.3) * env { 1 -> 0 in 6ms curve exp }
+    out (bell * env { 1 -> 0 in 260ms curve exp } + tick) * velocity
+  }
+  bus {
+    pan(pos: 0.25)
+    reverb(size: 0.4, decay: 600ms, mix: 10%)
+  }
+}
+
+# Surdo: membrana grave com pele (marcação no 2).
+synth surdo {
+  poly 2 steal oldest
+  gain -5db
+  kill after 1.5s
+  voice {
+    let drop = env { 95hz -> 62hz in 60ms curve exp }
+    let skin = sine(freq: drop) * env { 1 -> 0 in 420ms curve exp }
+    let slap = bandpass(noise(gain: 0.6), cutoff: 700hz, q: 0.5) * env { 1 -> 0 in 30ms curve exp }
+    out saturate(skin + slap * 0.5, amount: 0.3) * velocity
+  }
+}
+
+# Pluck brilhante (cavaquinho-sintético): melodia/arpejos.
+synth pluck_cv {
+  poly 8 steal quietest
+  gain -9db
+  kill after 3s
+  voice {
+    let s = pluck(freq: note, damp: 0.25, decay: 1.2s, position: 18%)
+    let sq = pulse(freq: note, width: 0.3, gain: 0.12) * env { 1 -> 0 in 140ms curve exp }
+    out lowpass(s + sq, cutoff: 5khz, q: 0.2) * velocity
+  }
+  bus {
+    delay_fx(time: 3/8beat, feedback: 30%, mix: 18%, pingpong: true, damp: 3khz)
+    reverb(size: 0.6, decay: 1.4s, mix: 14%)
+    widen(amount: 35%)
+  }
+}
+
+# Pad de cama (largo, escuro) para o hook e o logo.
+synth pad_reel {
+  poly 8 steal oldest
+  gain -14db
+  voice {
+    let o = saw(freq: note, unison: 5, spread: 18ct, width: 0.8, gain: 0.3)
+    let amp = adsr(attack: 300ms, decay: 400ms, sustain: 0.8, release: 1.2s)
+    out lowpass(o, cutoff: 1.8khz, q: 0.2) * amp * velocity
+  }
+  bus {
+    chorus(voices: 3, depth: 35%, rate: 0.3hz, mix: 30%)
+    reverb(size: 0.8, decay: 2.5s, mix: 25%)
+  }
+}
+
+mixer {
+  channel batida {
+    in: kick_tamborzao, kick_808, surdo, sfx_sub_drop
+    cola(threshold: -16db)
+    gain -1db
+  }
+  channel baixo {
+    in: bass_808
+    limpa_grave(freq: 35hz)
+    abre_espaco(alvo: batida, amount: 0.45)
+    gain 0db
+  }
+  channel perc {
+    in: tamborim, snare_seca, clap_funk, hat_trap
+    presenca(amount: -1db)
+    gain -3db
+  }
+  channel couro {
+    in: atabaque
+    limpa_grave(freq: 70hz)
+    gain -26db
+  }
+  channel campana {
+    in: agogo
+    gain 8db
+  }
+  channel harm {
+    in: stab_funk, pluck_cv, pad_reel, apito
+    limpa_grave(freq: 160hz)
+    abre_espaco(alvo: batida, amount: 0.35)
+    gain 10db
+  }
+  channel fx {
+    in: sfx_riser, sfx_riser_noise, sfx_impact, sfx_whoosh, sfx_downlifter
+    gain -3db
+  }
+}
+
+master {
+  bus_gain 6db
+  compressor(threshold: -16db, ratio: 3, attack: 8ms, release: 160ms, makeup: auto)
+  limiter(ceiling: -1db, lookahead: 5ms, release: 60ms)
+}
