@@ -1,8 +1,9 @@
 import { createBrowserRouter } from "react-router";
 import { AppShell } from "@/ui/AppShell";
+import { comRecarga } from "@/lib/chunkReload";
 
 // Cada página é carregada sob demanda (code-splitting por rota).
-const page = (load: () => Promise<{ default: React.ComponentType }>) => async () => ({ Component: (await load()).default });
+const page = (load: () => Promise<{ default: React.ComponentType }>) => async () => ({ Component: (await comRecarga(load)).default });
 
 export const router = createBrowserRouter([
   {
@@ -40,6 +41,10 @@ export const router = createBrowserRouter([
       { path: "federacoes", lazy: page(() => import("@/pages/FederacoesPage")) },
       { path: "federacao/:id", lazy: page(() => import("@/pages/FederacaoPage")) },
       { path: "novidades", lazy: page(() => import("@/pages/NovidadesPage")) },
+      { path: "congresso", lazy: page(() => import("@/pages/CongressoPage")) },
+      { path: "stf", lazy: page(() => import("@/pages/StfPage")) },
+      { path: "stf/ministro/:slug", lazy: page(() => import("@/pages/StfMinistroPage")) },
+      { path: "stf/processo/:classe/:numero", lazy: page(() => import("@/pages/StfProcessoPage")) },
       { path: "agenda", lazy: page(() => import("@/pages/AgendaPage")) },
       { path: "sobre", lazy: page(() => import("@/pages/SobrePage")) },
       { path: "*", lazy: page(() => import("@/pages/NotFound")) },
