@@ -1,0 +1,8 @@
+@import "tailwindcss";
+/* Tokens de tema: owned by src/ui (agente UI kit pode expandir). */
+@theme {
+  --color-verde: #009c3b;
+  --color-amarelo: #ffdf00;
+  --color-azul: #002776;
+  --color-branco: #ffffff;
+}

@@ -1,0 +1,14 @@
+{
+  "name": "emenda-pl",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "author": "Júlia Klee (https://x.com/klee00z)",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "bun run --cwd apps/web dev",
+    "build": "bun run --cwd apps/web build",
+    "test": "bun test packages apps/worker && bun run --cwd apps/web test && cargo test --workspace",
+    "typecheck": "bun run --cwd apps/web typecheck && bun run --cwd apps/worker typecheck",
+    "deploy": "bun run build && bun run --cwd apps/worker deploy"
+  }
+}
