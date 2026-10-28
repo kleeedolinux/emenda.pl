@@ -1,0 +1,13 @@
+[package]
+name = "og"
+version = "0.10.0"
+edition = "2021"
+license = "GPL-3.0-only"
+authors = ["Júlia Klee <https://x.com/klee00z>"]
+description = "Open Graph cards (1200x630) for emenda.pl — pure Rust, native + wasm32."
+publish = false
+
+[dependencies]
+# No system fonts / mmap: fonts are embedded; works on wasm32-unknown-unknown.
+resvg = { version = "0.49", default-features = false, features = ["text", "raster-images"] }
+ttf-parser = { version = "0.25", default-features = false, features = ["std"] }

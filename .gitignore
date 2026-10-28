@@ -5,3 +5,4 @@ target
 .dev.vars
 data/out
 *.zip
+apps/web/tsconfig.tsbuildinfo
