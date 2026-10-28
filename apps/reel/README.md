@@ -30,7 +30,7 @@ Preview one frame: `bun apps/reel/render.ts --w 1080 --h 1350 --still 12 --out /
 | `render.ts` | headless Chrome (CDP) → JPEG frames → ffmpeg |
 | `music/reel.{synth,score}` | lutier sources. 128 BPM, 64 beats = 30 s. |
 | `data/reel-data.json` | figures shown in the video |
-| `assets/` | fonts (OFL), Câmara photos, brand copies from `apps/web/public/brand` |
+| `assets/` | fonts (OFL), Câmara photos, brand copies (`logo-mark.svg`, `logo.svg`, `wordmark-dark.svg`) from `apps/web/public/brand`. Re-copy them when the brand changes. |
 
 Cuts land on beats 0 8 20 32 44 48 52 56 (beat = 60/128 s). If you change one, change it in both `reel.js` and `reel.score`.
 

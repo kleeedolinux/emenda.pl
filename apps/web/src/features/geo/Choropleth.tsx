@@ -1,14 +1,14 @@
 import { geoMercator, geoPath } from "d3-geo";
-import { motion, useReducedMotion } from "motion/react";
-import { useMemo, useState, type ReactNode } from "react";
+import { AnimatePresence, motion, useReducedMotion, useSpring } from "motion/react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
-import { useApi } from "@/lib/data";
+import { useMalha } from "@/lib/data";
 import { sequentialScale } from "@/lib/colors";
 import { formatNumber } from "@/lib/format";
 import { ErrorState, Skeleton } from "@/ui/primitives";
+import { spring } from "@/ui/motion/tokens";
 
-export interface GeoFeature { type: "Feature"; properties: { codarea: string }; geometry: { type: string; coordinates: unknown } }
-export interface GeoFC { type: "FeatureCollection"; features: GeoFeature[] }
+export type { GeoFeature, GeoFC } from "./malhas";
 
 export interface ChoroplethProps {
   /** URL de malha GeoJSON do IBGE (properties.codarea). */
@@ -26,10 +26,17 @@ export interface ChoroplethProps {
 const W = 640;
 
 export function Choropleth({ url, values, label, href, format = (n) => formatNumber(n), detail, ariaLabel, height = 560 }: ChoroplethProps) {
-  const q = useApi<GeoFC>(url);
+  const q = useMalha(url);
   const nav = useNavigate();
   const reduce = useReducedMotion();
   const [hover, setHover] = useState<{ code: string; x: number; y: number } | null>(null);
+  const tx = useSpring(0, spring.snappy), ty = useSpring(0, spring.snappy);
+  const shown = useRef(false);
+  useEffect(() => {
+    if (!hover) { shown.current = false; return; }
+    if (reduce || !shown.current) { tx.jump(hover.x); ty.jump(hover.y); } else { tx.set(hover.x); ty.set(hover.y); }
+    shown.current = true;
+  }, [hover, reduce, tx, ty]);
 
   const paths = useMemo(() => {
     if (!q.data?.features?.length) return [];
@@ -69,7 +76,7 @@ export function Choropleth({ url, values, label, href, format = (n) => formatNum
               animate={{ opacity: cur && cur !== p.code ? 0.75 : 1 }}
               transition={{ duration: 0.4, delay: reduce ? 0 : Math.min(i * 0.004, 0.5) }}
               className={href ? "cursor-pointer outline-none focus-visible:stroke-[var(--color-ring)] focus-visible:[stroke-width:2]" : ""}
-              style={cur === p.code ? { stroke: "var(--color-amarelo)", strokeWidth: 2 } : undefined}
+
               tabIndex={href ? 0 : -1}
               role={href ? "link" : undefined}
               aria-label={`${name}: ${v !== undefined ? format(v) : "sem dados"}`}
@@ -88,18 +95,52 @@ export function Choropleth({ url, values, label, href, format = (n) => formatNum
             />
           );
         })}
+        {/* Estado em foco "levanta" (cópia elevada com sombra), sem recalcular o mapa. */}
+        <AnimatePresence>
+          {cur && (() => {
+            const p = paths.find((x) => x.code === cur);
+            return p ? (
+              <motion.path
+                key={cur}
+                d={p.d}
+                fill={color(values[cur] ?? null)}
+                stroke="var(--color-amarelo)"
+                strokeWidth={paths.length > 200 ? 1 : 2}
+                strokeLinejoin="round"
+                pointerEvents="none"
+                className="map-lift"
+                initial={reduce ? false : { y: 0, opacity: 0 }}
+                animate={{ y: reduce ? 0 : -4, opacity: 1 }}
+                exit={{ y: 0, opacity: 0 }}
+                transition={spring.lift}
+              />
+            ) : null;
+          })()}
+        </AnimatePresence>
       </svg>
-      {hover && (
-        <div
-          className="pointer-events-none absolute z-10 min-w-40 -translate-x-1/2 -translate-y-[calc(100%+12px)] rounded-xl border border-line glass px-3 py-2 text-sm shadow-xl"
-          style={{ left: hover.x, top: hover.y }}
-          role="status"
-        >
-          <p className="font-semibold">{label(hover.code)}</p>
-          <p className="tabular">{values[hover.code] !== undefined ? format(values[hover.code]!) : "Sem dados"}</p>
-          {detail?.(hover.code)}
-        </div>
-      )}
+      <AnimatePresence>
+        {hover && (
+          <motion.div
+            key="tip"
+            className="pointer-events-none absolute left-0 top-0 z-10"
+            style={{ x: tx, y: ty }}
+            role="status"
+          >
+            <motion.div
+              className="min-w-40 -translate-x-1/2 -translate-y-[calc(100%+14px)] rounded-xl border border-line glass px-3 py-2 text-sm shadow-xl"
+              initial={reduce ? false : { opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={spring.bouncy}
+              style={{ transformOrigin: "50% 100%" }}
+            >
+              <p className="font-semibold">{label(hover.code)}</p>
+              <p className="tabular">{values[hover.code] !== undefined ? format(values[hover.code]!) : "Sem dados"}</p>
+              {detail?.(hover.code)}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <Legend max={max} format={format} />
     </div>
   );

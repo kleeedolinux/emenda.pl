@@ -6,7 +6,7 @@ import { Link } from "react-router";
 import { partyColor, contrastText } from "@/lib/colors";
 import { Tip } from "./Tip";
 import { termo } from "./glossario";
-import { fadeUp } from "./motion";
+import { fadeUp, inSharedTransition, liftable, sharedTitleProps, TransitionLink, duration, easing, spring } from "./motion";
 
 /** `tip` aceita chave do glossário ("empenhado") ou conteúdo livre. */
 export type TipProp = ReactNode;
@@ -37,16 +37,16 @@ export function PageHeader({
         </nav>
       ) : null}
       <motion.div
-        initial={reduce ? false : { opacity: 0, y: 10 }}
+        initial={reduce || inSharedTransition() ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: duration.slow, ease: easing.expo }}
         className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"
       >
         <div className="flex min-w-0 items-center gap-4">
           {media}
           <div className="min-w-0">
             {eyebrow && <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-accent">{eyebrow}</p>}
-            <h1 className="text-3xl font-bold leading-tight text-balance sm:text-4xl">{title}</h1>
+            <h1 {...sharedTitleProps} className="w-fit text-3xl font-bold leading-tight text-balance sm:text-4xl">{title}</h1>
             {subtitle && <p className="mt-2 max-w-3xl text-base text-muted text-pretty">{subtitle}</p>}
           </div>
         </div>
@@ -95,6 +95,8 @@ export function Stat({ label, value, hint, tip }: { label: ReactNode; value: Rea
   return (
     <motion.div
       variants={fadeUp}
+      whileHover={{ y: -3 }}
+      transition={spring.lift}
       className="card group relative overflow-hidden p-4 transition-shadow hover:shadow-[0_0_0_1px_var(--color-accent),0_10px_40px_-10px_var(--color-glow)] sm:p-5"
     >
       <div className="pointer-events-none absolute -right-10 -top-10 size-28 rounded-full bg-verde/10 blur-2xl transition group-hover:bg-verde/20" aria-hidden />
@@ -180,7 +182,7 @@ export function Avatar({ src, name, size = "md" }: { src?: string | null; name: 
 export function Skeleton({ className }: { className?: string }) {
   return (
     <div aria-hidden className={clsx("relative overflow-hidden rounded-lg bg-surface-2", className ?? "h-4 w-full")}>
-      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/5" />
+      <div className="skeleton-sheen absolute inset-0" />
     </div>
   );
 }
@@ -201,7 +203,7 @@ export function ErrorState({ error, retry }: { error: unknown; retry?: () => voi
       <div className="flex items-center gap-2 font-semibold text-vermelho"><AlertTriangle className="size-5" aria-hidden />Não foi possível carregar</div>
       <p className="text-sm text-muted">{msg}</p>
       {retry && (
-        <button type="button" onClick={retry} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:bg-surface-2">
+        <button type="button" onClick={retry} className="press inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:bg-surface-2">
           <RotateCw className="size-4" aria-hidden />Tentar de novo
         </button>
       )}
@@ -271,8 +273,8 @@ export function Timeline({ items }: { items: Array<{ date: ReactNode; title: Rea
 /** Botão/link secundário consistente. */
 export function ButtonLink({ to, children, primary }: { to: string; children: ReactNode; primary?: boolean }) {
   const cls = clsx(
-    "inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition",
-    primary ? "bg-verde text-white shadow-[0_8px_24px_-8px_rgb(0_156_59/0.6)] hover:bg-verde-700" : "border border-line bg-surface hover:bg-surface-2",
+    "press inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition",
+    primary ? "sheen bg-verde-700 text-white shadow-[0_8px_24px_-8px_rgb(0_156_59/0.6)] hover:bg-[#005c23]" : "border border-line bg-surface hover:bg-surface-2",
   );
   return to.startsWith("http") ? <a className={cls} href={to} target="_blank" rel="noopener noreferrer">{children}</a> : <Link className={cls} to={to}>{children}</Link>;
 }
@@ -289,17 +291,17 @@ export function NextSteps({ title = "Próximos passos", items }: { title?: React
             <>
               {it.icon && <span className="text-accent">{it.icon}</span>}
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold">{it.label}</span>
+                <span data-shared-source className="block w-fit font-semibold">{it.label}</span>
                 {it.desc && <span className="mt-0.5 block text-sm text-muted">{it.desc}</span>}
               </span>
               <ChevronRight className="size-4 shrink-0 text-muted transition group-hover:translate-x-1 group-hover:text-accent" aria-hidden />
             </>
           );
-          const cls = "card group flex h-full items-center gap-3 p-4 transition hover:-translate-y-0.5 hover:border-accent";
+          const cls = "card press group flex h-full items-center gap-3 p-4 transition-colors hover:border-accent";
           return (
-            <li key={i}>
-              {it.to.startsWith("http") ? <a className={cls} href={it.to} target="_blank" rel="noopener noreferrer">{body}</a> : <Link className={cls} to={it.to}>{body}</Link>}
-            </li>
+            <motion.li key={i} {...liftable}>
+              {it.to.startsWith("http") ? <a className={cls} href={it.to} target="_blank" rel="noopener noreferrer">{body}</a> : <TransitionLink className={cls} to={it.to}>{body}</TransitionLink>}
+            </motion.li>
           );
         })}
       </ul>

@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { useMemo, useState } from "react";
 import { formatNumber } from "@/lib/format";
+import { spring } from "../motion/tokens";
 
 export interface Seat { key: string; color: string; label: string; group: string }
 
@@ -48,9 +49,12 @@ export function Hemicycle({ seats }: { seats: Seat[] }) {
               fill={s.color}
               stroke={hover === s.key ? "var(--color-fg)" : "none"}
               strokeWidth={0.008}
-              initial={reduce ? false : { opacity: 0, scale: 0 }}
-              animate={{ opacity: hover && cur?.group !== s.group ? 0.35 : 1, scale: 1 }}
-              transition={{ delay: reduce ? 0 : Math.min(i * 0.0025, 1.2), duration: 0.3 }}
+              fillOpacity={hover && cur?.group !== s.group ? 0.35 : 1}
+              style={{ transformBox: "fill-box", transformOrigin: "center", transition: "fill-opacity .2s" }}
+              initial={reduce ? false : { opacity: 0, y: -0.35, scale: 0.4 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ ...spring.bouncy, delay: reduce ? 0 : Math.min(i * 0.0028, 1.3), opacity: { duration: 0.15, delay: reduce ? 0 : Math.min(i * 0.0028, 1.3) } }}
               onMouseEnter={() => setHover(s.key)}
               onMouseLeave={() => setHover(null)}
             >

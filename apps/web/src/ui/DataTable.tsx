@@ -2,6 +2,7 @@ import clsx from "clsx";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Download, Search } from "lucide-react";
 import { useDeferredValue, useMemo, useState, type ReactNode } from "react";
 import { downloadText, formatNumber, toCSV } from "@/lib/format";
+import { toast } from "./motion";
 import { semAcento } from "@emenda/contracts";
 import { MaybeTip, EmptyState, type TipProp } from "./primitives";
 
@@ -79,6 +80,7 @@ export function DataTable<T>({
     const header = columns.map((c) => (typeof c.header === "string" ? c.header : c.key));
     const body = sorted.map((r) => columns.map((c) => (c.csv ? c.csv(r) : valueOf(c, r))));
     downloadText(`${exportName}.csv`, toCSV(header, body));
+    toast(`CSV baixado: ${exportName}.csv`);
   };
 
   return (
@@ -102,7 +104,7 @@ export function DataTable<T>({
             {formatNumber(sorted.length)} {sorted.length === 1 ? "registro" : "registros"}
           </span>
           {exportName && (
-            <button type="button" onClick={exportCsv} disabled={!sorted.length} className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-2 disabled:opacity-50">
+            <button type="button" onClick={exportCsv} disabled={!sorted.length} className="press ml-auto inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-2 disabled:opacity-50">
               <Download className="size-4" aria-hidden />CSV
             </button>
           )}
@@ -140,9 +142,9 @@ export function DataTable<T>({
                 })}
               </tr>
             </thead>
-            <tbody>
+            <tbody key={`${p}-${sort?.key ?? ""}-${sort?.dir ?? ""}`}>
               {view.map((r, i) => (
-                <tr key={rowKey ? rowKey(r, i) : p * pageSize + i} className="border-b border-line/70 transition-colors last:border-0 hover:bg-surface-2/70">
+                <tr key={rowKey ? rowKey(r, i) : p * pageSize + i} style={{ "--i": i } as React.CSSProperties} className="row-in border-b border-line/70 transition-colors last:border-0 hover:bg-surface-2/70">
                   {columns.map((c) => (
                     <td key={c.key} className={clsx("px-3 py-2.5 align-top", c.align === "right" && "text-right tabular whitespace-nowrap", c.align === "center" && "text-center", c.className)}>
                       {c.cell ? c.cell(r) : (raw(r, c.key) as ReactNode) ?? "—"}
@@ -157,8 +159,8 @@ export function DataTable<T>({
       {pages > 1 && (
         <nav aria-label="Paginação" className="mt-3 flex items-center justify-end gap-2 text-sm">
           <span className="mr-auto text-xs text-muted tabular">Página {p + 1} de {formatNumber(pages)}</span>
-          <button type="button" aria-label="Página anterior" disabled={p === 0} onClick={() => setPage(p - 1)} className="rounded-lg border border-line p-1.5 hover:bg-surface-2 disabled:opacity-40"><ChevronLeft className="size-4" /></button>
-          <button type="button" aria-label="Próxima página" disabled={p >= pages - 1} onClick={() => setPage(p + 1)} className="rounded-lg border border-line p-1.5 hover:bg-surface-2 disabled:opacity-40"><ChevronRight className="size-4" /></button>
+          <button type="button" aria-label="Página anterior" disabled={p === 0} onClick={() => setPage(p - 1)} className="press rounded-lg border border-line p-1.5 hover:bg-surface-2 disabled:opacity-40"><ChevronLeft className="size-4" /></button>
+          <button type="button" aria-label="Próxima página" disabled={p >= pages - 1} onClick={() => setPage(p + 1)} className="press rounded-lg border border-line p-1.5 hover:bg-surface-2 disabled:opacity-40"><ChevronRight className="size-4" /></button>
         </nav>
       )}
     </div>

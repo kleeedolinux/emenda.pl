@@ -313,7 +313,7 @@ function HeroKpis({ b, m }: { b?: Brasil; m?: Meta }) {
       </Reveal.Item>
       <Reveal.Item className={`${card} col-span-2 sm:col-span-1`}>
         <dt className="text-xs text-muted">Pago (média) desde que você chegou</dt>
-        <dd className="mt-1 h-8 font-display text-xl font-bold text-accent sm:text-2xl" aria-live="off">{b ? <NumberRoll text={formatBRL(Math.round(desde))} /> : <Skeleton className="h-7 w-24" />}</dd>
+        <dd className="mt-1 h-8 font-display text-xl font-bold text-accent sm:text-2xl" aria-live="off">{b ? <NumberRoll text={`R$ ${Math.floor(desde / 100).toLocaleString("pt-BR")}`} /> : <Skeleton className="h-7 w-24" />}</dd>
       </Reveal.Item>
     </Reveal>
   );

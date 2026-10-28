@@ -563,7 +563,8 @@ scene(44, 56, (s) => {
   ["#ff5f57", "#febc2e", "#28c840"].forEach((c) => (el("div", "dot", bar).style.background = c));
   const url = el("div", "url", bar);
   const nav = el("div", "nav", fr);
-  el("div", "logo", nav, "emenda<i>.online</i>");
+  const navLogo = el("img", "", el("div", "logo", nav));
+  navLogo.src = "../assets/brand/logo.svg"; navLogo.style.height = "34px"; navLogo.style.display = "block";
   const navItems = (PORT ? ["Dinheiro", "Municípios", "Proposições"] : ["Dinheiro", "Municípios", "Deputados", "Proposições", "Emendas"]).map((t) => el("div", "", nav, t));
   const body = el("div", "body", fr);
   body.style.top = "122px";
@@ -770,10 +771,10 @@ scene(56, 64, (s) => {
   msvg.style.display = "block";
   const cols = [...msvg.querySelectorAll("rect")].slice(1, 4);
   cols.forEach((r) => { r.style.transformBox = "fill-box"; r.style.transformOrigin = "50% 100%"; });
-  // wordmark as text (product renamed to emenda.online; brand SVG still says the old name)
   const wmWrap = el("div", "", lock);
-  const wm = el("div", "disp", wmWrap, `emenda<span style="color:${C.verdeL}">.online</span>`);
-  wm.style.cssText += `font-size:${L(150, 100)}px;letter-spacing:-0.02em;line-height:1;padding-bottom:0.12em`;
+  const wm = el("img", "", wmWrap);
+  wm.src = "../assets/brand/wordmark-dark.svg";
+  wm.style.height = mh + "px"; wm.style.display = "block";
   const tri = el("div", "abs", s.cam);
   tri.style.cssText += "height:14px;border-radius:7px;overflow:hidden;display:flex";
   [C.verde, C.amarelo, "#2b63e0"].forEach((c) => (el("div", "", tri).style.cssText = `flex:1;background:${c}`));
@@ -849,6 +850,7 @@ function render(b) {
 }
 
 await document.fonts.ready;
+await Promise.all(["wordmark-dark", "logo"].map((n) => new Promise((ok) => { const i = new Image(); i.onload = i.onerror = ok; i.src = `../assets/brand/${n}.svg`; })));
 await Promise.all(D.deputados.map((d) => new Promise((ok) => { const i = new Image(); i.onload = i.onerror = ok; i.src = "../" + d.foto; })));
 window.seek = (t) => render((t * BPM) / 60);
 window.reelReady = true;

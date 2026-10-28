@@ -1,14 +1,27 @@
 import { describe, expect, test } from "bun:test";
-import { shouldTrack, hitPayload } from "./analytics";
+import { shouldTrack, hitPayload, parseAviso } from "./analytics";
 
+// Base legal: legítimo interesse (LGPD art. 7º, IX). Liga por padrão; só desliga com opt-out ou DNT/GPC.
 describe("shouldTrack", () => {
   test.each([
-    [{ consent: null, dnt: false }, true],
-    [{ consent: "aceito", dnt: false }, true],
-    [{ consent: "recusado", dnt: false }, false],
-    [{ consent: "aceito", dnt: true }, false],
-    [{ consent: null, dnt: true }, false],
+    [{ aviso: null, dnt: false }, true],
+    [{ aviso: "ciente", dnt: false }, true],
+    [{ aviso: "desativado", dnt: false }, false],
+    [{ aviso: "ciente", dnt: true }, false],
+    [{ aviso: null, dnt: true }, false],
   ] as const)("%o -> %s", (input, out) => expect(shouldTrack(input)).toBe(out));
+});
+
+describe("parseAviso", () => {
+  test.each([
+    ["ciente", "ciente"],
+    ["desativado", "desativado"],
+    // compatibilidade com o modelo antigo de consentimento
+    ["aceito", "ciente"],
+    ["recusado", "desativado"],
+    [null, null],
+    ["lixo", null],
+  ] as const)("%p -> %p", (raw, out) => expect(parseAviso(raw)).toBe(out));
 });
 
 describe("hitPayload", () => {

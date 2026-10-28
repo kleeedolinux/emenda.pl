@@ -1,45 +1,54 @@
-// Analytics próprio e anônimo (sem terceiros). Cookie first-party é gerido pelo Worker.
-// Regras: respeita Do Not Track; "recusado" no aviso LGPD = nenhum hit.
+// Analytics próprio e anônimo (sem terceiros). Cookie first-party `ep_vid` é gerido pelo Worker.
+// Base legal: legítimo interesse (LGPD art. 7º, IX; art. 10). Ativo por padrão, com opt-out.
+// Desliga com "Desativar" (persistido) ou Do Not Track / Global Privacy Control.
 import { useQuery } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 import { fetchJson } from "./data";
 
-export type Consent = "aceito" | "recusado" | null;
+/** Estado do aviso: lido ("ciente"), opt-out ("desativado") ou ainda não visto. */
+export type Aviso = "ciente" | "desativado" | null;
 const KEY = "emenda:consent";
 
-export function shouldTrack({ consent, dnt }: { consent: Consent; dnt: boolean }): boolean {
-  return !dnt && consent !== "recusado";
+/** Lê o valor persistido; aceita os valores do modelo antigo (aceito/recusado). */
+export function parseAviso(raw: string | null): Aviso {
+  if (raw === "ciente" || raw === "aceito") return "ciente";
+  if (raw === "desativado" || raw === "recusado") return "desativado";
+  return null;
+}
+
+export function shouldTrack({ aviso, dnt }: { aviso: Aviso; dnt: boolean }): boolean {
+  return !dnt && aviso !== "desativado";
 }
 
 export function hitPayload(path: string): string {
   return JSON.stringify({ path: path.split(/[?#]/)[0] || "/" });
 }
 
-const dnt = () =>
+export const dntAtivo = () =>
   typeof navigator !== "undefined" &&
   (navigator.doNotTrack === "1" || (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl === true);
 
 const listeners = new Set<() => void>();
-export function getConsent(): Consent {
+export function getAviso(): Aviso {
   try {
-    const v = localStorage.getItem(KEY);
-    return v === "aceito" || v === "recusado" ? v : null;
+    return parseAviso(localStorage.getItem(KEY));
   } catch {
     return null;
   }
 }
-export function setConsent(c: Exclude<Consent, null>) {
-  try { localStorage.setItem(KEY, c); } catch { /* modo privado */ }
+/** Persiste a escolha. "desativado" para todos os hits a partir de agora (o cookie HttpOnly expira sozinho). */
+export function setAviso(a: Exclude<Aviso, null>) {
+  try { localStorage.setItem(KEY, a); } catch { /* modo privado */ }
   listeners.forEach((l) => l());
 }
-export function useConsent(): Consent {
-  return useSyncExternalStore((cb) => (listeners.add(cb), () => listeners.delete(cb)), getConsent, () => null);
+export function useAviso(): Aviso {
+  return useSyncExternalStore((cb) => (listeners.add(cb), () => listeners.delete(cb)), getAviso, () => null);
 }
 
 let last = "";
 /** Registra uma visualização de página (deduplica o mesmo caminho em sequência). */
 export function sendHit(path: string) {
-  if (!shouldTrack({ consent: getConsent(), dnt: dnt() })) return;
+  if (!shouldTrack({ aviso: getAviso(), dnt: dntAtivo() })) return;
   const body = hitPayload(path);
   if (body === last) return;
   last = body;

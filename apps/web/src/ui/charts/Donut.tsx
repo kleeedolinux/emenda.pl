@@ -1,6 +1,7 @@
 import { arc, pie } from "d3-shape";
 import { motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
+import { useId, useState } from "react";
+import { duration, easing } from "../motion/tokens";
 import { corCategoria } from "@/lib/colors";
 import { formatNumber, formatPct } from "@/lib/format";
 
@@ -16,23 +17,35 @@ export function Donut({ data, format = (n) => formatNumber(n), centerLabel = "To
   const a = arc<(typeof arcs)[number]>().innerRadius(R * 0.62).outerRadius(R).cornerRadius(3);
   const aHover = arc<(typeof arcs)[number]>().innerRadius(R * 0.62).outerRadius(R + 5).cornerRadius(3);
   const cur = hover !== null ? rows[hover] : null;
+  const mid = R * 0.81, mask = `dn-${useId().replace(/:/g, "")}`;
   return (
     <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
       <svg viewBox="-100 -100 200 200" className="w-48 shrink-0" role="img" aria-label={rows.map((d) => `${d.label}: ${format(d.value)}`).join("; ")}>
+        {/* Varredura: máscara circular desenhada via pathLength (sentido horário a partir do topo). */}
+        <mask id={mask}>
+          <motion.circle
+            r={mid} fill="none" stroke="#fff" strokeWidth={R * 0.5} transform="rotate(-90)"
+            initial={reduce ? false : { pathLength: 0 }}
+            whileInView={{ pathLength: 1.001 }}
+            viewport={{ once: true }}
+            transition={{ duration: duration.cinematic, ease: easing.inOut }}
+          />
+        </mask>
+        <g mask={`url(#${mask})`}>
         {arcs.map((s, i) => (
           <motion.path
             key={s.data.label}
             d={(hover === i ? aHover : a)(s) ?? ""}
             fill={s.data.color ?? corCategoria(i)}
-            initial={reduce ? false : { opacity: 0, scale: 0.85 }}
-            animate={{ opacity: hover === null || hover === i ? 1 : 0.45, scale: 1 }}
-            transition={{ duration: 0.5, delay: reduce ? 0 : i * 0.05 }}
+            animate={{ opacity: hover === null || hover === i ? 1 : 0.45 }}
+            transition={{ duration: duration.fast }}
             onMouseEnter={() => setHover(i)}
             onMouseLeave={() => setHover(null)}
             stroke={s.data.highlight ? "var(--color-amarelo)" : "none"}
             strokeWidth={s.data.highlight ? 2.5 : 0}
           />
         ))}
+        </g>
         <text textAnchor="middle" y={-6} className="fill-muted text-[10px]">{cur ? cur.label.slice(0, 22) : centerLabel}</text>
         <text textAnchor="middle" y={12} className="fill-fg font-display text-[15px] font-bold">{format(cur ? cur.value : total)}</text>
       </svg>

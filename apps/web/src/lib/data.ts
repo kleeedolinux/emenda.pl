@@ -1,5 +1,6 @@
 // Acesso a dados: tudo same-origin (/api/* e /data/* servidos pelo Worker).
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import type { GeoFC } from "@/features/geo/malhas";
 
 export class HttpError extends Error {
   constructor(public status: number, public url: string) {
@@ -49,26 +50,47 @@ export function useCamara<T>(path: string | null): UseQueryResult<T, Error> {
 export interface IbgeMunicipio {
   id: number;
   nome: string;
+  /** Presente no índice estático (public/geo/municipios.json). */
+  uf?: string;
   microrregiao?: { nome: string; mesorregiao?: { nome: string; UF?: { sigla: string; nome: string; regiao?: { nome: string } } } } | null;
   "regiao-imediata"?: { nome: string; "regiao-intermediaria"?: { nome: string; UF?: { sigla: string; nome: string; regiao?: { nome: string } } } } | null;
+}
+
+/** Malha geográfica (TopoJSON estático ou GeoJSON) já como FeatureCollection. */
+export function useMalha(url: string | null): UseQueryResult<GeoFC, Error> {
+  return useQuery<GeoFC, Error>({
+    queryKey: ["malha", url],
+    queryFn: async ({ signal }) => {
+      // topojson-client só entra quando um mapa é desenhado (fora do bundle inicial).
+      const [{ toFeatureCollection }, raw] = await Promise.all([import("@/features/geo/malhas"), fetchJson<unknown>(url!, signal)]);
+      return toFeatureCollection(raw);
+    },
+    enabled: !!url,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: noRetry404,
+  });
 }
 
 export const ibge = {
   municipios: () => "/api/ibge/v1/localidades/municipios",
   municipio: (id: string | number) => `/api/ibge/v1/localidades/municipios/${id}`,
-  malhaBrasilUF: () => "/api/ibge/v3/malhas/paises/BR?intrarregiao=UF&formato=application/vnd.geo%2Bjson&qualidade=minima",
-  malhaUF: (uf: string) =>
-    `/api/ibge/v3/malhas/estados/${uf.toUpperCase()}?intrarregiao=municipio&formato=application/vnd.geo%2Bjson&qualidade=minima`,
+  /** Malhas estáticas (TopoJSON em public/geo, geradas por scripts/fetch-geo.ts). */
+  malhaBrasilUF: () => "/geo/br-uf.json",
+  malhaUF: (uf: string) => `/geo/uf/${uf.toUpperCase()}.json`,
+  /** Índice estático [id, nome, uf] de todos os municípios. */
+  municipiosIndice: () => "/geo/municipios.json",
 };
 
 export const ufDoMunicipio = (m: IbgeMunicipio) =>
-  m.microrregiao?.mesorregiao?.UF?.sigla ?? m["regiao-imediata"]?.["regiao-intermediaria"]?.UF?.sigla ?? "";
+  m.uf || (m.microrregiao?.mesorregiao?.UF?.sigla ?? m["regiao-imediata"]?.["regiao-intermediaria"]?.UF?.sigla ?? "");
 
-/** Lista de municípios do IBGE (cache longo: muda raramente). */
+/** Lista de municípios (índice estático; cache longo: muda raramente). */
 export function useMunicipiosIbge(enabled = true) {
   return useQuery<IbgeMunicipio[], Error>({
     queryKey: ["ibge-municipios"],
-    queryFn: ({ signal }) => fetchJson<IbgeMunicipio[]>(ibge.municipios(), signal),
+    queryFn: async ({ signal }) =>
+      (await fetchJson<Array<[number, string, string]>>(ibge.municipiosIndice(), signal)).map(([id, nome, uf]) => ({ id, nome, uf })),
     enabled,
     staleTime: Infinity,
     gcTime: Infinity,
