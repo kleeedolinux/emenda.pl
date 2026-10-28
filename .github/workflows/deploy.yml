@@ -1,0 +1,25 @@
+# Testa e publica na Cloudflare a cada push no main.
+name: deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency: { group: deploy, cancel-in-progress: true }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: wasm32-unknown-unknown }
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo install worker-build --locked
+      - run: bun install --frozen-lockfile
+      - run: bun test packages && bun run --cwd apps/web test && cargo test --workspace
+      - run: bun run build
+      - run: bun run --cwd apps/worker deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 8936c3f925c0408b6fadca464d5151d2

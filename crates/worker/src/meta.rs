@@ -99,7 +99,9 @@ pub fn render(m: &PageMeta) -> String {
 
 /// Replace the marker block (markers included) with `block`. None if markers are missing.
 pub fn inject(html: &str, block: &str) -> Option<String> {
-    let s = html.find(START)?;
+    // O marcador de início pode ter uma nota: "<!-- og:start (…) -->".
+    let s = html.find("<!-- og:start")?;
+    html[s..].find("-->")?;
     let e = html[s..].find(END)? + s + END.len();
     Some(format!("{}{block}{}", &html[..s], &html[e..]))
 }

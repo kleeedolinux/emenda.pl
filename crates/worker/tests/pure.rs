@@ -430,3 +430,10 @@ fn content_types() {
     );
     assert_eq!(content_type(Upstream::Ibge, "x", None), j);
 }
+
+#[test]
+fn inject_accepts_start_marker_with_trailing_note() {
+    let html = "<head>\n<!-- og:start (per-route; the Worker replaces this block) -->\n<title>x</title>\n<!-- og:end -->\n</head>";
+    let out = emenda_worker::meta::inject(html, "NEW").expect("markers found");
+    assert_eq!(out, "<head>\nNEW\n</head>");
+}
