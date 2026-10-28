@@ -13,9 +13,13 @@ pub enum Kind {
     Proposicao,
     Votacao,
     Partido,
+    /// "Como votou": id `votacaoId/depId`.
+    Voto,
+    /// Pauta do dia: id `YYYY-MM-DD` or `hoje`.
+    Agenda,
 }
 
-const SLUGS: [(Kind, &str); 8] = [
+const SLUGS: [(Kind, &str); 10] = [
     (Kind::Deputado, "deputado"),
     (Kind::Senador, "senador"),
     (Kind::Municipio, "municipio"),
@@ -24,6 +28,8 @@ const SLUGS: [(Kind, &str); 8] = [
     (Kind::Proposicao, "proposicao"),
     (Kind::Votacao, "votacao"),
     (Kind::Partido, "partido"),
+    (Kind::Voto, "voto"),
+    (Kind::Agenda, "agenda"),
 ];
 
 impl Kind {
@@ -280,4 +286,261 @@ pub fn partido(p: &Value) -> Option<CardSpec> {
         c = c.stat("Deputados", n);
     }
     Some(c)
+}
+
+// ---------- share: voto / agenda ----------
+
+/// Valid ISO calendar date (`YYYY-MM-DD`).
+pub fn valid_day(d: &str) -> bool {
+    d.len() == 10
+        && d.bytes().enumerate().all(|(i, b)| {
+            if i == 4 || i == 7 {
+                b == b'-'
+            } else {
+                b.is_ascii_digit()
+            }
+        })
+        && crate::analytics::parse_day(d)
+            .map(crate::analytics::fmt_day)
+            .as_deref()
+            == Some(d)
+}
+
+/// Civil date in Brasília (UTC-3, no DST since 2019) for a JS timestamp in ms.
+pub fn dia_brasilia(now_ms: f64) -> String {
+    crate::analytics::day_string(now_ms - 3.0 * 3_600_000.0)
+}
+
+const SEMANA: [&str; 7] = [
+    "quinta-feira",
+    "sexta-feira",
+    "sábado",
+    "domingo",
+    "segunda-feira",
+    "terça-feira",
+    "quarta-feira",
+];
+const MESES: [&str; 12] = [
+    "janeiro",
+    "fevereiro",
+    "março",
+    "abril",
+    "maio",
+    "junho",
+    "julho",
+    "agosto",
+    "setembro",
+    "outubro",
+    "novembro",
+    "dezembro",
+];
+
+/// "quarta-feira, 28 de outubro" (dia 1 -> "1º").
+pub fn dia_extenso(d: &str) -> Option<String> {
+    if !valid_day(d) {
+        return None;
+    }
+    let days = crate::analytics::parse_day(d)?;
+    let wd = SEMANA[days.rem_euclid(7) as usize]; // 1970-01-01 was a Thursday
+    let m: usize = d[5..7].parse().ok()?;
+    let dd: u32 = d[8..10].parse().ok()?;
+    let dia = if dd == 1 {
+        "1º".to_string()
+    } else {
+        dd.to_string()
+    };
+    Some(format!("{wd}, {dia} de {}", MESES[m - 1]))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VotoSpec {
+    pub deputado: String,
+    pub partido_uf: String,
+    pub voto: String,
+    pub titulo: String,
+    pub data: String,
+    /// (sim, não, outros)
+    pub placar: (u32, u32, u32),
+    pub photo_url: Option<String>,
+}
+
+fn br_date(iso: &str) -> String {
+    match (iso.get(0..4), iso.get(5..7), iso.get(8..10)) {
+        (Some(y), Some(m), Some(d)) => format!("{d}/{m}/{y}"),
+        _ => iso.to_string(),
+    }
+}
+
+/// `votacao`: Câmara /votacoes/{id}; `votos`: /votacoes/{id}/votos.
+pub fn voto(votacao: &Value, votos: &Value, dep_id: u64) -> Option<VotoSpec> {
+    let list = votos.get("dados")?.as_array()?;
+    let mine = list
+        .iter()
+        .find(|v| v.pointer("/deputado_/id").and_then(Value::as_u64) == Some(dep_id))?;
+    let (mut sim, mut nao, mut outros) = (0, 0, 0);
+    for v in list {
+        match v.get("tipoVoto").and_then(Value::as_str).unwrap_or("") {
+            "Sim" => sim += 1,
+            "Não" => nao += 1,
+            _ => outros += 1,
+        }
+    }
+    let d = "/dados";
+    let prop = votacao.pointer(&format!("{d}/proposicoesAfetadas/0"));
+    let titulo =
+        match prop.and_then(|p| Some((s(p, "/siglaTipo")?, s(p, "/numero")?, s(p, "/ano")?))) {
+            Some((t, n, a)) => {
+                let ementa = prop.and_then(|p| s(p, "/ementa")).unwrap_or_default();
+                let head = format!("{t} {n}/{a}");
+                if ementa.is_empty() {
+                    head
+                } else {
+                    format!("{head} · {}", truncate(&ementa, 160))
+                }
+            }
+            None => truncate(
+                &s(votacao, &format!("{d}/descricao")).unwrap_or_default(),
+                180,
+            ),
+        };
+    let tag = format!(
+        "{}-{}",
+        s(mine, "/deputado_/siglaPartido").unwrap_or_default(),
+        s(mine, "/deputado_/siglaUf").unwrap_or_default()
+    );
+    Some(VotoSpec {
+        deputado: s(mine, "/deputado_/nome")?,
+        partido_uf: tag.trim_matches('-').into(),
+        voto: s(mine, "/tipoVoto").unwrap_or_else(|| "—".into()),
+        titulo,
+        data: br_date(&s(votacao, &format!("{d}/data")).unwrap_or_default()),
+        placar: (sim, nao, outros),
+        photo_url: s(mine, "/deputado_/urlFoto"),
+    })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgendaItemSpec {
+    pub hora: String,
+    pub sigla: String,
+    pub titulo: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgendaSpec {
+    pub dia: String,
+    pub casa: String,
+    pub items: Vec<AgendaItemSpec>,
+    pub total: usize,
+}
+
+fn eventos_ativos(eventos: &Value) -> Vec<&Value> {
+    eventos
+        .get("dados")
+        .and_then(Value::as_array)
+        .map(|l| {
+            l.iter()
+                .filter(|e| {
+                    !s(e, "/situacao")
+                        .unwrap_or_default()
+                        .to_lowercase()
+                        .contains("cancel")
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn plenario(e: &Value) -> bool {
+    s(e, "/orgaos/0/sigla").as_deref() == Some("PLEN")
+}
+
+fn hora(e: &Value) -> String {
+    s(e, "/dataHoraInicio")
+        .and_then(|h| h.get(11..16).map(str::to_string))
+        .unwrap_or_default()
+}
+
+/// Plenary deliberative session whose pauta feeds the card (Câmara /eventos?dataInicio=D&dataFim=D).
+pub fn agenda_evento_principal(eventos: &Value) -> Option<u64> {
+    let ativos = eventos_ativos(eventos);
+    let deliberativa = |e: &&&Value| {
+        s(e, "/descricaoTipo")
+            .unwrap_or_default()
+            .to_lowercase()
+            .contains("deliberativ")
+    };
+    ativos
+        .iter()
+        .filter(|e| plenario(e))
+        .find(deliberativa)
+        .or_else(|| ativos.iter().find(|e| plenario(e)))
+        .and_then(|e| e.get("id")?.as_u64())
+}
+
+/// Card for `dia`: pauta of the main plenary session if given, else the day's events.
+pub fn agenda(dia: &str, eventos: &Value, pauta: Option<&Value>) -> Option<AgendaSpec> {
+    let dia_ext = dia_extenso(dia)?;
+    let ativos = eventos_ativos(eventos);
+    let pauta_items: Vec<&Value> = pauta
+        .and_then(|p| p.get("dados"))
+        .and_then(Value::as_array)
+        .map(|l| l.iter().collect())
+        .unwrap_or_default();
+    if !pauta_items.is_empty() {
+        let id = agenda_evento_principal(eventos);
+        let h = ativos
+            .iter()
+            .find(|e| e.get("id").and_then(Value::as_u64) == id)
+            .map(|e| hora(e))
+            .unwrap_or_default();
+        let items = pauta_items
+            .iter()
+            .map(|p| {
+                let prop = p.get("proposicao_").filter(|x| !x.is_null());
+                let sigla = prop
+                    .and_then(|x| {
+                        Some(format!(
+                            "{} {}/{}",
+                            s(x, "/siglaTipo")?,
+                            s(x, "/numero")?,
+                            s(x, "/ano")?
+                        ))
+                    })
+                    .or_else(|| s(p, "/titulo"))
+                    .unwrap_or_else(|| "Item".into());
+                let titulo = prop.and_then(|x| s(x, "/ementa")).unwrap_or_default();
+                AgendaItemSpec {
+                    hora: h.clone(),
+                    sigla,
+                    titulo: truncate(&titulo, 140),
+                }
+            })
+            .collect::<Vec<_>>();
+        return Some(AgendaSpec {
+            dia: dia_ext,
+            casa: "Plenário da Câmara".into(),
+            total: items.len(),
+            items,
+        });
+    }
+    let mut items: Vec<_> = ativos
+        .iter()
+        .map(|e| AgendaItemSpec {
+            hora: hora(e),
+            sigla: if plenario(e) {
+                "Plenário".into()
+            } else {
+                s(e, "/orgaos/0/sigla").unwrap_or_else(|| "Câmara".into())
+            },
+            titulo: s(e, "/descricaoTipo").unwrap_or_default(),
+        })
+        .collect();
+    items.sort_by(|a, b| a.hora.cmp(&b.hora));
+    Some(AgendaSpec {
+        dia: dia_ext,
+        casa: "Câmara dos Deputados".into(),
+        total: items.len(),
+        items,
+    })
 }

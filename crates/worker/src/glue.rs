@@ -11,14 +11,14 @@ use worker::*;
 const UA: &str = "emenda.pl (+https://emenda.pl)";
 const ASSET_HOST: &str = "https://assets.local";
 
-struct Out {
-    status: u16,
-    ctype: String,
-    body: Vec<u8>,
+pub(crate) struct Out {
+    pub(crate) status: u16,
+    pub(crate) ctype: String,
+    pub(crate) body: Vec<u8>,
 }
 
 impl Out {
-    fn json(status: u16, v: &Value) -> Self {
+    pub(crate) fn json(status: u16, v: &Value) -> Self {
         Out {
             status,
             ctype: "application/json; charset=utf-8".into(),
@@ -38,6 +38,9 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         (Some(h), Some(p)) => format!("{h}:{p}"),
         (h, _) => h.unwrap_or("localhost").to_string(),
     };
+    if let Some(p) = crate::cdn::scope(&host, url.path()) {
+        return crate::glue_cdn::handle(&req, p).await;
+    }
     match crate::api::scope(&host, url.path()) {
         crate::api::Scope::Site => {}
         sc => {
@@ -45,6 +48,11 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             security_headers(&mut resp)?;
             return Ok(resp);
         }
+    }
+    if let Some(sr) = crate::seo::route(&method, url.path(), url.query()) {
+        let mut resp = crate::seo::glue_seo::handle(&req, &env, &url, &host, sr).await?;
+        security_headers(&mut resp)?;
+        return Ok(resp);
     }
     let r = route::route(&method, url.path(), url.query());
     let cors = matches!(
@@ -74,6 +82,15 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             let key = route::cache_key(url.as_str());
             cached(&key, CacheClass::Stats, || stats(&env)).await?
         }
+        Route::Proxy {
+            upstream: up @ (Upstream::Camara | Upstream::Senado),
+            rest,
+            query,
+        } => {
+            let class = route::cache_class(&r).unwrap_or(CacheClass::CamaraList);
+            let key = route::cache_key(url.as_str());
+            crate::glue_espelho::handle(&env, *up, rest, query.as_deref(), &key, class).await?
+        }
         _ => {
             let class = route::cache_class(&r).unwrap_or(CacheClass::CamaraList);
             let key = route::cache_key(url.as_str());
@@ -100,7 +117,7 @@ fn security_headers(resp: &mut Response) -> Result<()> {
     Ok(())
 }
 
-fn respond(o: Out) -> Result<Response> {
+pub(crate) fn respond(o: Out) -> Result<Response> {
     let mut r = Response::from_bytes(o.body)?.with_status(o.status);
     r.headers_mut().set("Content-Type", &o.ctype)?;
     Ok(r)
@@ -174,7 +191,7 @@ pub(crate) async fn get(url: &str, accept: &str) -> Result<Response> {
 }
 
 /// Raw upstream fetch -> (status, content-type, body). Non-200 -> 502.
-async fn proxy(env: &Env, up: Upstream, rest: &str, query: Option<&str>) -> Out {
+pub(crate) async fn proxy(env: &Env, up: Upstream, rest: &str, query: Option<&str>) -> Out {
     let res = match (up, data_base(env)) {
         (Upstream::Data, DataSource::Assets) => from_assets(env, &format!("/data/{rest}")).await,
         (_, ds) => {
@@ -322,6 +339,8 @@ async fn card_for(env: &Env, t: &Target) -> Option<CardSpec> {
             let pid = list.pointer("/dados/0/id")?.as_i64()?;
             cards::partido(&camara(&format!("partidos/{pid}")).await?)
         }
+        // Rendered by `share_png`.
+        Kind::Voto | Kind::Agenda => None,
     }
 }
 
@@ -336,17 +355,74 @@ fn og_kind(k: Kind) -> og::OgKind {
         Kind::Proposicao => og::OgKind::Proposicao,
         Kind::Votacao => og::OgKind::Votacao,
         Kind::Partido => og::OgKind::Partido,
+        Kind::Voto | Kind::Agenda => og::OgKind::Default,
+    }
+}
+
+async fn photo(url: Option<&str>) -> Option<Vec<u8>> {
+    match get(url?, "image/*").await {
+        Ok(mut r) if r.status_code() == 200 => r.bytes().await.ok(),
+        _ => None,
+    }
+}
+
+/// Voto / agenda cards; None -> caller falls back to the default card.
+async fn share_png(t: &Target) -> Option<Vec<u8>> {
+    match t.kind {
+        Kind::Voto => {
+            let (vid, dep) = t.id.split_once('/')?;
+            let v = camara(&format!("votacoes/{vid}")).await?;
+            let votos = camara(&format!("votacoes/{vid}/votos")).await?;
+            let spec = cards::voto(&v, &votos, dep.parse().ok()?)?;
+            let photo = photo(spec.photo_url.as_deref()).await;
+            og::voto_png(&og::OgVoto {
+                deputado: spec.deputado,
+                partido_uf: spec.partido_uf,
+                voto: spec.voto,
+                titulo: spec.titulo,
+                data: spec.data,
+                placar: Some(spec.placar),
+                photo,
+            })
+            .ok()
+        }
+        Kind::Agenda => {
+            let dia = if t.id == "hoje" {
+                cards::dia_brasilia(Date::now().as_millis() as f64)
+            } else {
+                t.id.clone()
+            };
+            let ev = camara(&format!(
+                "eventos?dataInicio={dia}&dataFim={dia}&ordem=ASC&ordenarPor=dataHoraInicio&itens=100"
+            ))
+            .await?;
+            let pauta = match cards::agenda_evento_principal(&ev) {
+                Some(id) => camara(&format!("eventos/{id}/pauta")).await,
+                None => None,
+            };
+            let a = cards::agenda(&dia, &ev, pauta.as_ref())?;
+            og::agenda_png(&og::OgAgenda {
+                dia: a.dia,
+                casa: a.casa,
+                total: a.total,
+                items: a
+                    .items
+                    .into_iter()
+                    .map(|i| og::OgAgendaItem {
+                        hora: i.hora,
+                        sigla: i.sigla,
+                        titulo: i.titulo,
+                    })
+                    .collect(),
+            })
+            .ok()
+        }
+        _ => None,
     }
 }
 
 async fn to_og(c: CardSpec) -> og::OgCard {
-    let photo = match &c.photo_url {
-        Some(u) => match get(u, "image/*").await {
-            Ok(mut r) if r.status_code() == 200 => r.bytes().await.ok(),
-            _ => None,
-        },
-        None => None,
-    };
+    let photo = photo(c.photo_url.as_deref()).await;
     og::OgCard {
         kind: og_kind(c.kind),
         eyebrow: c.eyebrow,
@@ -364,6 +440,13 @@ async fn to_og(c: CardSpec) -> og::OgCard {
 }
 
 async fn og_png(env: &Env, t: &Target) -> Out {
+    if let Some(body) = share_png(t).await {
+        return Out {
+            status: 200,
+            ctype: "image/png".into(),
+            body,
+        };
+    }
     let card = card_for(env, t).await.unwrap_or_else(cards::default_card);
     let png = match og::png(&to_og(card).await) {
         Ok(p) => Ok(p),

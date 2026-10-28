@@ -76,12 +76,12 @@ fn days_from_civil(y: i64, m: u32, d: u32) -> i64 {
     era * 146_097 + yoe * 365 + yoe / 4 - yoe / 100 + doy - 719_468
 }
 
-fn fmt_day(days: i64) -> String {
+pub(crate) fn fmt_day(days: i64) -> String {
     let (y, m, d) = civil(days);
     format!("{y:04}-{m:02}-{d:02}")
 }
 
-fn parse_day(s: &str) -> Option<i64> {
+pub(crate) fn parse_day(s: &str) -> Option<i64> {
     let mut it = s.split('-');
     let (y, m, d) = (
         it.next()?.parse().ok()?,

@@ -61,3 +61,19 @@ GET/HEAD; OPTIONS 204; others 405. Body `{data, meta:{fonte[], atualizado, licen
 - 429: `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining: 0`. Binding missing -> fail open.
 - Caps: query <= 512, `q` <= 64 chars, `limit` 1..=500 (default 50), `offset` <= 10000.
 - Docs page: `apps/web/src/pages/ApiDocsPage.tsx` (`/api`).
+
+## SEO / AI (`src/seo`, glue `src/seo/glue_seo.rs`)
+
+Dispatched in `glue.rs` before `route::route` (after the `/v1` scope). GET/HEAD only.
+
+| Path | Output | Edge TTL |
+|---|---|---|
+| page routes (`/`, `/uf/:uf`, `/municipio/:ibge`, … see `seo::route`) | `index.html` + head block + JSON-LD + prerender in `#root`, or Markdown | `seo::ttl` (5 min–6h) |
+| `<page>.md`, `/index.md` | Markdown | same |
+| `/llms.txt`, `/llms-full.txt` | text/plain | 1d |
+| `/sitemap.xml`, `/sitemaps/{paginas,ufs,municipios,autores,parlamentares,proposicoes,entenda}.xml` | XML | 1d |
+
+- Flow: `seo::route` -> `pages::sources` (index 0 = `v1/meta.json`) -> parallel fetch, 3.5s timeout each -> `pages::build` -> `head`/`prerender` or `markdown`.
+- Markdown when: `.md`, `?formato=md`, `Accept: text/markdown`, AI UA (`negotiate::AI_AGENTS`), or HTTP lib UA without `text/html`. Browsers and search crawlers get HTML.
+- Cache key: canonical URL + `__seo=html|md` + `__v=<sha256(index.html)[..12]>`. Incomplete docs (a source failed) are not cached; 404 data -> status 404 + `noindex`.
+- Canonical and absolute links always use `https://emenda.online`. Catalog (`catalog.rs`) mirrors `temas.ts`/`pautas.ts`; tests fail if they drift.

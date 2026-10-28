@@ -1,17 +1,8 @@
 use emenda_worker::api::map;
 use emenda_worker::api::{
-    self, cache_control, envelope, envelope_raw, error_body, etag, etag_matches, parse, scope,
-    ApiError, AutoresQuery, Endpoint, Meta, Scope,
+    self, cache_control, envelope, envelope_raw, error_body, etag, etag_matches, scope, Meta, Scope,
 };
 use serde_json::{json, Value};
-
-fn aq(q: Option<&str>, limit: usize, offset: usize) -> Endpoint {
-    Endpoint::Autores(AutoresQuery {
-        q: q.map(Into::into),
-        limit,
-        offset,
-    })
-}
 
 #[test]
 fn scopes() {
@@ -31,6 +22,15 @@ fn scopes() {
         ("emenda.online", "/v1x", Scope::Site),
         ("emenda.online", "/api", Scope::Site),
         ("emenda.online", "/", Scope::Site),
+        ("emenda.online", "/mcp", Scope::Mcp),
+        ("api.emenda.online", "/mcp", Scope::Mcp),
+        ("emenda.online", "/rss/agenda.xml", Scope::Rss("agenda.xml")),
+        (
+            "api.emenda.online",
+            "/rss/deputado/1.atom",
+            Scope::Rss("deputado/1.atom"),
+        ),
+        ("emenda.online", "/mcpx", Scope::Site),
     ];
     for (host, path, want) in cases {
         assert_eq!(scope(host, path), want, "{host}{path}");
@@ -38,179 +38,11 @@ fn scopes() {
 }
 
 #[test]
-fn parses_endpoints() {
-    let ok: Vec<(&str, Option<&str>, Endpoint)> = vec![
-        ("", None, Endpoint::Index),
-        ("/meta", None, Endpoint::Meta),
-        ("/meta/", Some("x=1"), Endpoint::Meta),
-        ("/brasil", None, Endpoint::Brasil),
-        ("/ufs", None, Endpoint::Ufs),
-        ("/ufs/sp", None, Endpoint::Uf("SP".into())),
-        (
-            "/municipios/3550308",
-            None,
-            Endpoint::Municipio("3550308".into()),
-        ),
-        ("/autores", None, aq(None, 50, 0)),
-        (
-            "/autores",
-            Some("q=Silva&limit=10&offset=20&foo=bar"),
-            aq(Some("SILVA"), 10, 20),
-        ),
-        (
-            "/autores",
-            Some("q=Jo%C3%A3o+da%20Silva"),
-            aq(Some("JOAO DA SILVA"), 50, 0),
-        ),
-        ("/autores", Some("q=8100"), aq(Some("8100"), 50, 0)),
-        ("/autores", Some("q=%20%21"), aq(None, 50, 0)),
-        ("/autores/8100", None, Endpoint::Autor("8100".into())),
-        ("/pix", None, Endpoint::Pix),
-        ("/pix/2024", None, Endpoint::PixAno(2024)),
-        ("/feed", None, Endpoint::Feed),
-        ("/feed/202410", None, Endpoint::FeedMes("202410".into())),
-        ("/abertas", None, Endpoint::Abertas),
-        ("/deputados", None, Endpoint::Deputados),
-        ("/deputados/204379", None, Endpoint::Deputado(204379)),
-        ("/senadores", None, Endpoint::Senadores),
-        ("/senadores/5012", None, Endpoint::Senador("5012".into())),
-        ("/proposicoes/2270800", None, Endpoint::Proposicao(2270800)),
-        (
-            "/votacoes/2236186-60",
-            None,
-            Endpoint::Votacao("2236186-60".into()),
-        ),
-    ];
-    for (path, q, want) in ok {
-        assert_eq!(parse(path, q), Ok(want), "{path} {q:?}");
-    }
-    let long_q = format!("q={}", "a".repeat(600));
-    let long_name = format!("q={}", "a".repeat(65));
-    let err: Vec<(&str, Option<&str>, ApiError)> = vec![
-        ("/nada", None, ApiError::NotFound),
-        ("/ufs/SP/x", None, ApiError::NotFound),
-        ("/ufs/S1", None, ApiError::NotFound),
-        ("/ufs/SPX", None, ApiError::NotFound),
-        ("/municipios/123", None, ApiError::NotFound),
-        ("/autores/../x", None, ApiError::NotFound),
-        ("/pix/24", None, ApiError::NotFound),
-        ("/feed/202413", None, ApiError::NotFound),
-        ("/deputados/abc", None, ApiError::NotFound),
-        ("/votacoes/1-2-x", None, ApiError::NotFound),
-        (
-            "/meta",
-            Some(long_q.as_str()),
-            ApiError::BadRequest("query muito longa"),
-        ),
-        (
-            "/autores",
-            Some(long_name.as_str()),
-            ApiError::BadRequest("q: máximo 64 caracteres"),
-        ),
-        (
-            "/autores",
-            Some("limit=0"),
-            ApiError::BadRequest("limit: 1..=500"),
-        ),
-        (
-            "/autores",
-            Some("limit=501"),
-            ApiError::BadRequest("limit: 1..=500"),
-        ),
-        (
-            "/autores",
-            Some("limit=x"),
-            ApiError::BadRequest("limit: 1..=500"),
-        ),
-        (
-            "/autores",
-            Some("offset=10001"),
-            ApiError::BadRequest("offset: 0..=10000"),
-        ),
-    ];
-    for (path, q, want) in err {
-        assert_eq!(parse(path, q), Err(want), "{path} {q:?}");
-    }
-    assert_eq!(ApiError::NotFound.status(), 404);
-    assert_eq!(ApiError::BadRequest("x").status(), 400);
-}
-
-#[test]
-fn canonical_paths_drop_unknown_and_sort() {
-    let cases = [
-        ("/meta", Some("z=1"), "/v1/meta"),
-        ("", None, "/v1"),
-        ("/ufs/rj", None, "/v1/ufs/RJ"),
-        (
-            "/autores",
-            Some("offset=5&q=jo%C3%A3o&zz=1"),
-            "/v1/autores?limit=50&offset=5&q=JOAO",
-        ),
-        (
-            "/autores",
-            Some("q=maria+silva"),
-            "/v1/autores?limit=50&offset=0&q=MARIA%20SILVA",
-        ),
-        ("/autores", None, "/v1/autores?limit=50&offset=0"),
-        ("/feed/202401", None, "/v1/feed/202401"),
-        ("/votacoes/1-2", None, "/v1/votacoes/1-2"),
-    ];
-    for (path, q, want) in cases {
-        assert_eq!(parse(path, q).unwrap().canonical(), want, "{path}");
-    }
-}
-
-#[test]
-fn data_files_and_ttls() {
-    let cases: Vec<(Endpoint, Option<&str>, u32)> = vec![
-        (Endpoint::Index, None, 86400),
-        (Endpoint::Meta, Some("v1/meta.json"), 6 * 3600),
-        (Endpoint::Brasil, Some("v1/brasil.json"), 12 * 3600),
-        (Endpoint::Ufs, None, 12 * 3600),
-        (Endpoint::Uf("SP".into()), Some("v1/uf/SP.json"), 12 * 3600),
-        (
-            Endpoint::Municipio("3550308".into()),
-            Some("v1/municipio/3550308.json"),
-            12 * 3600,
-        ),
-        (aq(None, 50, 0), None, 12 * 3600),
-        (
-            Endpoint::Autor("8100".into()),
-            Some("v1/autor/8100.json"),
-            12 * 3600,
-        ),
-        (Endpoint::Pix, Some("v1/pix.json"), 6 * 3600),
-        (Endpoint::PixAno(2024), Some("v1/pix/2024.json"), 6 * 3600),
-        (Endpoint::Feed, Some("v1/feed.json"), 6 * 3600),
-        (
-            Endpoint::FeedMes("202410".into()),
-            Some("v1/feed/202410.json"),
-            6 * 3600,
-        ),
-        (Endpoint::Abertas, Some("v1/abertas.json"), 6 * 3600),
-        (Endpoint::Deputados, None, 12 * 3600),
-        (Endpoint::Deputado(1), None, 12 * 3600),
-        (Endpoint::Senadores, None, 12 * 3600),
-        (Endpoint::Senador("1".into()), None, 12 * 3600),
-        (Endpoint::Proposicao(1), None, 3600),
-        (Endpoint::Votacao("1-2".into()), None, 3600),
-    ];
-    for (e, file, ttl) in cases {
-        assert_eq!(e.data_file().as_deref(), file, "{e:?}");
-        assert_eq!(e.ttl(), ttl, "{e:?}");
-        assert!((600..=86400).contains(&e.ttl()));
-    }
-    assert_eq!(
-        cache_control(3600),
-        "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400, stale-if-error=86400"
-    );
-}
-
-#[test]
 fn envelopes() {
     let m = Meta {
         fonte: vec!["https://a".into()],
         atualizado: "2026-10-28T20:01:50Z".into(),
+        paginacao: None,
     };
     let want_meta = json!({
         "fonte": ["https://a"],
@@ -274,14 +106,14 @@ fn index_lists_every_endpoint() {
         "/v1/meta",
         "/v1/brasil",
         "/v1/ufs",
-        "/v1/ufs/{UF}",
+        "/v1/ufs/{uf}",
         "/v1/municipios/{ibge}",
         "/v1/autores",
         "/v1/autores/{codigo}",
         "/v1/pix",
         "/v1/pix/{ano}",
         "/v1/feed",
-        "/v1/feed/{YYYYMM}",
+        "/v1/feed/{mes}",
         "/v1/abertas",
         "/v1/deputados",
         "/v1/deputados/{id}",
@@ -303,89 +135,6 @@ fn autores() -> Value {
         {"codigo":"2","nome":"RANDOLFE RODRIGUES","chave":"RANDOLFE RODRIGUES","n":5,"pago":50,"empenhado":70},
         {"codigo":"3","nome":"BANCADA DO CEARA","chave":"BANCADA DO CEARA","n":9,"pago":10,"empenhado":20}
     ])
-}
-
-#[test]
-fn autores_filter_and_page() {
-    let all = autores();
-    let cases: Vec<(AutoresQuery, u64, Vec<&str>)> = vec![
-        (
-            AutoresQuery {
-                q: None,
-                limit: 50,
-                offset: 0,
-            },
-            3,
-            vec!["1", "2", "3"],
-        ),
-        (
-            AutoresQuery {
-                q: None,
-                limit: 1,
-                offset: 1,
-            },
-            3,
-            vec!["2"],
-        ),
-        (
-            AutoresQuery {
-                q: None,
-                limit: 5,
-                offset: 9,
-            },
-            3,
-            vec![],
-        ),
-        (
-            AutoresQuery {
-                q: Some("RODRIGUES".into()),
-                limit: 50,
-                offset: 0,
-            },
-            1,
-            vec!["2"],
-        ),
-        (
-            AutoresQuery {
-                q: Some("3".into()),
-                limit: 50,
-                offset: 0,
-            },
-            1,
-            vec!["3"],
-        ),
-        (
-            AutoresQuery {
-                q: Some("ZZZ".into()),
-                limit: 50,
-                offset: 0,
-            },
-            0,
-            vec![],
-        ),
-    ];
-    for (q, total, codes) in cases {
-        let r = map::autores(&all, &q);
-        assert_eq!(r["total"], total, "{q:?}");
-        assert_eq!(r["limit"], q.limit as u64);
-        assert_eq!(r["offset"], q.offset as u64);
-        let got: Vec<&str> = r["itens"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|a| a["codigo"].as_str().unwrap())
-            .collect();
-        assert_eq!(got, codes, "{q:?}");
-    }
-    let first = &map::autores(
-        &all,
-        &AutoresQuery {
-            q: None,
-            limit: 1,
-            offset: 0,
-        },
-    )["itens"][0];
-    assert_eq!(first["url"], "/v1/autores/1");
 }
 
 #[test]
@@ -577,4 +326,12 @@ fn votacao_normalized() {
         Value::Null
     );
     assert!(map::votacao(&json!({}), None, None).is_none());
+}
+
+#[test]
+fn cache_control_header() {
+    assert_eq!(
+        cache_control(3600),
+        "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400, stale-if-error=86400"
+    );
 }

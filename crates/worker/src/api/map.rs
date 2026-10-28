@@ -1,5 +1,4 @@
 //! Upstream JSON -> stable API shapes. Pure.
-use super::AutoresQuery;
 use crate::cards::chave_nome;
 use serde_json::{json, Map, Value};
 use std::collections::{BTreeMap, HashMap};
@@ -7,24 +6,24 @@ use std::collections::{BTreeMap, HashMap};
 const SITE: &str = "https://emenda.online";
 
 /// Trimmed non-empty string (numbers stringified) or null.
-fn st(v: &Value, ptr: &str) -> Value {
+pub(crate) fn st(v: &Value, ptr: &str) -> Value {
     match v.pointer(ptr) {
         Some(Value::String(s)) if !s.trim().is_empty() => Value::String(s.trim().into()),
         Some(Value::Number(n)) => Value::String(n.to_string()),
         _ => Value::Null,
     }
 }
-fn num(v: &Value, ptr: &str) -> Option<i64> {
+pub(crate) fn num(v: &Value, ptr: &str) -> Option<i64> {
     let x = v.pointer(ptr)?;
     x.as_i64().or_else(|| x.as_str()?.trim().parse().ok())
 }
-fn https(v: Value) -> Value {
+pub(crate) fn https(v: Value) -> Value {
     match v {
         Value::String(s) => Value::String(s.replacen("http://", "https://", 1)),
         x => x,
     }
 }
-fn arr<'a>(v: &'a Value, ptr: &str) -> &'a [Value] {
+pub(crate) fn arr<'a>(v: &'a Value, ptr: &str) -> &'a [Value] {
     v.pointer(ptr)
         .and_then(Value::as_array)
         .map_or(&[], Vec::as_slice)
@@ -67,30 +66,28 @@ impl<'a> Autores<'a> {
     }
 }
 
-/// Filter (`q`: código exact or name-key substring) + page over `autores.json`.
-pub fn autores(all: &Value, q: &AutoresQuery) -> Value {
-    let list = all.as_array().map_or(&[][..], Vec::as_slice);
-    let hit = |a: &&Value| match q.q.as_deref() {
-        None => true,
-        Some(q) if q.bytes().all(|b| b.is_ascii_digit()) => {
-            a.get("codigo").and_then(Value::as_str) == Some(q)
-        }
-        Some(q) => a
-            .get("chave")
-            .and_then(Value::as_str)
-            .is_some_and(|c| c.contains(q)),
-    };
-    let found: Vec<&Value> = list.iter().filter(hit).collect();
-    let itens: Vec<Value> = found
+/// Autor código for the first name (with or without a title) found in `autores.json`.
+pub fn autor_codigo(all: Option<&Value>, nomes: &[&str]) -> Option<String> {
+    let idx = Autores::new(all);
+    nomes.iter().find_map(|n| {
+        let k = chave_nome(n);
+        let sem = [
+            "DEP ",
+            "DEPUTADO ",
+            "DEPUTADA ",
+            "SEN ",
+            "SENADOR ",
+            "SENADORA ",
+        ]
         .iter()
-        .skip(q.offset)
-        .take(q.limit)
-        .map(|a| {
-            let c = a.get("codigo").and_then(Value::as_str).unwrap_or_default();
-            with_url(a, format!("/v1/autores/{c}"))
-        })
-        .collect();
-    json!({ "total": found.len(), "limit": q.limit, "offset": q.offset, "itens": itens })
+        .find_map(|t| k.strip_prefix(t))
+        .map(String::from);
+        [Some(k.clone()), sem]
+            .into_iter()
+            .flatten()
+            .find_map(|k| idx.0.get(k.as_str()))
+            .and_then(|a| a.get("codigo")?.as_str().map(String::from))
+    })
 }
 
 /// `brasil.json` `porUf` + links.
@@ -342,6 +339,7 @@ pub fn votacao(v: &Value, votos: Option<&Value>, orientacoes: Option<&Value>) ->
     };
     let mut placar = Placar::default();
     let mut partidos: BTreeMap<String, Placar> = BTreeMap::new();
+    let mut ufs: BTreeMap<String, Placar> = BTreeMap::new();
     let lista: Vec<Value> = votos
         .map(|x| arr(x, "/dados"))
         .unwrap_or_default()
@@ -356,6 +354,9 @@ pub fn votacao(v: &Value, votos: Option<&Value>, orientacoes: Option<&Value>) ->
                 .entry(partido.as_str().unwrap_or("S/PARTIDO").into())
                 .or_default()
                 .add(vs);
+            ufs.entry(st(dep, "/siglaUf").as_str().unwrap_or("?").into())
+                .or_default()
+                .add(vs);
             json!({
                 "deputadoId": num(dep, "/id"),
                 "nome": st(dep, "/nome"),
@@ -365,17 +366,20 @@ pub fn votacao(v: &Value, votos: Option<&Value>, orientacoes: Option<&Value>) ->
             })
         })
         .collect();
-    let mut por: Vec<(String, Placar)> = partidos.into_iter().collect();
-    por.sort_by(|a, b| b.1.total().cmp(&a.1.total()).then_with(|| a.0.cmp(&b.0)));
-    let por_partido: Vec<Value> = por
-        .into_iter()
-        .map(|(p, c)| {
-            let mut m = Map::new();
-            m.insert("partido".into(), p.into());
-            m.extend(c.json());
-            Value::Object(m)
-        })
-        .collect();
+    let grupo = |g: BTreeMap<String, Placar>, k: &str| -> Vec<Value> {
+        let mut por: Vec<(String, Placar)> = g.into_iter().collect();
+        por.sort_by(|a, b| b.1.total().cmp(&a.1.total()).then_with(|| a.0.cmp(&b.0)));
+        por.into_iter()
+            .map(|(p, c)| {
+                let mut m = Map::new();
+                m.insert(k.into(), p.into());
+                m.extend(c.json());
+                Value::Object(m)
+            })
+            .collect()
+    };
+    let por_partido = grupo(partidos, "partido");
+    let por_uf = grupo(ufs, "uf");
     let orient: Vec<Value> = orientacoes
         .map(|o| arr(o, "/dados"))
         .unwrap_or_default()
@@ -404,6 +408,7 @@ pub fn votacao(v: &Value, votos: Option<&Value>, orientacoes: Option<&Value>) ->
         "aprovada": aprovada,
         "placar": Value::Object(placar.json()),
         "porPartido": por_partido,
+        "porUf": por_uf,
         "orientacoes": orient,
         "votos": lista,
         "proposicoes": props,

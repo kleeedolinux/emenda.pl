@@ -65,6 +65,17 @@ pub fn page_meta(t: &Target, origin: &str, path: &str, name: Option<&str>) -> Pa
             "Placar e detalhes da votação.".into(),
         ),
         Kind::Partido => (Some(t.id.clone()), "Emendas e bancada do partido.".into()),
+        Kind::Voto => (
+            Some("Como o(a) deputado(a) votou".into()),
+            "Veja o voto de cada deputado(a) nesta votação e compartilhe.".into(),
+        ),
+        Kind::Agenda => (
+            Some(match crate::cards::dia_extenso(&t.id) {
+                Some(d) => format!("Agenda do Congresso · {d}"),
+                None => "Agenda do Congresso".into(),
+            }),
+            "O que a Câmara e o Senado discutem e votam, e o resultado das votações.".into(),
+        ),
     };
     let title = match name.map(str::to_string).or(label) {
         Some(n) => format!("{n} · {SITE}"),

@@ -109,10 +109,32 @@ pub fn route(method: &str, path: &str, query: Option<&str>) -> Route {
     }
     let mut segs = path.trim_matches('/').splitn(2, '/');
     let page = match (segs.next(), segs.next()) {
+        (Some("agenda"), None) => {
+            let dia = query_param(query, "dia").filter(|d| crate::cards::valid_day(d));
+            Some(Target {
+                kind: Kind::Agenda,
+                id: dia.unwrap_or("hoje").into(),
+            })
+        }
+        (Some("votacao"), Some(id)) => target("votacao", id).map(|t| {
+            match query_param(query, "dep").and_then(|d| target("voto", &format!("{}/{d}", t.id))) {
+                Some(v) => v,
+                None => t,
+            }
+        }),
+        (Some("voto" | "agenda"), _) => None,
         (Some(slug), Some(id)) => target(slug, id),
         _ => None,
     };
     Route::Page(page.unwrap_or_else(Target::default_page))
+}
+
+fn query_param<'a>(query: Option<&'a str>, key: &str) -> Option<&'a str> {
+    query?
+        .split('&')
+        .filter_map(|p| p.split_once('='))
+        .find(|(k, _)| *k == key)
+        .map(|(_, v)| v)
 }
 
 fn safe_rest(rest: &str) -> bool {
@@ -139,6 +161,15 @@ fn target(slug: &str, id: &str) -> Option<Target> {
         Kind::Uf => id.len() == 2 && all(|b| b.is_ascii_alphabetic(), 2),
         Kind::Votacao => all(|b| b.is_ascii_digit() || b == b'-', 24),
         Kind::Partido => all(|b| b.is_ascii_alphanumeric(), 20),
+        Kind::Voto => id.split_once('/').is_some_and(|(v, d)| {
+            !v.is_empty()
+                && v.len() <= 24
+                && v.bytes().all(|b| b.is_ascii_digit() || b == b'-')
+                && !d.is_empty()
+                && d.len() <= 12
+                && d.bytes().all(|b| b.is_ascii_digit())
+        }),
+        Kind::Agenda => id == "hoje" || crate::cards::valid_day(id),
     };
     let id = match kind {
         Kind::Uf | Kind::Partido => id.to_ascii_uppercase(),
@@ -183,6 +214,8 @@ pub enum CacheClass {
     CamaraList,
     Senado,
     Og,
+    /// Agenda cards change during the day.
+    OgAgenda,
     Html,
     Stats,
     Asset,
@@ -196,6 +229,7 @@ pub fn cache_class(r: &Route) -> Option<CacheClass> {
             Upstream::Senado => CacheClass::Senado,
             Upstream::Camara => camara_class(rest),
         },
+        Route::Og(t) if t.kind == Kind::Agenda => CacheClass::OgAgenda,
         Route::Og(_) => CacheClass::Og,
         Route::Page(_) => CacheClass::Html,
         Route::Stats => CacheClass::Stats,
@@ -226,6 +260,7 @@ pub fn ttl_secs(c: CacheClass) -> u32 {
         CacheClass::Html => 300,
         CacheClass::Stats => 30,
         CacheClass::Og => 24 * H,
+        CacheClass::OgAgenda => H,
         CacheClass::Asset => 365 * 24 * H,
     }
 }
@@ -265,8 +300,8 @@ pub const SECURITY_HEADERS: [(&str, &str); 5] = [
         "Content-Security-Policy",
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; \
 font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://www.camara.leg.br https://*.camara.leg.br \
-https://www.senado.leg.br https://*.senado.leg.br https://legis.senado.leg.br; connect-src 'self'; \
-frame-ancestors 'none'; base-uri 'self'; object-src 'none'; media-src 'self' blob:",
+https://www.senado.leg.br https://*.senado.leg.br https://legis.senado.leg.br https://cdn.emenda.online; \
+connect-src 'self' https://cdn.emenda.online; frame-src 'self' https://cdn.emenda.online; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; media-src 'self' blob:",
     ),
     ("X-Content-Type-Options", "nosniff"),
     ("Referrer-Policy", "strict-origin-when-cross-origin"),

@@ -1,3 +1,7 @@
+# Todos os robôs são bem-vindos, inclusive assistentes de IA (GPTBot, ClaudeBot, PerplexityBot, Google-Extended...).
+# Versão Markdown de cada página: acrescente .md ao caminho. Resumo para LLMs: /llms.txt
 User-agent: *
 Allow: /
 Disallow: /api/
+
+Sitemap: https://emenda.online/sitemap.xml
