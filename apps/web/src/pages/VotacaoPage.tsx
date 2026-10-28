@@ -6,7 +6,8 @@ import {
 } from "@/ui";
 import { cam, fontes, type VotacaoDetalhe } from "@/features/legislativo/api";
 import { categoriaVoto, mapaOrientacoes, normPartido, placar, porPartido, porUf, type LinhaGrupo, type Orientacao, type VotoCamara } from "@/features/legislativo/votacao";
-import { Fontes, GradeFotos, HemicicloVotacao, Parlamentar } from "@/features/legislativo/components";
+import { Fontes, Parlamentar } from "@/features/legislativo/components";
+import { VotacaoInterativa } from "@/features/legislativo/VotacaoInterativa";
 import { ShareButton, ShareVoto, VotoDestaque } from "@/features/share";
 
 export default function VotacaoPage() {
@@ -68,19 +69,6 @@ export default function VotacaoPage() {
         actions={d && <>{d.aprovacao === 1 ? <Badge tone="verde">Aprovada</Badge> : d.aprovacao === 0 ? <Badge tone="vermelho">Rejeitada</Badge> : <Badge>Resultado no texto</Badge>}<ShareButton fab kind="votacao" title={d.descUltimaAberturaVotacao || d.descricao} subtitle={formatDate(d.data)} url={`/votacao/${id}`} ogId={id} votes={votos.length ? votosShare : undefined} /></>}
       />
 
-      {d && (
-        <Card title="Sobre esta votação" className="mb-6">
-          <KeyValue items={[
-            ["Data e hora", d.dataHoraRegistro ? new Date(d.dataHoraRegistro).toLocaleString("pt-BR") : formatDate(d.data)],
-            ["Onde", d.siglaOrgao === "PLEN" ? "Plenário da Câmara" : d.siglaOrgao],
-            ["Resultado registrado", d.descricao],
-            ["Proposições envolvidas", props.length ? (
-              <span className="flex flex-col gap-1">{props.slice(0, 8).map((x) => <Link key={x.id} className="link" to={`/proposicao/${x.id}`}>{x.siglaTipo} {x.numero}/{x.ano} — {x.ementa.slice(0, 90)}</Link>)}</span>
-            ) : null],
-            ...(d.ultimaApresentacaoProposicao?.descricao ? [["Último parecer apresentado", <span className="line-clamp-4">{d.ultimaApresentacaoProposicao.descricao}</span>] as [string, React.ReactNode]] : []),
-          ]} />
-        </Card>
-      )}
 
       {vq.isError ? <ErrorState error={vq.error} retry={() => vq.refetch()} /> : vq.isPending ? <Skeleton className="h-80" /> : votos.length === 0 ? (
         <EmptyState title="Esta votação não tem votos individuais registrados." hint="Votações simbólicas (por aclamação) não registram como cada deputado votou." />
@@ -94,20 +82,16 @@ export default function VotacaoPage() {
             <Stat label="Votaram contra o partido" value={formatNumber(contraSet.size)} tip="orientação de bancada" />
           </StatGrid>
 
-          <Section title="Composição do Congresso no momento da votação" tip="Cada ponto é uma cadeira. O partido é o que o deputado tinha no dia da votação (pode ser diferente do atual).">
+          <Section title="Quem votou como" tip="Cada ponto é uma cadeira; o partido é o do dia da votação. Passe o mouse ou use Tab nos cartões para ver voto e orientação do partido.">
             <Card>
-              <HemicicloVotacao votos={votos} cadeiras={plenario ? 513 : votos.length} />
-              {mapa.gerais.length > 0 && (
-                <p className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                  <span className="text-muted">Orientações gerais:</span>
-                  {mapa.gerais.map((g) => <span key={g.lideranca} className="inline-flex items-center gap-1">{g.lideranca} <VoteBadge voto={g.orientacao} /></span>)}
-                </p>
-              )}
+              <VotacaoInterativa votos={votos} orientacoes={ori} cadeiras={plenario ? 513 : votos.length} perfil={(i) => `/deputado/${i}`} quem="deputado(a)"
+                extra={mapa.gerais.length > 0 && (
+                  <p className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
+                    <span className="text-muted">Orientações gerais:</span>
+                    {mapa.gerais.map((g) => <span key={g.lideranca} className="inline-flex items-center gap-1">{g.lideranca} <VoteBadge voto={g.orientacao} /></span>)}
+                  </p>
+                )} />
             </Card>
-          </Section>
-
-          <Section title="Quem votou como" tip="Fotos agrupadas pelo voto. Passe o mouse para ver nome e partido; clique para abrir o perfil.">
-            <Card><GradeFotos votos={votos} link={(i) => `/deputado/${i}`} /></Card>
           </Section>
 
           <Section title="Por partido" tip="orientação de bancada">
@@ -122,18 +106,36 @@ export default function VotacaoPage() {
             </Card>
           </Section>
 
-          <Section title="Por estado">
-            <Card><DataTable rows={ufs} columns={colsGrupo("UF", false)} pageSize={27} rowKey={(r) => r.grupo} exportName={`votacao-${id}-ufs`} /></Card>
-          </Section>
+          <details className="mt-6 rounded-2xl border border-line bg-surface p-4">
+            <summary className="cursor-pointer font-semibold">Por estado</summary>
+            <div className="mt-3"><DataTable rows={ufs} columns={colsGrupo("UF", false)} pageSize={27} rowKey={(r) => r.grupo} exportName={`votacao-${id}-ufs`} /></div>
+          </details>
 
-          <Section title="Lista completa de votos">
-            <Card>
+          <details className="mt-4 rounded-2xl border border-line bg-surface p-4">
+            <summary className="cursor-pointer font-semibold">Tabela completa de votos (ordenar, exportar CSV, compartilhar voto)</summary>
+            <div className="mt-3">
               <DataTable rows={votos} columns={colsVotos} pageSize={50} rowKey={(r) => r.deputado_.id} exportName={`votacao-${id}-votos`}
                 search={(r) => `${r.deputado_.nome} ${r.deputado_.siglaPartido} ${r.deputado_.siglaUf} ${r.tipoVoto}`} searchPlaceholder="Filtrar por nome, partido, UF ou voto…" />
               <p className="mt-2 text-xs text-muted">{formatNumber(votos.filter((v) => categoriaVoto(v.tipoVoto) === "outro").length)} registros “outros” incluem o presidente da sessão (Art. 17 do Regimento: não vota, salvo empate).</p>
-            </Card>
-          </Section>
+            </div>
+          </details>
         </>
+      )}
+      {d && (
+        <details className="mt-6 rounded-2xl border border-line bg-surface p-4">
+          <summary className="cursor-pointer font-semibold">Sobre esta votação (data, órgão, proposições, parecer)</summary>
+          <div className="mt-3">
+          <KeyValue items={[
+            ["Data e hora", d.dataHoraRegistro ? new Date(d.dataHoraRegistro).toLocaleString("pt-BR") : formatDate(d.data)],
+            ["Onde", d.siglaOrgao === "PLEN" ? "Plenário da Câmara" : d.siglaOrgao],
+            ["Resultado registrado", d.descricao],
+            ["Proposições envolvidas", props.length ? (
+              <span className="flex flex-col gap-1">{props.slice(0, 8).map((x) => <Link key={x.id} className="link" to={`/proposicao/${x.id}`}>{x.siglaTipo} {x.numero}/{x.ano} — {x.ementa.slice(0, 90)}</Link>)}</span>
+            ) : null],
+            ...(d.ultimaApresentacaoProposicao?.descricao ? [["Último parecer apresentado", <span className="line-clamp-4">{d.ultimaApresentacaoProposicao.descricao}</span>] as [string, React.ReactNode]] : []),
+          ]} />
+          </div>
+        </details>
       )}
       <Fontes items={[...fontes.votacao(id), ...(d?.idEvento ? [{ label: "Evento (sessão) no site da Câmara", href: `https://www.camara.leg.br/evento-legislativo/${d.idEvento}` }] : [])]} />
     </>

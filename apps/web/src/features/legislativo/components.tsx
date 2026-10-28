@@ -1,12 +1,11 @@
 // Peças de apresentação do módulo legislativo, compostas só com "@/ui".
 import clsx from "clsx";
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { Database } from "lucide-react";
-import { Avatar, Badge, Card, EmptyState, ExternalLink, Hemicycle, PartyBadge, Spinner, Tip, VoteBadge, formatDate, formatNumber } from "@/ui";
+import { Avatar, Badge, Card, EmptyState, ExternalLink, PartyBadge, Spinner, Tip, VoteBadge, formatDate, formatNumber } from "@/ui";
 import type { Fonte } from "./api";
 import { duracaoDias, formatDuracao, mesclarPeriodos, type Mandato } from "./mandatos";
-import { assentosVotacao, ladosFotos, placar, VOTO_COR, type VotoCamara } from "./votacao";
 
 /** Fontes originais: API upstream + páginas oficiais. */
 export function Fontes({ items, className }: { items: Fonte[]; className?: string }) {
@@ -150,54 +149,6 @@ export function PainelMandatos({ mandatos, sel, onSel, fonte }: { mandatos: Mand
       ) : <EmptyState title="Sem mandatos registrados na fonte." />}
       {fonte}
     </Card>
-  );
-}
-
-// ---------- Votações ----------
-export function HemicicloVotacao({ votos, cadeiras, titulo }: { votos: VotoCamara[]; cadeiras: number; titulo?: ReactNode }) {
-  const [modo, setModo] = useState<"voto" | "partido">("voto");
-  const seats = useMemo(() => assentosVotacao(votos, modo, cadeiras), [votos, modo, cadeiras]);
-  const p = useMemo(() => placar(votos), [votos]);
-  return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        {titulo && <h3 className="font-semibold">{titulo}</h3>}
-        <Segmentado label="Colorir assentos por" value={modo} onChange={setModo} options={[{ value: "voto", label: "Por voto" }, { value: "partido", label: "Por partido" }]} />
-      </div>
-      <Hemicycle seats={seats} />
-      <p className="mt-2 text-xs text-muted">
-        <b style={{ color: VOTO_COR.sim }}>{p.sim} sim</b> · <b style={{ color: VOTO_COR.nao }}>{p.nao} não</b> · {p.abstencao} abstenção · {p.obstrucao} obstrução · {p.outro} outros ·{" "}
-        {Math.max(cadeiras - p.total, 0)} sem voto registrado. Assentos agrupados pelo partido de cada parlamentar no dia da votação.
-      </p>
-    </div>
-  );
-}
-
-/** Grade de fotos A favor / Contra / Outros. */
-export function GradeFotos({ votos, link }: { votos: VotoCamara[]; link?: (id: number) => string }) {
-  const l = useMemo(() => ladosFotos(votos), [votos]);
-  const col = (titulo: string, vs: VotoCamara[], cor: string) => (
-    <div className="min-w-0">
-      <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold"><span className="size-2.5 rounded-full" style={{ background: cor }} aria-hidden />{titulo} <span className="tabular text-muted">{vs.length}</span></h4>
-      <ul className="flex flex-wrap gap-1.5">
-        {vs.map((v) => {
-          const d = v.deputado_;
-          const el = (
-            <span className="group relative inline-flex" title={`${d.nome} (${d.siglaPartido}-${d.siglaUf}): ${v.tipoVoto}`}>
-              <Avatar src={d.urlFoto} name={d.nome} size="sm" />
-            </span>
-          );
-          return <li key={d.id}>{link ? <Link to={link(d.id)} aria-label={`${d.nome}, ${d.siglaPartido}-${d.siglaUf}, votou ${v.tipoVoto}`}>{el}</Link> : el}</li>;
-        })}
-      </ul>
-    </div>
-  );
-  return (
-    <div className="grid gap-5 lg:grid-cols-3">
-      {col("A favor (Sim)", l.favor, VOTO_COR.sim)}
-      {col("Contra (Não)", l.contra, VOTO_COR.nao)}
-      {col("Outros (abstenção, obstrução, presidente…)", l.outros, VOTO_COR.outro)}
-    </div>
   );
 }
 

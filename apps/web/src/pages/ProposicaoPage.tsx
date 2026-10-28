@@ -13,8 +13,9 @@ import {
 import { useSenado } from "@/features/legislativo/hooks";
 import { desfecho, linksNorma, normaDaTramitacao, type Desfecho } from "@/features/legislativo/normas";
 import { pautaPorCamaraId } from "@/features/legislativo/pautas";
-import { placarDaDescricao, votosSenado, type VotoCamara } from "@/features/legislativo/votacao";
-import { Campo, Fontes, GradeFotos, HemicicloVotacao, Parlamentar, selectCls } from "@/features/legislativo/components";
+import { placarDaDescricao, votosSenado, type Orientacao, type VotoCamara } from "@/features/legislativo/votacao";
+import { VotacaoInterativa } from "@/features/legislativo/VotacaoInterativa";
+import { Campo, Fontes, Parlamentar, selectCls } from "@/features/legislativo/components";
 import { ShareButton } from "@/features/share";
 
 const TOM: Record<Desfecho["tipo"], Tone> = { lei: "verde", vetada: "vermelho", rejeitada: "vermelho", arquivada: "neutro", tramitando: "amarelo" };
@@ -207,12 +208,13 @@ function VotosDuasCasas({ camara, carregandoCamara, senado, carregandoSenado, se
   const [si, setSi] = useState(0);
   const cv = nominais[Math.min(ci, nominais.length - 1)];
   const cvotos = useCamara<VotoCamara[]>(cv ? cam.votos(cv.id) : null);
+  const cori = useCamara<Orientacao[]>(cv ? cam.orientacoes(cv.id) : null);
   const sv = senado[Math.min(si, senado.length - 1)];
   const svotos = useMemo(() => (sv?.votos ? votosSenado(sv.votos) : []), [sv]);
 
   return (
     <>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="space-y-4">
         <Card title="Câmara dos Deputados" tip="Até 513 cadeiras. Cinza = sem voto registrado (ausente, licença ou vaga).">
           {carregandoCamara ? <Skeleton className="h-64" /> : !cv ? <EmptyState title="Sem votação nominal na Câmara." hint="Pode ter sido aprovada em votação simbólica ou de forma conclusiva nas comissões." /> : (
             <>
@@ -221,7 +223,7 @@ function VotosDuasCasas({ camara, carregandoCamara, senado, carregandoSenado, se
                   {nominais.map((v, k) => <option key={v.id} value={k}>{formatDate(v.data)} — {v.descricao.slice(0, 90)}</option>)}
                 </select>
               </Campo>
-              <div className="mt-3">{cvotos.isPending ? <Skeleton className="h-56" /> : cvotos.data && <HemicicloVotacao votos={cvotos.data} cadeiras={513} />}</div>
+              <div className="mt-3">{cvotos.isPending ? <Skeleton className="h-56" /> : cvotos.data && <VotacaoInterativa votos={cvotos.data} orientacoes={cori.data ?? []} cadeiras={513} perfil={(i) => `/deputado/${i}`} quem="deputado(a)" />}</div>
               <Link className="link mt-2 inline-block text-sm" to={`/votacao/${cv.id}`}>Análise completa desta votação (partidos, estados, orientação) →</Link>
               <Fontes items={fontes.votacao(cv.id).slice(0, 2)} />
             </>
@@ -237,19 +239,13 @@ function VotosDuasCasas({ camara, carregandoCamara, senado, carregandoSenado, se
                   {senado.map((v, k) => <option key={v.codigoSessaoVotacao} value={k}>{formatDate(v.dataSessao)} — {v.descricaoVotacao.slice(0, 90)}</option>)}
                 </select>
               </Campo>
-              <div className="mt-3"><HemicicloVotacao votos={svotos} cadeiras={81} /></div>
               <p className="mt-2 text-sm">Resultado: {sv.resultadoVotacao === "A" ? <Badge tone="verde">Aprovado</Badge> : sv.resultadoVotacao === "R" ? <Badge tone="vermelho">Rejeitado</Badge> : sv.resultadoVotacao ?? "—"}</p>
+              <div className="mt-3"><VotacaoInterativa votos={svotos} cadeiras={81} perfil={(i) => `/senador/${i}`} quem="senador(a)" /></div>
               <Fontes items={[{ label: "Votação (API do Senado)", href: fontes.senadoApi(sen.votacoesProcesso(sv.idProcesso)) }, ...fontes.materiaSenado(sv.codigoMateria)]} />
             </>
           )}
         </Card>
       </div>
-      {(cvotos.data?.length || svotos.length) ? (
-        <div className="mt-4 space-y-4">
-          {cvotos.data && cvotos.data.length > 0 && <Card title="Fotos — Câmara"><GradeFotos votos={cvotos.data} link={(i) => `/deputado/${i}`} /></Card>}
-          {svotos.length > 0 && <Card title="Fotos — Senado"><GradeFotos votos={svotos} link={(i) => `/senador/${i}`} /></Card>}
-        </div>
-      ) : null}
     </>
   );
 }
