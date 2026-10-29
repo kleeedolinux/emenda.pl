@@ -688,6 +688,7 @@ pub static OPS: &[Op] = &[
     op!("feed", "/v1/feed", "Pix e pagamentos", "Últimos pagamentos", "Pagamentos mais recentes e resumo por mês (`formato=csv` exporta `itens`).", [], None, Some("/itens"), 6 * H, PORTAL, "/v1/feed"),
     op!("feed_mes", "/v1/feed/{mes}", "Pix e pagamentos", "Pagamentos de um mês", "Pagamentos do mês AAAAMM.",
         [pp("mes", Ty::Str { min: 6, max: 6, chars: Chars::Month }, "Mês AAAAMM", "202410")], None, Some("/itens"), 6 * H, PORTAL, "/v1/feed/202410"),
+    op!("novidades", "/v1/novidades", "Pix e pagamentos", "Novidades", "O que mudou nos dados oficiais (pagamentos, votações, leis), em ordem cronológica.", [], None, Some("/itens"), 6 * H, PORTAL, "/v1/novidades"),
     op!("abertas", "/v1/abertas", "Pix e pagamentos", "Saldos em aberto", "Empenhado e ainda não pago: totais e os 300 maiores saldos (`top`).", [], None, Some("/top"), 6 * H, PORTAL, "/v1/abertas"),
     op!("rankings", "/v1/rankings", "Pix e pagamentos", "Rankings recentes", "Quem mais pagou/recebeu em 1, 3, 6 e 12 meses.",
         [qp("janela", Ty::Enum(&["1m", "3m", "6m", "12m"]), "Só esta janela", "3m")], None, None, 6 * H, PORTAL, "/v1/rankings?janela=3m"),

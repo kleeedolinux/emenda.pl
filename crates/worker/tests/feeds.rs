@@ -1,6 +1,8 @@
 //! RSS/Atom: routing, sources, item building, escaping and XML well-formedness (roxmltree).
 use emenda_worker::api::registry::resolve;
-use emenda_worker::feeds::{channel, esc, parse, render, rfc3339, rfc822, sources, Fmt, FEEDS};
+use emenda_worker::feeds::{
+    channel, esc, parse, render, rfc3339, rfc822, rss, sources, Fmt, FEEDS,
+};
 use serde_json::{json, Value};
 
 #[test]
@@ -202,4 +204,23 @@ fn entity_feeds() {
         ch.items[0].title,
         "Aprovada (Sim 300 × Não 10): Aprovado o projeto"
     );
+}
+
+#[test]
+fn novidades_feed() {
+    // /novidades anuncia /rss/novidades.xml; precisa existir.
+    let r = parse("novidades.xml").expect("feed novidades");
+    assert_eq!(sources(&r, "2026-10-29"), vec!["/v1/novidades"]);
+    let data = serde_json::json!({"itens": [{
+        "id": "pagamentos-1", "data": "2026-10-28T21:14:58Z",
+        "titulo": "R$ 337,8 mi pagos em outubro", "texto": "Maior pagamento: Bancada de MG.",
+        "entidades": [{"url": "/autor/7114"}]
+    }]});
+    let ch = channel(&r, &[Some(data)]).expect("channel");
+    assert_eq!(ch.items.len(), 1);
+    assert_eq!(ch.items[0].title, "R$ 337,8 mi pagos em outubro");
+    assert_eq!(ch.items[0].guid, "pagamentos-1");
+    assert!(ch.items[0].link.ends_with("/autor/7114"));
+    let xml = rss(&ch, "https://emenda.online/rss/novidades.xml", "2026-10-29");
+    check_xml(&xml, "rss");
 }

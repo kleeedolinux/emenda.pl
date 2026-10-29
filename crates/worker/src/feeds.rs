@@ -55,6 +55,15 @@ pub static FEEDS: &[Feed] = &[
         param: None,
     },
     Feed {
+        id: "novidades",
+        path: "/rss/novidades.xml",
+        titulo: "Novidades do emenda.online",
+        descricao: "O que mudou nos dados oficiais: pagamentos, votações e leis.",
+        ttl: 3600,
+        exemplo: "/rss/novidades.xml",
+        param: None,
+    },
+    Feed {
         id: "deputado",
         path: "/rss/deputado/{id}.xml",
         titulo: "Deputado: proposições, votos e emendas",
@@ -146,6 +155,7 @@ pub fn sources(r: &FeedReq, today: &str) -> Vec<String> {
         )],
         "votacoes" => vec!["/v1/votacoes?nominais=true&limit=50".into()],
         "emendas" | "pix" => vec!["/v1/feed".into()],
+        "novidades" => vec!["/v1/novidades".into()],
         "deputado" => vec![
             format!("/v1/deputados/{a}"),
             format!("/v1/deputados/{a}/proposicoes?limit=20"),
@@ -365,6 +375,25 @@ pub fn channel(r: &FeedReq, data: &[Option<Value>]) -> Option<Channel> {
                 .filter(|e| !pix || e["tipo"] == "pix")
                 .take(100)
                 .map(pagamento)
+                .collect();
+        }
+        "novidades" => {
+            ch.link = format!("{SITE}/novidades");
+            ch.items = rows(d(0).and_then(|x| x.get("itens")))
+                .iter()
+                .take(100)
+                .map(|n| Item {
+                    title: s(n, "/titulo").into(),
+                    link: format!(
+                        "{SITE}{}",
+                        n.pointer("/entidades/0/url")
+                            .and_then(Value::as_str)
+                            .unwrap_or("/novidades")
+                    ),
+                    guid: s(n, "/id").into(),
+                    date: s(n, "/data").trim_end_matches('Z').into(),
+                    desc: s(n, "/texto").into(),
+                })
                 .collect();
         }
         "deputado" => {
