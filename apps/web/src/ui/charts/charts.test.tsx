@@ -24,6 +24,15 @@ describe("Bars", () => {
     expect(label.className).toContain("min-w-0");
   });
 
+  test("valor largo desce para a linha de baixo em vez de partir palavras do rótulo", () => {
+    render(<Bars data={[{ label: "Comissão de Desenvolvimento Regional", value: 123456789 }]} />);
+    const v = screen.getByText("123.456.789");
+    const label = screen.getByText("Comissão de Desenvolvimento Regional").parentElement!;
+    expect(v.parentElement!.className).toContain("flex-wrap");
+    expect(v.className).toContain("ml-auto");
+    expect(label.className).toMatch(/flex-\[1_1_\d+rem\]/);
+  });
+
   test.each([[0], [-10], [Number.NaN]])("valor %p não quebra a barra", (value) => {
     const { container } = render(<Bars data={[{ label: "A", value }, { label: "B", value: 10 }]} />);
     const fill = container.querySelector(".bar-fill") as HTMLElement;

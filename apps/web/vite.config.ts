@@ -11,7 +11,8 @@ const proxy = { target: proxyAlvo, changeOrigin: true };
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-  server: { proxy: { "/api": proxy, "/data": proxy } },
+  // "^/api/" (não "/api"): a página /api é do SPA; só as chamadas /api/... vão ao Worker.
+  server: { proxy: { "^/api/": proxy, "/data": proxy, "/v1": proxy } },
   build: {
     target: "es2022",
     cssCodeSplit: true,

@@ -23,9 +23,9 @@ export function AreasGasto({ itens, inicial = 5 }: { itens: ReadonlyArray<{ func
           <div className="flex items-center gap-3">
             <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${a.icone === "semArea" ? "bg-amarelo/15 text-[#a07800] dark:text-amarelo" : "bg-verde/12 text-accent"}`}><Icon className="size-5" aria-hidden /></span>
             <span className="min-w-0 flex-1">
-              <span className="flex items-baseline justify-between gap-2">
-                <span className="truncate font-semibold">{a.rotulo}{a.icone === "semArea" && <Tip content="Dinheiro mandado sem dizer para quê (Emenda Pix) aparece assim: a prefeitura decide depois como gastar." />}</span>
-                <span className="shrink-0 text-sm tabular"><b>{formatBRL(a.valor, true)}</b> <span className="text-muted">· {Math.round(pct * 100)}%</span></span>
+              <span className="flex flex-wrap items-baseline justify-between gap-x-2">
+                <span className="min-w-0 flex-[1_1_7rem] break-words font-semibold">{a.rotulo}{a.icone === "semArea" && <Tip content="Dinheiro mandado sem dizer para quê (Emenda Pix) aparece assim: a prefeitura decide depois como gastar." />}</span>
+                <span className="ml-auto shrink-0 text-sm tabular"><b>{formatBRL(a.valor, true)}</b> <span className="text-muted">· {Math.round(pct * 100)}%</span></span>
               </span>
               <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-surface-2"><span className="block h-full rounded-full bg-accent" style={{ width: `${Math.max(2, pct * 100)}%` }} /></span>
             </span>

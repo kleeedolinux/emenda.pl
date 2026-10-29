@@ -35,3 +35,11 @@ Fonte única do texto: `apps/web/src/ui/glossario.ts` (`TIPOS_LEIGO`), usado pel
 
 - Padrão: 3–8 itens + "Ver mais". Tabelas completas só dentro de `ModoDetalhado`.
 - Todo número grande e todo estado no mapa é link.
+
+## Responsividade
+
+- Auditoria: `cd apps/web && bun run audit:responsivo` (rotas de `e2e/rotas.ts` × 320–1920 px × Chromium + WebKit, temas claro/escuro, carregando, "ver mais", busca/menu/dica abertos). Sai 1 se houver achado. Rodar antes de deploy. `BASE=`, `ENGINES=`, `WIDTHS=`, `ROTAS=` restringem.
+- Rota nova no `router.tsx` precisa de exemplo em `e2e/rotas.ts` (teste `src/test/rotas-e2e.test.ts`).
+- Toque (`@media (pointer: coarse)` em `styles.css`): controles ≥ 44 px, links ≥ 24 px via `::after`, sem mudar o layout.
+- `DataTable`: 4+ colunas viram cartões abaixo de `md` (`stack`), com rótulo por célula e seletor de ordem.
+- `data-tap-equiv`: alvo pequeno com controle equivalente grande na mesma tela (WCAG 2.5.8).

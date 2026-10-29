@@ -76,7 +76,7 @@ export function BarraTipos({ porTipo, href, detalhe, compacta = false }: {
   const atual = fatias.find((f) => f.tipo === sel);
   return (
     <div>
-      <div className={clsx("flex w-full overflow-hidden rounded-full bg-surface-2", compacta ? "h-3" : "h-5")} role={compacta ? "img" : "group"}
+      <div className={clsx("flex w-full overflow-hidden rounded-full bg-surface-2", compacta ? "h-3" : "h-5")} data-tap-equiv role={compacta ? "img" : "group"}
         aria-label={compacta ? fatias.map((f) => `${TIPO_DINHEIRO[f.tipo].rotulo}: ${Math.round(f.pct * 100)}%`).join("; ") : "Toque numa cor para entender"}>
         {fatias.map((f, i) => {
           const t = TIPO_DINHEIRO[f.tipo];

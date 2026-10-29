@@ -120,7 +120,7 @@ function Coesao({ fId }: { fId: string }) {
             <tr>
               <th className="py-2 pr-3 font-medium" scope="col">Pauta</th>
               <th className="py-2 pr-3 font-medium" scope="col">Federação</th>
-              <th className="py-2 pr-3 font-medium" scope="col">Coesão <Tip content="100% = todos os votos Sim/Não da federação no mesmo lado. Abstenções e obstruções não entram na conta." /></th>
+              <th className="py-2 pr-3 font-medium pointer-coarse:py-3" scope="col">Coesão <Tip content="100% = todos os votos Sim/Não da federação no mesmo lado. Abstenções e obstruções não entram na conta." /></th>
               <th className="py-2 font-medium" scope="col">Por partido</th>
             </tr>
           </thead>

@@ -80,7 +80,7 @@ export function AppShell() {
       <header className="sticky top-0 z-50 border-b border-line glass">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
           <Link to="/" className="flex shrink-0 items-center rounded-lg" aria-label="emenda.pl — página inicial">
-            <Logo variant="full" className="h-8 w-auto" />
+            <Logo variant="full" className="h-6 w-auto min-[360px]:h-8" />
           </Link>
           <nav aria-label="Principal" className="ml-4 hidden flex-1 items-center gap-0.5 xl:flex">
             {NAV_MAIN.map((n) => (
@@ -209,7 +209,7 @@ function Footer() {
     <footer className="mt-16 border-t border-line bg-surface">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
-          <Logo variant="full" className="h-8 w-auto" />
+          <Logo variant="full" className="h-6 w-auto min-[360px]:h-8" />
           <p className="mt-3 max-w-sm text-sm text-muted">
             O maior site de transparência do Brasil sobre emendas parlamentares: quem indicou, para onde foi e quanto foi pago.
           </p>

@@ -132,7 +132,7 @@ export default function OrcamentoSecretoPage() {
               <li><b>Depois:</b> parte do dinheiro passa a ser mandada de outros jeitos: sem dizer para quê (Pix) e pelas comissões do Congresso.</li>
             </ol>
             {linha.length > 0 && (
-              <table className="mt-5 w-full text-sm">
+              <table className="mt-5 w-full text-sm max-sm:block max-sm:overflow-x-auto">
                 <thead><tr className="text-left text-muted"><th className="py-1 font-medium">Ano</th><th className="py-1 text-right font-medium">Orçamento secreto</th><th className="py-1 text-right font-medium"><Link className="link" to="/pix">Sem dizer para quê</Link></th><th className="py-1 text-right font-medium"><Link className="link" to="/comissoes">Comissões</Link></th></tr></thead>
                 <tbody>{linha.map((l) => <tr key={l.ano} className="border-t border-line"><td className="py-1.5">{l.ano}</td><td className="py-1.5 text-right tabular" style={{ color: l.secreto ? VERMELHO : undefined }}>{l.secreto ? brl(l.secreto) : "—"}</td><td className="py-1.5 text-right tabular">{l.pix ? brl(l.pix) : "—"}</td><td className="py-1.5 text-right tabular">{!comPronto ? "…" : l.comissao ? brl(l.comissao) : "—"}</td></tr>)}</tbody>
               </table>

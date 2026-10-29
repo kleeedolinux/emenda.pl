@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Responsividade auditada: `bun run audit:responsivo` (todas as rotas, 11 larguras, Chromium + WebKit, temas, estados) com checagens de vazamento, corte, palavra partida, selo, número, alvo de toque, sobreposição, sticky, tabela, SVG e imagem. Toque ≥ 44 px (links ≥ 24 px) sem mudar layout; `DataTable` em cartões abaixo de md com dica de rolagem; logo cabe em 320 px; ações de `Card` quebram linha.
 - Linguagem do dia a dia: cabeçalho de toda página diz o que é, por que importa e o que fazer; jargão só em "Oficialmente:" (`features/linguagem/cabecalhos.ts`, testado). Nomes oficiais viram nomes comuns (`lib/nomes.ts`: "MUNICIPIO DE X" -> "Prefeitura de X", abreviações expandidas).
 - Home refeita: número grande clicável (ou o do seu estado), busca da cidade, mapa clicável com nome e R$ por estado, fato do dia com compartilhar, "Perto de você", 4 portas de entrada, Novidades, "Como funciona".
 - Página `/orcamento-secreto`: total, ano a ano, mapa, quem recebeu, áreas, o que mudou depois, fontes (STF ADPF 850/851/854).

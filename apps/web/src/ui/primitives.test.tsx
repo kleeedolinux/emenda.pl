@@ -149,10 +149,13 @@ describe("ErrorState / EmptyState", () => {
 });
 
 describe("Card", () => {
-  test("título encolhe e ações não", () => {
+  test("título encolhe; ações descem de linha e nunca passam da largura do cartão", () => {
     render(<Card title="Gastos por categoria em 2024" actions={<button type="button">CSV</button>}>x</Card>);
     expect(screen.getByRole("heading", { level: 2 }).className).toContain("min-w-0");
-    expect(screen.getByRole("button", { name: "CSV" }).parentElement!.className).toContain("shrink-0");
+    const acoes = screen.getByRole("button", { name: "CSV" }).parentElement!.className;
+    expect(acoes).toContain("max-w-full");
+    expect(acoes).toContain("flex-wrap");
+    expect(acoes).not.toContain("shrink-0");
   });
 });
 

@@ -101,6 +101,21 @@
   /* Itens de grid com min-width:auto alargam a trilha implícita até o min-content e empurram
      números/selos para fora da tela no celular. Especificidade zero: min-w-* continua vencendo. */
   :where(.grid, .inline-grid) > * { min-width: 0; }
+  /* Toque: alvo mínimo de 44px (controles) e 24px (links) via ::after, sem mudar o layout.
+     Quem já usa after: (link esticado, sheen) fica de fora. Campos não têm pseudo-elemento: altura real. */
+  @media (pointer: coarse) {
+    :where(button, summary, [role=tab], [role=button], [role=switch], [role=menuitem], a[href]):not([class*="after:"]):not(.sheen) { position: relative; }
+    :where(button, summary, [role=tab], [role=button], [role=switch], [role=menuitem]):not([class*="after:"]):not(.sheen)::after {
+      content: ""; position: absolute; inset: min(0px, calc((100% - 44px) / 2));
+    }
+    :where(a[href]):not([class*="after:"]):not(.sheen):not([role])::after {
+      content: ""; position: absolute; inset: min(0px, calc((100% - 24px) / 2));
+    }
+    :where(select, input:not([type=checkbox], [type=radio], [type=hidden])) { min-height: 44px; }
+    :where(.sheen) { min-height: 44px; }
+    :where(.overflow-x-auto, .snap-x) > :where(button, a[href], [role=tab]) { min-height: 44px; }
+    :where(a[href].truncate, a[href][class*="line-clamp"]) { min-height: 24px; }
+  }
   ::selection { background: color-mix(in oklab, var(--color-amarelo) 60%, transparent); color: #0b1220; }
 
   /* View Transitions: título compartilhado voa do cartão para o cabeçalho; raiz cruza rápido. */
@@ -118,6 +133,15 @@
 @keyframes vt-out { to { opacity: 0; transform: translateY(-6px); } }
 @keyframes vt-in { from { opacity: 0; transform: translateY(10px); } }
 
+/* Dica de rolagem lateral: sombra nas bordas só quando há conteúdo escondido (capas "local" cobrem a sombra no início/fim). */
+@utility scroll-fade-x {
+  background:
+    linear-gradient(to right, var(--color-surface) 40%, transparent) left / 2.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--color-surface) 40%, transparent) right / 2.5rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / 0.16), transparent) left / 0.75rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / 0.16), transparent) right / 0.75rem 100% no-repeat scroll;
+  background-color: var(--color-surface);
+}
 @utility tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum", "cv11"; }
 @utility glass {
   background: color-mix(in oklab, var(--color-surface) 78%, transparent);

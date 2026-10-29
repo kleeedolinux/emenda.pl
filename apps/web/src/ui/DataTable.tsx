@@ -33,15 +33,21 @@ export interface DataTableProps<T> {
   initialSort?: { key: string; dir: "asc" | "desc" };
   rowKey?: (row: T, i: number) => string | number;
   caption?: string;
+  /** Abaixo de md, cada linha vira um cartão com rótulos. Padrão: 4+ colunas. */
+  stack?: boolean;
 }
 
 const raw = <T,>(r: T, k: string): Prim => (r as Record<string, Prim>)[k];
 const valueOf = <T,>(c: Column<T>, r: T): Prim => (typeof c.sort === "function" ? c.sort(r) : raw(r, c.key));
 const norm = (s: string) => semAcento(s).toLowerCase();
+/** Rótulo da coluna dentro da célula no modo cartão (pseudo-elemento: o texto da célula não muda). */
+const CELULA_ROTULO = "max-md:before:content-[attr(data-label)] max-md:before:text-xs max-md:before:font-semibold max-md:before:uppercase max-md:before:tracking-wide max-md:before:text-muted max-md:before:leading-5";
+/** Número no cartão: rótulo à esquerda, valor à direita; sem espaço, o valor desce inteiro (nunca vaza). */
+const NUMERO_EMPILHADO = "max-md:flex max-md:flex-wrap max-md:items-baseline max-md:justify-end max-md:gap-x-3 max-md:before:mr-auto max-md:before:text-left max-md:before:whitespace-normal";
 const collator = new Intl.Collator("pt-BR", { numeric: true, sensitivity: "base" });
 
 export function DataTable<T>({
-  rows, columns, pageSize = 25, search, searchPlaceholder = "Filtrar…", empty, exportName, initialSort, rowKey, caption,
+  rows, columns, pageSize = 25, search, searchPlaceholder = "Filtrar…", empty, exportName, initialSort, rowKey, caption, stack = columns.length >= 4,
 }: DataTableProps<T>) {
   const [q, setQ] = useState("");
   const dq = useDeferredValue(q);
@@ -83,9 +89,11 @@ export function DataTable<T>({
     toast(`CSV baixado: ${exportName}.csv`);
   };
 
+  const ordenaveis = stack ? columns.filter((c) => c.sort && typeof c.header === "string") : [];
+
   return (
     <div className="min-w-0">
-      {(search || exportName) && (
+      {(search || exportName || ordenaveis.length > 0) && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
           {search && (
             <label className="relative min-w-0 flex-1 sm:max-w-sm">
@@ -98,6 +106,22 @@ export function DataTable<T>({
                 placeholder={searchPlaceholder}
                 className="w-full rounded-xl border border-line bg-surface py-2 pl-9 pr-3 text-sm placeholder:text-muted focus:border-accent"
               />
+            </label>
+          )}
+          {ordenaveis.length > 0 && (
+            <label className="flex min-w-0 items-center gap-2 text-xs text-muted md:hidden">
+              <span className="shrink-0">Ordenar por</span>
+              <select
+                value={sort ? `${sort.key}:${sort.dir}` : ""}
+                onChange={(e) => { const [key, dir] = e.target.value.split(":"); setPage(0); setSort(key ? { key, dir: dir as "asc" | "desc" } : null); }}
+                className="min-w-0 rounded-xl border border-line bg-surface px-2 py-2 text-sm text-fg"
+              >
+                <option value="">Padrão</option>
+                {ordenaveis.flatMap((c) => [
+                  <option key={`${c.key}:desc`} value={`${c.key}:desc`}>{c.header as string} ↓</option>,
+                  <option key={`${c.key}:asc`} value={`${c.key}:asc`}>{c.header as string} ↑</option>,
+                ])}
+              </select>
             </label>
           )}
           <span className="shrink-0 whitespace-nowrap text-xs text-muted tabular" aria-live="polite">
@@ -113,10 +137,10 @@ export function DataTable<T>({
       {!sorted.length ? (
         typeof empty === "string" || !empty ? <EmptyState title={empty ?? "Nenhum registro encontrado."} /> : empty
       ) : (
-        <div className="overflow-x-auto overscroll-x-contain rounded-xl border border-line lg:max-h-[70vh] lg:overflow-y-auto">
-          <table className="w-full border-collapse text-sm">
+        <div className="scroll-fade-x overflow-x-auto overscroll-x-contain rounded-xl border border-line lg:max-h-[70vh] lg:overflow-y-auto">
+          <table className={clsx("w-full border-collapse text-sm", stack && "max-md:block")}>
             {caption && <caption className="sr-only">{caption}</caption>}
-            <thead className="sticky top-0 z-10 glass">
+            <thead className={clsx("sticky top-0 z-10 glass", stack && "max-md:hidden")}>
               <tr>
                 {columns.map((c) => {
                   const active = sort?.key === c.key;
@@ -126,7 +150,7 @@ export function DataTable<T>({
                       key={c.key}
                       scope="col"
                       aria-sort={active ? (sort!.dir === "asc" ? "ascending" : "descending") : undefined}
-                      className={clsx("whitespace-nowrap border-b border-line px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted", c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : "text-left")}
+                      className={clsx("whitespace-nowrap border-b border-line px-3 py-2.5 pointer-coarse:py-3.5 text-xs font-semibold uppercase tracking-wide text-muted", c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : "text-left")}
                     >
                       <span className={clsx("inline-flex items-center gap-1", c.align === "right" && "flex-row-reverse")}>
                         {c.sort ? (
@@ -142,14 +166,17 @@ export function DataTable<T>({
                 })}
               </tr>
             </thead>
-            <tbody key={`${p}-${sort?.key ?? ""}-${sort?.dir ?? ""}`}>
+            <tbody key={`${p}-${sort?.key ?? ""}-${sort?.dir ?? ""}`} className={clsx(stack && "max-md:block")}>
               {view.map((r, i) => (
-                <tr key={rowKey ? rowKey(r, i) : p * pageSize + i} style={{ "--i": i } as React.CSSProperties} className="row-in border-b border-line/70 transition-colors last:border-0 hover:bg-surface-2/70">
-                  {columns.map((c) => (
-                    <td key={c.key} className={clsx("px-3 py-2.5 align-top", c.align === "right" && "text-right tabular whitespace-nowrap", c.align === "center" && "text-center", c.className)}>
+                <tr key={rowKey ? rowKey(r, i) : p * pageSize + i} style={{ "--i": i } as React.CSSProperties} className={clsx("row-in border-b border-line/70 transition-colors last:border-0 hover:bg-surface-2/70", stack && "max-md:block max-md:px-3 max-md:py-2")}>
+                  {columns.map((c, j) => {
+                    const label = stack && j > 0 && typeof c.header === "string" ? c.header : undefined;
+                    return (
+                    <td key={c.key} data-label={label} className={clsx("px-3 py-2.5 align-top", c.align === "right" && "text-right tabular whitespace-nowrap", c.align === "center" && "text-center", stack && "max-md:px-0 max-md:py-1", stack && (label && c.align === "right" ? NUMERO_EMPILHADO : "max-md:block"), stack && c.align === "center" && "max-md:text-left", label && CELULA_ROTULO, label && c.align !== "right" && "max-md:before:block", c.className)}>
                       {c.cell ? c.cell(r) : (raw(r, c.key) as ReactNode) ?? "—"}
                     </td>
-                  ))}
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>

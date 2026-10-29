@@ -25,7 +25,7 @@ export function Tabs({ tabs, param = "tab" }: { tabs: TabDef[]; param?: string }
           <R.Trigger
             key={t.id}
             value={t.id}
-            className="relative shrink-0 whitespace-nowrap px-3.5 py-2.5 text-sm font-semibold text-muted transition hover:text-fg data-[state=active]:text-fg"
+            className="relative shrink-0 whitespace-nowrap px-3.5 py-2.5 pointer-coarse:min-h-11 text-sm font-semibold text-muted transition hover:text-fg data-[state=active]:text-fg"
           >
             {t.label}
             {t.count !== undefined && (

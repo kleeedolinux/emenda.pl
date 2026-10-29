@@ -17,14 +17,14 @@ export function Bars({ data, format = (n) => formatNumber(n), max: maxProp, limi
         const frac = Math.max(0.005, Math.min(1, d.value / max || 0));
         const delay = staggerDelay(i, staggerStep.tight * 1.4, 0.5);
         const label = (
-          <span className="flex min-w-0 items-baseline justify-between gap-3 text-sm">
-            <span className="min-w-0 font-medium break-words transition-colors">
+          <span className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 text-sm">
+            <span className="min-w-0 flex-[1_1_9rem] font-medium break-words transition-colors">
               <span data-shared-source>{d.label}</span>
               {d.sub && <span className="ml-1.5 inline-block whitespace-nowrap text-xs font-normal text-muted">{d.sub}</span>}
             </span>
             <motion.span
               data-num
-              className="shrink-0 whitespace-nowrap font-semibold tabular"
+              className="ml-auto shrink-0 whitespace-nowrap font-semibold tabular"
               initial={reduce ? false : { opacity: 0, x: -6 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}

@@ -70,7 +70,7 @@ export function Card({
               <MaybeTip tip={tip} />
             </h2>
           )}
-          {actions && <div className="ml-auto flex shrink-0 flex-wrap justify-end gap-2">{actions}</div>}
+          {actions && <div className="ml-auto flex max-w-full flex-wrap justify-end gap-2">{actions}</div>}
         </header>
       )}
       {children}

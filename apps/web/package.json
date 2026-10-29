@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --noEmit",
-    "test": "bun test src"
+    "test": "bun test src",
+    "audit:responsivo": "bun e2e/responsivo.ts"
   },
   "dependencies": {
     "@emenda/contracts": "workspace:*",
@@ -45,6 +46,7 @@
     "@types/topojson-client": "^3.1.5",
     "@vitejs/plugin-react": "^6.1.2",
     "happy-dom": "^21.0.4",
+    "playwright-core": "1.64.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.5"

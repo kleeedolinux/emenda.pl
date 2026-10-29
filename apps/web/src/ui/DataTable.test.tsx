@@ -87,4 +87,56 @@ describe("DataTable", () => {
     expect(td.className).toContain("whitespace-nowrap");
     expect(td.className).toContain("tabular");
   });
+
+  describe("celular (< md)", () => {
+    interface R4 { nome: string; uf: string; partido: string; valor: number }
+    const r4: R4[] = [
+      { nome: "Ana", uf: "SP", partido: "PT", valor: 10 },
+      { nome: "Bruno", uf: "RJ", partido: "PL", valor: 30 },
+    ];
+    const c4: Column<R4>[] = [
+      { key: "nome", header: "Nome", sort: true },
+      { key: "uf", header: "UF" },
+      { key: "partido", header: "Partido" },
+      { key: "valor", header: "Valor", sort: true, align: "right" },
+    ];
+
+    test("4+ colunas viram cartões empilhados: rótulo por célula (CSS, sem mudar o texto)", () => {
+      const { container } = render(<DataTable rows={r4} columns={c4} />);
+      expect(container.querySelector("table")!.className).toContain("max-md:block");
+      const tds = [...container.querySelectorAll("tbody tr:first-child td")];
+      expect(tds.map((td) => td.getAttribute("data-label"))).toEqual([null, "UF", "Partido", "Valor"]);
+      expect(tds[1]!.textContent).toBe("SP");
+      // número: rótulo e valor em flex-wrap (valor desce inteiro em vez de vazar do cartão)
+      expect(tds[3]!.className).toContain("max-md:flex-wrap");
+      expect(tds[3]!.className).not.toContain("float");
+    });
+
+    test("cartões: ordenação por seletor (cabeçalho fica oculto)", () => {
+      render(<DataTable rows={r4} columns={c4} />);
+      const sel = screen.getByRole("combobox", { name: /Ordenar/ });
+      fireEvent.change(sel, { target: { value: "valor:desc" } });
+      expect(bodyNames()).toEqual(["Bruno", "Ana"]);
+      fireEvent.change(sel, { target: { value: "valor:asc" } });
+      expect(bodyNames()).toEqual(["Ana", "Bruno"]);
+    });
+
+    test("até 3 colunas: tabela normal com rolagem e dica de rolagem", () => {
+      const { container } = render(<DataTable rows={rows} columns={columns} />);
+      expect(container.querySelector("td[data-label]")).toBeNull();
+      expect(screen.queryByRole("combobox", { name: /Ordenar/ })).toBeNull();
+      expect(container.querySelector("table")!.parentElement!.className).toContain("scroll-fade-x");
+    });
+
+    test("toque: cabeçalho com folga para o alvo de 44px do botão de ordenar/dica", () => {
+      render(<DataTable rows={rows} columns={columns} />);
+      expect(screen.getByRole("columnheader", { name: /Valor/ }).className).toContain("pointer-coarse:py-3.5");
+    });
+
+    test("stack={false} força tabela", () => {
+      const { container } = render(<DataTable rows={r4} columns={c4} stack={false} />);
+      expect(container.querySelector("td[data-label]")).toBeNull();
+    });
+  });
 });
+

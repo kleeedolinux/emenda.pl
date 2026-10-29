@@ -224,7 +224,7 @@ export function BuscaUniversal({ variante = "painel", modoInicial = "tudo", ufIn
         <div role="radiogroup" aria-label="O que você procura?" className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {MODOS.filter((m) => !modos || modos.includes(m.id)).map((m) => (
             <button key={m.id} type="button" role="radio" aria-checked={modo === m.id} onClick={() => trocarModo(m.id)}
-              className={clsx("press relative min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold transition sm:min-h-9 sm:px-3.5", modo === m.id ? "text-white" : "text-muted ring-1 ring-inset ring-line hover:text-fg")}>
+              className={clsx("press relative min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold transition sm:pointer-fine:min-h-9 sm:px-3.5", modo === m.id ? "text-white" : "text-muted ring-1 ring-inset ring-line hover:text-fg")}>
               {modo === m.id && <motion.span layoutId={`busca-modo-${variante}`} className="absolute inset-0 rounded-full bg-verde-700" transition={{ type: "spring", bounce: 0.2, duration: 0.35 }} />}
               <span className="relative">{m.rotulo}</span>
             </button>

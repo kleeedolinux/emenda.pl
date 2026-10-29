@@ -42,6 +42,11 @@ describe("Tabs", () => {
     expect(tab.className).toContain("whitespace-nowrap");
   });
 
+  test("no toque, aba tem 44px de altura (a faixa rola e cortaria um alvo maior que ela)", () => {
+    setup();
+    expect(screen.getByRole("tab", { name: /Resumo/ }).className).toContain("pointer-coarse:min-h-11");
+  });
+
   test("valor inválido em ?tab= cai na primeira", () => {
     setup("/x?tab=nada");
     expect(screen.getByRole("tab", { name: /Resumo/ }).getAttribute("aria-selected")).toBe("true");

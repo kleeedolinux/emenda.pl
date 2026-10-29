@@ -60,3 +60,12 @@ describe("AppShell: cabeçalho em telas médias (~760px)", () => {
     expect(screen.getByRole("link", { name: /página inicial/ }).className).toContain("shrink-0");
   });
 });
+
+describe("AppShell: cabeçalho em 320px", () => {
+  test("logo menor abaixo de 360px para os 3 botões caberem", () => {
+    setup();
+    const svg = screen.getByRole("link", { name: /página inicial/ }).querySelector("svg")!;
+    expect(svg.getAttribute("class")).toContain("h-6");
+    expect(svg.getAttribute("class")).toContain("min-[360px]:h-8");
+  });
+});

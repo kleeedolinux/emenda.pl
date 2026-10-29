@@ -13,4 +13,27 @@ describe("layout móvel", () => {
     for (const f of ["./AppShell.tsx", "./DataTable.tsx", "./primitives.tsx"]) expect(src(f)).not.toMatch(/h-screen|100vh/);
   });
   test("tabela: sem rolagem vertical aninhada no celular", () => expect(src("./DataTable.tsx")).toMatch(/overflow-x-auto[^"]*lg:max-h-\[70vh\] lg:overflow-y-auto/));
+  test("toque: controles têm alvo ≥44px e links ≥24px sem mudar o layout (pseudo-elemento)", () => {
+    const m = css.match(/@media \(pointer: coarse\) \{([\s\S]*?)\n\s{2}\}/);
+    expect(m).not.toBeNull();
+    const bloco = m![1]!;
+    expect(bloco).toContain("calc((100% - 44px) / 2)");
+    expect(bloco).toContain("calc((100% - 24px) / 2)");
+    // não quebra o padrão "link esticado" (after:absolute after:inset-0) nem o sheen
+    expect(bloco).toContain(':not([class*="after:"])');
+    // campos (sem pseudo-elemento) ganham altura mínima real
+    expect(bloco).toMatch(/:where\(select, input:not\(\[type=checkbox\], \[type=radio\], \[type=hidden\]\)\) \{ min-height: 44px; \}/);
+    // .sheen corta o próprio ::after (overflow hidden): ganha altura real
+    expect(bloco).toMatch(/:where\(\.sheen\) \{ min-height: 44px; \}/);
+    // faixas com rolagem lateral cortam o ::after na vertical: filhos diretos ganham altura real
+    expect(bloco).toMatch(/:where\(\.overflow-x-auto, \.snap-x\) > :where\(button, a\[href\], \[role=tab\]\) \{ min-height: 44px; \}/);
+    // link que corta o próprio conteúdo (truncate/line-clamp) corta o ::after: altura real de 24px
+    expect(bloco).toMatch(/:where\(a\[href\]\.truncate, a\[href\]\[class\*="line-clamp"\]\) \{ min-height: 24px; \}/);
+  });
+  test("dica de rolagem horizontal (sombras com background-attachment local)", () => {
+    const m = css.match(/@utility scroll-fade-x \{([\s\S]*?)\n\}/);
+    expect(m).not.toBeNull();
+    expect(m![1]).toContain("local");
+  });
 });
+
