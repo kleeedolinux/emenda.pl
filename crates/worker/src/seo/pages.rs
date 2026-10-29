@@ -23,7 +23,7 @@ pub fn sources(p: &Page, today: &str) -> Vec<Source> {
     let id = &p.id;
     let mut v = vec![data(META.into())];
     match p.kind {
-        Home | Emendas | Dinheiro => v.push(data("v1/brasil.json".into())),
+        Home | Emendas | Dinheiro | OrcamentoSecreto => v.push(data("v1/brasil.json".into())),
         Uf => v.push(data(format!("v1/uf/{id}.json"))),
         Municipio => v.push(data(format!("v1/municipio/{id}.json"))),
         Autor => v.push(data(format!("v1/autor/{id}.json"))),
@@ -463,6 +463,7 @@ pub fn build(p: &Page, d: &[Fetched], now: &str) -> Doc {
         Senadores => at(1).map(|v| senadores(p, v)),
         Partidos => at(1).map(|v| partidos(p, v)),
         Comissoes => at(1).map(|v| comissoes(p, v)),
+        OrcamentoSecreto => at(1).map(|v| orcamento_secreto(p, v, meta)),
         _ => None,
     };
     let live = matches!(
@@ -552,6 +553,7 @@ fn generic(p: &Page, meta: Option<&Value>) -> Doc {
         Federacoes => ("Federações partidárias: partidos e bancadas".into(), "Federações partidárias".into(), "Federações partidárias registradas no TSE e suas bancadas na Câmara.".into()),
         Estaduais => ("Deputados estaduais e assembleias legislativas".into(), "Deputados estaduais".into(), "Links e dados das assembleias legislativas estaduais.".into()),
         Sobre => ("Sobre o emenda.online: fontes, método e autora".into(), "Sobre".into(), "Como o emenda.online coleta e cruza dados públicos de emendas, votações e gastos; fontes, licença e autoria.".into()),
+        OrcamentoSecreto => ("Orçamento secreto: bilhões distribuídos sem mostrar quem pediu".into(), "Orçamento secreto".into(), "Entre 2020 e 2022, o relator do Orçamento distribuiu bilhões sem mostrar quem pediu. Veja para onde foi o dinheiro.".into()),
         Api => ("API aberta de emendas parlamentares e votações".into(), "API aberta".into(), "API JSON gratuita, sem chave: emendas por município, estado e autor, deputados, senadores, proposições e votações.".into()),
     };
     let mut d = doc(p, &title, &h1, &desc);
@@ -1821,6 +1823,61 @@ fn emendas(p: &Page, b: &Value, meta: Option<&Value>) -> Doc {
     dataset(
         &mut d,
         "Emendas parlamentares por ano, tipo e estado",
+        "/v1/brasil",
+        "v1/brasil.json",
+        meta,
+        Some("Brasil".into()),
+    );
+    d
+}
+
+/// Orçamento secreto (emendas de relator-geral, RP9).
+fn orcamento_secreto(p: &Page, b: &Value, meta: Option<&Value>) -> Doc {
+    let total: i64 = arr(b, "/porTipo")
+        .iter()
+        .filter(|x| s(x, "/tipo").as_deref() == Some("relator"))
+        .filter_map(|x| i(x, "/pago"))
+        .sum();
+    let pago = brl(total);
+    let desc = format!(
+        "Orçamento secreto: {pago} foram distribuídos sem mostrar quem pediu. Veja para quais estados e áreas foi o dinheiro."
+    );
+    let mut d = doc(
+        p,
+        &format!("Orçamento secreto: {pago} sem mostrar quem pediu"),
+        "Orçamento secreto",
+        &desc,
+    );
+    here(&mut d, "Orçamento secreto");
+    fact(&mut d, "Pago pelo orçamento secreto", pago);
+    d.sections.push(text_section(
+        "O que foi",
+        "Entre 2020 e 2022, o relator do Orçamento distribuiu bilhões sem mostrar qual político pediu cada valor. Em dezembro de 2022, o STF decidiu que isso não podia continuar (ADPF 850, 851 e 854). Oficialmente: emendas de relator-geral (RP9).",
+    ));
+    d.sections.push(section(
+        "Veja também",
+        vec![
+            Item::link(
+                "Dinheiro mandado sem dizer para quê (emenda Pix)",
+                "/pix",
+                None,
+            ),
+            Item::link(
+                "Entenda o orçamento secreto",
+                "/entenda/emenda-de-relator",
+                None,
+            ),
+        ],
+    ));
+    src(
+        &mut d,
+        "STF — ADPF 854",
+        "https://portal.stf.jus.br/processos/detalhe.asp?incidente=6199750",
+    );
+    portal(&mut d);
+    dataset(
+        &mut d,
+        "Orçamento secreto (emendas de relator-geral)",
         "/v1/brasil",
         "v1/brasil.json",
         meta,

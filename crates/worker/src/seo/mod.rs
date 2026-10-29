@@ -54,11 +54,12 @@ pub enum PageKind {
     Federacoes,
     Estaduais,
     Sobre,
+    OrcamentoSecreto,
     Api,
 }
 
 /// Static pages: path segment -> kind.
-pub const STATIC_PAGES: [(&str, PageKind); 15] = [
+pub const STATIC_PAGES: [(&str, PageKind); 16] = [
     ("pix", PageKind::Pix),
     ("ultimas", PageKind::Ultimas),
     ("emendas", PageKind::Emendas),
@@ -74,6 +75,7 @@ pub const STATIC_PAGES: [(&str, PageKind); 15] = [
     ("federacoes", PageKind::Federacoes),
     ("estaduais", PageKind::Estaduais),
     ("sobre", PageKind::Sobre),
+    ("orcamento-secreto", PageKind::OrcamentoSecreto),
 ];
 
 const ID_PAGES: [(&str, PageKind); 12] = [

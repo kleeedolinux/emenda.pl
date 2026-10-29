@@ -362,3 +362,47 @@ fn name_lookup_prefers_exact_match() {
     let p = foto::senador_por_nome(&lista, "OTTO ALENCAR").unwrap();
     assert_eq!((p.id, p.partido.as_str()), (35, "PSD"));
 }
+
+#[test]
+fn orcamento_secreto_has_seo_page_and_og_card() {
+    // SEO router: real page, canonical + markdown.
+    let Some(seo::SeoRoute::Page { page: p, .. }) = seo::route("GET", "/orcamento-secreto", None)
+    else {
+        panic!("rota SEO")
+    };
+    assert_eq!(p.kind, PageKind::OrcamentoSecreto);
+    assert_eq!(p.md_path(), "/orcamento-secreto.md");
+    // OG: /og/pagina/orcamento-secreto.png
+    assert_eq!(viral::og_path(&p), "/og/pagina/orcamento-secreto.png");
+    assert!(matches!(
+        route("GET", "/og/pagina/orcamento-secreto.png", None),
+        Route::Og(_)
+    ));
+    // Card leads with the RP9 total, plain words.
+    let b = json!({
+        "totais": { "n": 3, "pago": 90_000_000_000_i64, "rapPago": 0 },
+        "porTipo": [
+            { "tipo": "relator", "n": 1, "pago": 37_200_000_000_i64, "rapPago": 0 },
+            { "tipo": "pix", "n": 1, "pago": 10_000_000_000_i64, "rapPago": 0 }
+        ],
+        "porUf": [], "fluxo": []
+    });
+    let s = spec(&p, vec![ok(json!({})), ok(b)], vec![]);
+    assert_eq!(s.numero, "R$ 372 mi");
+    assert_eq!(s.frase, "foram distribuídos sem mostrar quem pediu");
+    assert!(s.gancho.contains("Veja para onde foi"));
+    let doc = seo::pages::build(
+        &p,
+        &[
+            ok(json!({})),
+            ok(json!({"porTipo": [{"tipo": "relator", "pago": 37_200_000_000_i64}]})),
+        ],
+        "2026-10-28T12:00-03:00",
+    );
+    assert!(doc.title.contains("Orçamento secreto"), "{}", doc.title);
+    assert!(
+        doc.description.contains("sem mostrar quem pediu"),
+        "{}",
+        doc.description
+    );
+}
