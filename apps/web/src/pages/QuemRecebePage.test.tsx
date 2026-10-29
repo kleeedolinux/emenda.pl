@@ -7,7 +7,7 @@ import QuemRecebePage from "./QuemRecebePage";
 const pj = "Pessoa Jurídica";
 const dados = {
   totais: { empresas: 30_000_000_000, entidades: 10_000_000_000, fundos: 5_000_000_000 },
-  empresas: [{ documento: "1", nome: "CONSTRUTORA Y LTDA", tipo: pj, valor: 20_000_000_000, uf: "MG", municipio: "BETIM" }],
+  empresas: [{ documento: "11222333000181", nome: "CONSTRUTORA Y LTDA", tipo: pj, valor: 20_000_000_000, uf: "MG", municipio: "BETIM" }],
   entidades: [{ documento: "2", nome: "HOSPITAL X", tipo: pj, valor: 10_000_000_000, uf: "SP", municipio: "CAMPINAS" }],
   fundos: [{ documento: "3", nome: "FUNDO ESTADUAL DE SAUDE", tipo: pj, valor: 5_000_000_000, uf: "SP", municipio: "SAO PAULO" }],
 };
@@ -28,6 +28,8 @@ describe("QuemRecebePage", () => {
     expect(within(priv).getByText(/Construtora Y/i)).toBeTruthy();
     expect(within(priv).getByText(/Hospital X/i)).toBeTruthy();
     expect(within(priv).queryByText(/Fundo Estadual/i)).toBeNull();
+    const cnpj = within(priv).getByRole("link", { name: /11\.222\.333\/0001-81/ });
+    expect(cnpj.getAttribute("href")).toBe("https://portaldatransparencia.gov.br/pessoa-juridica/11222333000181");
     fireEvent.click(within(priv).getByRole("button", { name: "Empresas" }));
     expect(within(priv).queryByText(/Hospital X/i)).toBeNull();
     const fundos = screen.getByRole("heading", { name: /Fundos públicos/ }).closest("section")!;

@@ -3,6 +3,7 @@ import type { Beneficiado } from "@emenda/contracts";
 import { formatBRL } from "@/lib/format";
 import { nomeLeigo } from "@/lib/nomes";
 import { ListaVerMais } from "@/features/linguagem";
+import { formatCnpjCpf, linkFornecedor } from "@/features/gastos/gastos";
 import { ROTULO_GRUPO, type Privado } from "./beneficiados";
 
 const brl = (n: number) => formatBRL(Math.round(n), true);
@@ -20,7 +21,7 @@ export function LinhaBeneficiado({ x, i }: { x: Beneficiado | Privado; i: number
       <span className="min-w-0 flex-1">
         <span className="block font-medium break-words">{nomeLeigo(x.nome).replace(/,(?=\S)/g, ", ")}</span>
         <span className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs text-muted">
-          <span>{grupo === "fundo" ? "Fundo público" : ROTULO_GRUPO[grupo]}{onde ? ` · ${onde}` : ""}</span>
+          <span>{grupo === "fundo" ? "Fundo público" : ROTULO_GRUPO[grupo]}{onde ? ` · ${onde}` : ""} · <Documento d={x.documento} /></span>
           <b className="text-sm text-fg tabular">{brl(x.valor)}</b>
         </span>
       </span>
@@ -34,4 +35,14 @@ export function ListaBeneficiados<T extends Beneficiado>({ itens, inicial = 10 }
       vazio={<p className="py-4 text-sm text-muted">Nada encontrado.</p>}
       render={(x, i) => <LinhaBeneficiado x={x} i={i} />} />
   );
+}
+
+/** CNPJ/CPF formatado; CNPJ vira link para a ficha no Portal da Transparência. */
+export function Documento({ d }: { d: string }) {
+  if (!d || d.startsWith("#")) return null;
+  const link = linkFornecedor(d);
+  const txt = formatCnpjCpf(d);
+  return link
+    ? <a href={link} target="_blank" rel="noopener noreferrer" className="link whitespace-nowrap tabular">{txt}</a>
+    : <span className="whitespace-nowrap tabular">{txt}</span>;
 }

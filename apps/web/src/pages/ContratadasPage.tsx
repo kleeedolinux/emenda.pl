@@ -7,6 +7,7 @@ import { formatBRL, formatNumber } from "@/lib/format";
 import { nomeLeigo } from "@/lib/nomes";
 import { CABECALHOS, CabecalhoPagina, ListaVerMais } from "@/features/linguagem";
 import { GRUPOS, comNomes } from "@/features/contratadas/contratadas";
+import { Documento } from "@/features/beneficiados";
 import { ShareButton } from "@/features/share";
 
 const brl = (n: number) => formatBRL(Math.round(n), true);
@@ -50,7 +51,7 @@ export default function ContratadasPage() {
                     <span className="min-w-0 flex-1">
                       <b className="block break-words">{nomeLeigo(f.nome)}</b>
                       <span className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs text-muted">
-                        <span>contratada por {formatNumber(f.parlamentares)} {f.parlamentares === 1 ? "político" : "políticos"} · {formatNumber(f.n)} notas</span>
+                        <span>contratada por {formatNumber(f.parlamentares)} {f.parlamentares === 1 ? "político" : "políticos"} · {formatNumber(f.n)} notas{f.cnpjCpf && <> · <Documento d={f.cnpjCpf} /></>}</span>
                         <b className="text-sm text-fg tabular">{brl(f.valor)}</b>
                       </span>
                     </span>

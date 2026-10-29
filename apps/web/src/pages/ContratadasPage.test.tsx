@@ -9,7 +9,7 @@ const dados: Record<string, unknown> = {
   "fornecedores.json": {
     grupos: [
       { grupo: "passagens", valor: 900, fornecedores: [forn("1", "Cia Aérea - TAM", 900, "camara", "10")] },
-      { grupo: "divulgacao", valor: 500, fornecedores: [forn("2", "GRAFICA X LTDA", 500, "senado", "20")] },
+      { grupo: "divulgacao", valor: 500, fornecedores: [forn("11222333000181", "GRAFICA X LTDA", 500, "senado", "20")] },
     ],
   },
   "ranking.json": { parlamentares: [
@@ -37,6 +37,7 @@ describe("ContratadasPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Propaganda e marketing/ }));
     const linha = (await screen.findByText(/Grafica X/i)).closest("li")!;
     expect(screen.queryByText(/Cia Aérea - TAM/)).toBeNull();
+    expect(within(linha).getByRole("link", { name: /11\.222\.333\/0001-81/ })).toBeTruthy();
     const quem = within(linha).getByRole("link", { name: /Beto Souza/ });
     expect(quem.getAttribute("href")).toBe("/senador/20#gastos");
   });

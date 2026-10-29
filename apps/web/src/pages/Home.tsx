@@ -9,6 +9,7 @@ import { HeroBrasil, preloadHeroScene } from "@/features/geo/HeroBrasil";
 import { BuscaUniversal, abrirBusca } from "@/features/busca";
 import { LinhaBeneficiado, privados } from "@/features/beneficiados";
 import { GRUPOS } from "@/features/contratadas/contratadas";
+import { formatCnpjCpf } from "@/features/gastos/gastos";
 import { fatosDoDia, lerLocal, type Fato, type LocalVisitante } from "@/features/home/home";
 import { HERO, QuemMandou, QuemMandouSkeleton, TIPO_DINHEIRO } from "@/features/linguagem";
 import { PAUTAS } from "@/features/legislativo/pautas";
@@ -281,6 +282,7 @@ function EmpresasContratadas() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted">{GRUPOS[g.grupo].rotulo}</span>
                 <b className="leading-tight break-words">{nomeLeigo(f.nome)}</b>
                 <span className="font-display text-2xl font-bold tabular">{brl(f.valor)}</span>
+                <span className="text-xs text-muted">CNPJ {f.cnpjCpf ? formatCnpjCpf(f.cnpjCpf) : "—"}</span>
                 <span className="mt-auto flex items-center justify-between text-sm text-muted">contratada por {f.parlamentares} políticos<ArrowRight className="size-4 text-accent transition group-hover:translate-x-0.5" aria-hidden /></span>
               </Link>
             </li>
