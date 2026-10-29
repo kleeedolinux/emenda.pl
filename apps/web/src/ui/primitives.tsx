@@ -4,7 +4,8 @@ import { AlertTriangle, ArrowUpRight, ChevronRight, Inbox, Loader2, RotateCw } f
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { partyColor, contrastText } from "@/lib/colors";
-import { cdnImg, imagemCdn, trocarParaOriginal } from "@/lib/cdn";
+import { bandeiraUf, cdnImg, imagemCdn, trocarParaOriginal } from "@/lib/cdn";
+import { ufDaBancada } from "@/lib/nomes";
 import { Tip } from "./Tip";
 import { termo } from "./glossario";
 import { fadeUp, inSharedTransition, liftable, sharedTitleProps, TransitionLink, duration, easing, spring } from "./motion";
@@ -177,10 +178,13 @@ const SIZES = { sm: "size-8 text-xs", md: "size-12 text-sm", lg: "size-20 text-x
 export function Avatar({ src, name, size = "md" }: { src?: string | null; name: string; size?: keyof typeof SIZES }) {
   const [err, setErr] = useState(false);
   const ini = name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+  const uf = src ? null : ufDaBancada(name);
   return (
     <span className={clsx("relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-verde to-azul font-bold text-white ring-2 ring-surface", SIZES[size])}>
       {src && !err ? (
         <img {...cdnImg(src, { sm: 32, md: 48, lg: 80, xl: 112 }[size])} alt={name} loading="lazy" decoding="async" onError={(e) => trocarParaOriginal(e.currentTarget, imagemCdn(src)?.fallbackSrc) || setErr(true)} className="size-full object-cover" />
+      ) : uf && !err ? (
+        <img src={bandeiraUf(uf, 64)} alt={name} loading="lazy" decoding="async" onError={() => setErr(true)} className="size-full object-cover" />
       ) : (
         <span aria-label={name}>{ini}</span>
       )}

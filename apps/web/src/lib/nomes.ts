@@ -1,5 +1,6 @@
 // Nomes vindos do Portal/Câmara em CAIXA ALTA, abreviados e sem acento -> leitura comum. Puro.
 // "MUNICIPIO DE BELEM" -> "Prefeitura de Belém"; "COM. DESENV REGIONAL E TURISMO" -> "Comissão de Desenvolvimento Regional e Turismo".
+import { chaveNome, UFS as NOMES_UF, type SiglaUf } from "@emenda/contracts";
 
 const MINUSCULAS = new Set(["DA", "DAS", "DE", "DO", "DOS", "E", "EM", "SOBRE", "COM", "AO", "AOS", "A", "AS", "NA", "NO", "NAS", "NOS"]);
 const SIGLAS = new Set(["APAE", "SUS", "FNDE", "FNS", "SESI", "SENAI", "SESC", "SENAC", "CNPJ", "CPF", "ONG", "OSCIP", "S/A", "SA", "S.A.", "ME", "EPP", "EIRELI", "LTDA.", "IBGE", "INSS", "UPA", "UBS", "CRAS", "CREAS", "DNIT", "CODEVASF", "EMBRAPA", "UFBA", "UFMG", "USP", "IFBA", "PT", "PL", "PSD", "MDB", "PP"]);
@@ -67,4 +68,12 @@ export function nomeLeigo(entrada: string): string {
   for (let i = 0; i < out.length - 1; i++)
     if (out[i] === "Comissão" && !/^(de|da|do|dos|das|Mista|Permanente|Senado|sobre|-)$/.test(out[i + 1]!)) out.splice(i + 1, 0, "de");
   return out.join(" ");
+}
+
+/** "Bancada de Minas Gerais" → "MG". Bancadas temáticas ("Bancada Ruralista") → null. */
+export function ufDaBancada(nome: string): SiglaUf | null {
+  const m = /^bancada\s+(?:de|do|da|dos|das)\s+(.+)$/i.exec(nome.trim());
+  if (!m) return null;
+  const alvo = chaveNome(m[1]!);
+  return (Object.keys(NOMES_UF) as SiglaUf[]).find((uf) => chaveNome(NOMES_UF[uf]) === alvo) ?? null;
 }

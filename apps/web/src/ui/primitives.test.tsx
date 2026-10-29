@@ -173,6 +173,18 @@ describe("Avatar", () => {
     render(<Avatar name="joão" />);
     expect(screen.getByLabelText("joão").textContent).toBe("J");
   });
+  test("bancada estadual sem foto -> bandeira do estado", () => {
+    const { container } = render(<Avatar name="Bancada de Minas Gerais" />);
+    const img = container.querySelector("img")!;
+    expect(img.getAttribute("src")).toContain("/bandeira/uf/MG");
+    expect(img.getAttribute("alt")).toBe("Bancada de Minas Gerais");
+  });
+  test("bandeira que falha volta para as iniciais", () => {
+    const { container } = render(<Avatar name="Bancada da Bahia" />);
+    fireEvent.error(container.querySelector("img")!);
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByLabelText("Bancada da Bahia").textContent).toBe("BD");
+  });
 });
 
 describe("ExternalLink", () => {

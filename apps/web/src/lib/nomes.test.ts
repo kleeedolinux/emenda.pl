@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { nomeLeigo } from "./nomes";
+import { nomeLeigo, ufDaBancada } from "./nomes";
 
 describe("nomeLeigo: nomes do Portal em caixa alta -> leitura comum", () => {
   test.each([
@@ -25,4 +25,22 @@ describe("nomeLeigo: nomes do Portal em caixa alta -> leitura comum", () => {
     ["Iraquara", "Iraquara"],
     ["  ", ""],
   ])("%s -> %s", (entrada, saida) => expect(nomeLeigo(entrada)).toBe(saida));
+});
+
+describe("ufDaBancada", () => {
+  test.each([
+    ["Bancada de Minas Gerais", "MG"],
+    ["BANCADA DE MINAS GERAIS", "MG"],
+    ["Bancada do Rio de Janeiro", "RJ"],
+    ["BANCADA DA BAHIA", "BA"],
+    ["Bancada de São Paulo", "SP"],
+    ["BANCADA DE SAO PAULO", "SP"],
+    ["Bancada do Rio Grande do Sul", "RS"],
+    ["Bancada do Rio Grande do Norte", "RN"],
+    ["Bancada do Amapá", "AP"],
+    ["Bancada do Distrito Federal", "DF"],
+    ["Bancada Ruralista", null],
+    ["Comissão de Educação", null],
+    ["Nikolas Ferreira", null],
+  ])("%s → %s", (nome, uf) => expect(ufDaBancada(nome) as string | null).toBe(uf));
 });
