@@ -168,3 +168,57 @@ fn csp_do_site_libera_o_cdn() {
         assert!(dir.contains("https://cdn.emenda.online"), "{dir}");
     }
 }
+
+#[test]
+fn alias_por_nome() {
+    use emenda_worker::cdn::{alias, resolver_alias};
+    let a = alias("foto/nome/SP/tabata-amaral-160.webp").unwrap();
+    assert_eq!(a.indice, "indice/nomes/t.json");
+    assert_eq!(a.uf.as_deref(), Some("SP"));
+    assert_eq!(a.slug, "tabata-amaral");
+    assert_eq!(a.sufixo, "-160.webp");
+    assert_eq!(alias("foto/nome/XX/ana-512.jpg").unwrap().uf, None);
+    for bad in [
+        "foto/nome/SP/tabata.webp",
+        "foto/nome/SP/x-99.webp",
+        "foto/nome/SPX/a-160.webp",
+        "foto/nome/SP/A-160.webp",
+        "foto/nome/SP/a-160.jpg",
+        "foto/deputado/1-160.webp",
+    ] {
+        assert!(alias(bad).is_none(), "{bad}");
+    }
+    let idx = serde_json::json!({
+        "tabata-amaral": [["SP", "foto/deputado/1"], ["SP", "foto/tse/2022/9"]],
+        "joao-silva": [["RJ", "foto/tse/2022/1"], ["MG", "foto/tse/2022/2"]],
+        "ana": [["", "foto/senador/7"]]
+    });
+    let r = |p: &str| resolver_alias(&idx, &alias(p).unwrap());
+    assert_eq!(
+        r("foto/nome/SP/tabata-amaral-160.webp").as_deref(),
+        Some("foto/deputado/1-160.webp")
+    );
+    assert_eq!(
+        r("foto/nome/MG/joao-silva-512.jpg").as_deref(),
+        Some("foto/tse/2022/2-512.jpg")
+    );
+    assert_eq!(
+        r("foto/nome/XX/joao-silva-160.webp"),
+        None,
+        "ambíguo sem UF"
+    );
+    assert_eq!(r("foto/nome/BA/joao-silva-160.webp"), None);
+    assert_eq!(
+        r("foto/nome/BA/ana-160.webp").as_deref(),
+        Some("foto/senador/7-160.webp")
+    );
+    assert_eq!(
+        r("foto/nome/XX/tabata-amaral-160.webp").as_deref(),
+        Some("foto/deputado/1-160.webp")
+    );
+    assert_eq!(r("foto/nome/SP/ninguem-160.webp"), None);
+    assert_eq!(
+        cdn::content_type("indice/nomes/t.json"),
+        Some("application/json; charset=utf-8")
+    );
+}

@@ -21,6 +21,7 @@ The wasm glue is in `src/glue.rs` and `src/glue_api.rs` (`cfg(target_arch = "was
 | `/og/default.png`, `/og/<kind>/<id>.png` | `og::png` card; any failure -> default card | 1d |
 | `/deputado/:id` … `/partido/:sigla`, `/` | `index.html` with `<!-- og:start -->…<!-- og:end -->` replaced | 5 min |
 | `/assets/*` | static, `immutable` | 1y |
+| host `cdn.*`, `/cdn/*` | asset mirror, branch `assets` (`src/cdn.rs`, see `assets.md`) | 30d |
 | `/api/health` | `{ok, version}` | no-store |
 | `POST /api/hit` | analytics beacon, 204 | no-store |
 | `GET /api/stats` | analytics aggregate | 30s |

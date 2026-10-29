@@ -6,7 +6,7 @@ pub const ORIGIN: &str = "https://cdn.emenda.online/";
 /// Paths are stable (not content-hashed): 30 days + 7 days stale.
 pub const CACHE_CONTROL: &str =
     "public, max-age=2592000, s-maxage=2592000, stale-while-revalidate=604800";
-/// `manifest.json` changes daily.
+/// JSON (manifest, name index, credits) changes daily.
 pub const CACHE_CONTROL_MANIFEST: &str =
     "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400";
 /// Redirects to upstream and 404s (the next mirror run may fill the path).
@@ -59,7 +59,7 @@ pub fn cache_key(path: &str) -> String {
 }
 
 pub fn cache_control(path: &str) -> &'static str {
-    if path == "manifest.json" {
+    if path.ends_with(".json") {
         CACHE_CONTROL_MANIFEST
     } else {
         CACHE_CONTROL
@@ -140,4 +140,64 @@ pub fn etag_match(if_none_match: Option<&str>, etag: &str) -> bool {
     let strip = |s: &str| s.trim().trim_start_matches("W/").to_string();
     let e = strip(etag);
     if_none_match.is_some_and(|h| h.split(',').any(|t| t.trim() == "*" || strip(t) == e))
+}
+
+/// `foto/nome/{UF|XX}/{slug}-{160|512}.webp` or `-512.jpg`: photo by name (people without an id).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Alias {
+    /// `indice/nomes/{first letter}.json` in the mirror.
+    pub indice: String,
+    pub uf: Option<String>,
+    pub slug: String,
+    pub sufixo: &'static str,
+}
+
+pub fn alias(path: &str) -> Option<Alias> {
+    let rest = path.strip_prefix("foto/nome/")?;
+    let (uf, file) = rest.split_once('/')?;
+    if uf.len() != 2 || !uf.bytes().all(|b| b.is_ascii_uppercase()) {
+        return None;
+    }
+    let sufixo = ["-160.webp", "-512.webp", "-512.jpg"]
+        .into_iter()
+        .find(|s| file.ends_with(s))?;
+    let slug = file.strip_suffix(sufixo)?;
+    let ok = !slug.is_empty()
+        && slug.len() <= 120
+        && slug.bytes().all(|b| b.is_ascii_lowercase() || b == b'-');
+    if !ok {
+        return None;
+    }
+    Some(Alias {
+        indice: format!("indice/nomes/{}.json", &slug[..1]),
+        uf: (uf != "XX").then(|| uf.to_string()),
+        slug: slug.to_string(),
+        sufixo,
+    })
+}
+
+/// Index `{slug: [[uf, chave], ...]}` -> target path. Same UF first (else entries without UF);
+/// without UF only when all entries share one UF.
+pub fn resolver_alias(indice: &Value, a: &Alias) -> Option<String> {
+    let e: Vec<(&str, &str)> = indice[&a.slug]
+        .as_array()?
+        .iter()
+        .filter_map(|p| Some((p[0].as_str()?, p[1].as_str()?)))
+        .collect();
+    let chave = match &a.uf {
+        Some(uf) => {
+            e.iter()
+                .find(|(u, _)| u == uf)
+                .or_else(|| e.iter().find(|(u, _)| u.is_empty()))?
+                .1
+        }
+        None => {
+            let u0 = e.first()?.0;
+            if !e.iter().all(|(u, _)| *u == u0) {
+                return None;
+            }
+            e[0].1
+        }
+    };
+    Some(format!("{chave}{}", a.sufixo))
 }

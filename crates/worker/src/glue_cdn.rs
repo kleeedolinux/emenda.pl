@@ -78,17 +78,28 @@ pub(crate) async fn handle(req: &Request, path: &str) -> Result<Response> {
         hit.headers_mut().set("x-emenda-cache", "HIT")?;
         return conditional(req, hit);
     }
-    let up = match crate::glue::get(&cdn::upstream(path), "*/*").await {
+    // Photo by name: resolve through the name index; served and cached under the alias path.
+    let alvo = match cdn::alias(path) {
+        Some(a) => match name_index(&cache, &a.indice).await {
+            Some(idx) => match cdn::resolver_alias(&idx, &a) {
+                Some(t) => t,
+                None => return status(404, cdn::CACHE_CONTROL_FALLBACK),
+            },
+            None => return status(404, cdn::CACHE_CONTROL_FALLBACK),
+        },
+        None => path.to_string(),
+    };
+    let up = match crate::glue::get(&cdn::upstream(&alvo), "*/*").await {
         Ok(r) => r,
         Err(_) => return status(502, "no-store"),
     };
     match up.status_code() {
         200 => {}
-        404 => return not_mirrored(path).await,
+        404 => return not_mirrored(&alvo).await,
         _ => return status(502, "no-store"),
     }
     let h = Headers::new();
-    for (k, v) in cdn::headers(path) {
+    for (k, v) in cdn::headers(&alvo) {
         h.set(k, v)?;
     }
     if let Some(e) = up.headers().get("ETag")? {
@@ -98,4 +109,27 @@ pub(crate) async fn handle(req: &Request, path: &str) -> Result<Response> {
     let _ = cache.put(key.as_str(), resp.cloned()?).await;
     resp.headers_mut().set("x-emenda-cache", "MISS")?;
     conditional(req, resp)
+}
+
+/// `indice/nomes/{c}.json` (edge-cached like the manifest).
+async fn name_index(cache: &Cache, rel: &str) -> Option<serde_json::Value> {
+    let key = cdn::cache_key(rel);
+    if let Ok(Some(mut hit)) = cache.get(key.as_str(), true).await {
+        return hit.json().await.ok();
+    }
+    let mut r = crate::glue::get(&cdn::upstream(rel), "application/json")
+        .await
+        .ok()?;
+    if r.status_code() != 200 {
+        return None;
+    }
+    let body = r.bytes().await.ok()?;
+    let v: serde_json::Value = serde_json::from_slice(&body).ok()?;
+    if let Ok(mut resp) = Response::from_bytes(body) {
+        let h = resp.headers_mut();
+        let _ = h.set("Content-Type", "application/json; charset=utf-8");
+        let _ = h.set("Cache-Control", cdn::CACHE_CONTROL_MANIFEST);
+        let _ = cache.put(key.as_str(), resp).await;
+    }
+    Some(v)
 }

@@ -28,8 +28,8 @@ run_worker_first = [
   "/auditar/*", "/api",
   # Public API extras (src/mcp.rs, src/feeds.rs)
   "/mcp", "/rss/*",
-  # Asset mirror (src/cdn.rs): host cdn.emenda.online serves /foto|logo|pdf/*, /manifest.json; /cdn/* on any host
-  "/cdn", "/cdn/*", "/foto/*", "/logo/*", "/pdf/*", "/manifest.json",
+  # Asset mirror (src/cdn.rs): host cdn.emenda.online serves /foto|logo|bandeira|brasao|credito|indice|pdf/*, /manifest.json; /cdn/* on any host
+  "/cdn", "/cdn/*", "/foto/*", "/logo/*", "/pdf/*", "/bandeira/*", "/brasao/*", "/credito/*", "/indice/*", "/manifest.json",
 ]
 
 [vars]
