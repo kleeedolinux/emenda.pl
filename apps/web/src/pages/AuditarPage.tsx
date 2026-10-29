@@ -1,3 +1,4 @@
+import { BuscaUniversal } from "@/features/busca";
 import clsx from "clsx";
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
@@ -36,7 +37,7 @@ export default function AuditarPage() {
       <PageHeader
         eyebrow="Audite seu candidato"
         title={unico ? "Boletim do parlamentar" : comparar.length ? "Comparar parlamentares" : "Audite seu candidato"}
-        subtitle="Um boletim com dados oficiais sobre mandato, projetos, presença, votos, emendas e gastos de qualquer deputado federal ou senador. Sem notas nem opinião: só números públicos, com a fonte e a conta explicadas."
+        subtitle="Antes de votar, veja o boletim do seu deputado ou senador: dinheiro que mandou, como votou, quanto gastou e o que propôs. Só números oficiais, sem opinião."
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Audite seu candidato", to: "/auditar" }, ...(unico ? [{ label: "Boletim" }] : [])]}
       />
       {unico ? <Unico alvo={unico} /> : comparar.length ? (
@@ -134,11 +135,14 @@ function Seletor({ comparar, onComparar }: { comparar: Alvo[]; onComparar: (as: 
 
   return (
     <Card className="print:hidden">
+      <BuscaUniversal variante="hero" modoInicial="deputado" modos={["deputado", "senador"]} className="mb-5"
+        hrefDe={(it) => (it.tipo === "deputado" ? `/auditar/deputado/${it.id.slice(2)}` : it.tipo === "senador" ? `/auditar/senador/${it.id.slice(2)}` : it.href)} />
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Ou filtre e compare até {MAX_COMPARAR}</p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]">
         <Campo label="Nome">
           <span className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden />
-            <input className={clsx(inputCls, "pl-9")} placeholder="Digite o nome do deputado ou senador" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+            <input className={clsx(inputCls, "pl-9")} placeholder="Filtrar por nome" value={q} onChange={(e) => setQ(e.target.value)} />
           </span>
         </Campo>
         <Campo label="Estado"><select className={selectCls} value={uf} onChange={(e) => setUf(e.target.value)}><option value="">Todos</option>{ufs.map((u) => <option key={u}>{u}</option>)}</select></Campo>
@@ -154,7 +158,7 @@ function Seletor({ comparar, onComparar }: { comparar: Alvo[]; onComparar: (as: 
         <p className="mt-4 text-sm text-muted">{formatNumber(opcoes.length)} parlamentares em exercício. Busque pelo nome ou filtre por estado e partido.</p>
       ) : res.length === 0 ? <EmptyState title="Ninguém encontrado com esses filtros." /> : (
         <ul className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          {res.slice(0, 30).map((o) => (
+          {res.slice(0, 8).map((o) => (
             <li key={`${o.casa}${o.id}`} className="flex min-w-0 items-center gap-3 rounded-xl border border-line p-2.5">
               <Avatar src={o.foto} name={o.nome} size="md" />
               <span className="min-w-0 flex-1">
@@ -173,7 +177,7 @@ function Seletor({ comparar, onComparar }: { comparar: Alvo[]; onComparar: (as: 
           ))}
         </ul>
       )}
-      {res.length > 30 && filtrando && <p className="mt-2 text-xs text-muted">Mostrando 30 de {formatNumber(res.length)}. Refine a busca.</p>}
+      {res.length > 8 && filtrando && <p className="mt-2 text-xs text-muted">Mostrando 8 de {formatNumber(res.length)}. Refine a busca.</p>}
       <p className="mt-3 text-xs text-muted">Ex-parlamentares também têm boletim: use o link a partir do perfil (/auditar/deputado/ID ou /auditar/senador/CÓDIGO).</p>
     </Card>
   );

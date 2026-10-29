@@ -54,7 +54,7 @@ export function FavorecidosTable({ rows, exportName }: { rows: FavorecidoExt[]; 
     {
       key: "documento", header: "CNPJ / CPF", sort: true, tip: "CNPJ",
       cell: (r) => (isCNPJ(r.documento)
-        ? <ExternalLink href={externo.cnpj(r.documento)}><span className="tabular">{formatDocumento(r.documento)}</span></ExternalLink>
+        ? <ExternalLink href={externo.cnpj(r.documento)} className="whitespace-nowrap"><span className="tabular">{formatDocumento(r.documento)}</span></ExternalLink>
         : <span className="tabular text-muted" title="CPF mascarado pela fonte">{r.documento || "—"}</span>),
       csv: (r) => formatDocumento(r.documento),
     },

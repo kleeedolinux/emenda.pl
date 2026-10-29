@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router";
 import { AppShell } from "@/ui/AppShell";
 import { comRecarga } from "@/lib/chunkReload";
+import { ErroRota } from "@/pages/ErroRota";
 
 // Cada página é carregada sob demanda (code-splitting por rota).
 const page = (load: () => Promise<{ default: React.ComponentType }>) => async () => ({ Component: (await comRecarga(load)).default });
@@ -8,6 +9,7 @@ const page = (load: () => Promise<{ default: React.ComponentType }>) => async ()
 export const router = createBrowserRouter([
   {
     element: <AppShell />,
+    errorElement: <ErroRota />,
     children: [
       { index: true, lazy: page(() => import("@/pages/Home")) },
       // Geografia e dinheiro (agente: geo)
@@ -15,6 +17,7 @@ export const router = createBrowserRouter([
       { path: "municipio/:ibge", lazy: page(() => import("@/pages/MunicipioPage")) },
       { path: "autor/:codigo", lazy: page(() => import("@/pages/AutorPage")) },
       { path: "dinheiro", lazy: page(() => import("@/pages/DinheiroPage")) },
+      { path: "busca", lazy: page(() => import("@/pages/BuscaPage")) },
       { path: "emendas", lazy: page(() => import("@/pages/EmendasPage")) },
       // Legislativo (agente: legislativo)
       { path: "deputados", lazy: page(() => import("@/pages/DeputadosPage")) },

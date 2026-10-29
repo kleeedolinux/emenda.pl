@@ -46,6 +46,12 @@ export function kpis(g: Pick<GastosParlamentarData, "mandato" | "cota">) {
   };
 }
 
+/** Total da cota para exibir: o do mandato; se vazio (mandato encerrado), a soma por categoria. */
+export function totalCota(g: Pick<GastosParlamentarData, "mandato" | "porCategoria">) {
+  if (g.mandato.total > 0) return { total: g.mandato.total, mediaMensal: g.mandato.mediaMensal };
+  return { total: g.porCategoria.reduce((s, c) => s + c.valor, 0), mediaMensal: 0 };
+}
+
 /** Barras empilhadas por ano: `top` categorias de maior valor + "Outras". */
 export function empilhado(linhas: GastoCategoriaAno[], top = 6) {
   const porCat = new Map<string, number>();

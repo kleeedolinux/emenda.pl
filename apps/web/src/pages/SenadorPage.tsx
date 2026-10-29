@@ -13,12 +13,15 @@ import { AutoLink } from "@/features/links";
 import { EmendasAutor } from "@/features/legislativo/EmendasAutor";
 import { categoriaVoto } from "@/features/legislativo/votacao";
 import { ShareButton } from "@/features/share";
-import { GastosParlamentar } from "@/features/gastos";
-import { HandCoins, Repeat, Vote, Wallet } from "lucide-react";
+import { GastosParlamentar, GastosResumo, useGastosParlamentar } from "@/features/gastos";
+import { totalCota } from "@/features/gastos/gastos";
+import { ModoDetalhado } from "@/features/linguagem";
+import { formatBRL } from "@/lib/format";
+import { FileText, HandCoins, Repeat, Vote, Wallet } from "lucide-react";
 import { useAutor } from "@/features/legislativo/hooks";
 import type { Mandato } from "@/features/legislativo/mandatos";
 import { contarSim, perfilEmendas, resumoSimples, trocasSenado } from "@/features/perfil/resumo";
-import { BlocoEmendas, ResumoSimplesCard, SecaoLeiga } from "@/features/perfil/CardsPerfil";
+import { BlocoEmendas, ResumoSimplesCard, SecaoLeiga, TilesPerfil } from "@/features/perfil/CardsPerfil";
 import { CardPautas, pautasSenador } from "@/features/perfil/Pautas";
 import { CardTrocas } from "@/features/perfil/Trocas";
 
@@ -62,9 +65,8 @@ export default function SenadorPage() {
   return (
     <>
       <PageHeader
-        eyebrow={<>Senado Federal · <Term k="senador">o que faz?</Term></>}
+        eyebrow={<>Senador(a){s ? ` · ${UFS[s.uf as SiglaUf] ?? s.uf}` : ""} <Term k="senador">o que faz?</Term></>}
         title={s ? nome : <Skeleton className="h-9 w-64" />}
-        subtitle={s ? `Nome civil: ${s.nomeCompleto}` : undefined}
         media={<Avatar src={s?.foto} name={nome} size="xl" />}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Senadores", to: "/senadores" }, { label: nome }]}
         actions={s && (
@@ -80,8 +82,7 @@ export default function SenadorPage() {
         <PerfilLeigoSenador cod={cod} s={s} mandatos={mandatos} autorCodigo={autor?.codigo} semAutor={!!autores.data && !autor} filiacoes={filiacoes} />
       )}
 
-      <h2 className="mb-1 mt-10 text-xl font-bold">Modo repositório: todos os detalhes</h2>
-      <p className="mb-4 text-sm text-muted">Dados completos e tabelas para quem quer conferir cada registro.</p>
+      <ModoDetalhado id="detalhes" titulo="Ver tudo: mandatos, votações, projetos, comissões e dados oficiais">
 
       {s && (
         <div className="mb-6 grid gap-4 lg:grid-cols-2">
@@ -116,8 +117,10 @@ export default function SenadorPage() {
           { id: "autorias", label: "Autorias", content: <Autorias cod={cod} janela={janela} /> },
           { id: "emendas", label: "Emendas", content: <EmendasAutor autorCodigo={autor?.codigo} carregando={autores.isPending} janela={m ? janela : null} nomes={[s.nome, s.nomeCompleto]} /> },
           { id: "comissoes", label: "Comissões", content: <Comissoes cod={cod} janela={m ? janela : null} /> },
+          { id: "gastos", label: "Gastos e pessoal", content: <GastosParlamentar kind="senador" id={cod} /> },
         ]} />
       )}
+      </ModoDetalhado>
     </>
   );
 }
@@ -142,24 +145,34 @@ function PerfilLeigoSenador({ cod, s, mandatos, autorCodigo, semAutor, filiacoes
     proposicoes: aut.data ? aut.data.length : null,
     votos: vot.data ? { ...votos, fonte: "nominais" } : null,
   });
+  const gastos = useGastosParlamentar("senador", cod);
+  const pe = autor.data ? perfilEmendas(autor.data.emendas) : null;
+  const gk = gastos.data ? totalCota(gastos.data) : null;
+  const vp = contarSim(pautas.map((x) => x.voto));
+  const t = <span className="inline-block h-8 w-20 animate-pulse rounded bg-surface-2" />;
   return (
     <>
       <ResumoSimplesCard frases={frases} carregando={(autor.isPending && !!autorCodigo) || vot.isPending} />
-      <SecaoLeiga id="dinheiro" icon={<HandCoins className="size-5" aria-hidden />} titulo="Dinheiro que indicou (emendas)"
-        significa="Emendas são a parte do Orçamento da União que o parlamentar escolhe para onde vai. “Pago” é o que de fato chegou ao destino. Emenda Pix cai direto na conta da prefeitura ou do estado.">
+      <TilesPerfil itens={[
+        { href: "#dinheiro", icon: <HandCoins className="size-4" aria-hidden />, rotulo: "Dinheiro que mandou", valor: pe ? formatBRL(pe.pago, true) : semAutor ? "R$ 0" : t, sub: pe ? `para ${formatNumber(pe.municipios)} cidades` : undefined },
+        { href: "#gastos", icon: <Wallet className="size-4" aria-hidden />, rotulo: "Gastos da cota", valor: gk ? formatBRL(gk.total, true) : gastos.isError ? "—" : t, sub: gk?.mediaMensal ? `${formatBRL(gk.mediaMensal, true)} por mês` : "no mandato" },
+        { href: "#votos", icon: <Vote className="size-4" aria-hidden />, rotulo: "Como votou", valor: vot.isPending ? t : vp.total ? `${vp.sim} Sim` : "—", sub: vot.isPending ? undefined : vp.total ? `em ${vp.total} votações polêmicas` : "sem voto registrado nas polêmicas" },
+        { href: "#detalhes", icon: <FileText className="size-4" aria-hidden />, rotulo: "Projetos", valor: aut.data ? formatNumber(aut.data.length) : t, sub: "apresentados" },
+      ]} />
+      <SecaoLeiga id="dinheiro" icon={<HandCoins className="size-5" aria-hidden />} titulo="Dinheiro que mandou para cidades e estados"
+        significa="Parte do Orçamento federal que o senador escolhe para onde vai (emendas parlamentares).">
         <BlocoEmendas autor={autor.data} carregando={autor.isPending} semCorrespondencia={semAutor} />
       </SecaoLeiga>
-      <SecaoLeiga id="votos" icon={<Vote className="size-5" aria-hidden />} titulo="Como votou no que mais repercutiu"
-        significa="Em votação nominal cada voto fica registrado. Siglas do Senado como AP, NCom e LS indicam ausência ou licença, não voto contra.">
-        <CardPautas itens={pautas} carregando={vot.isPending} />
+      <SecaoLeiga id="votos" icon={<Vote className="size-5" aria-hidden />} titulo="Como votou no que mais deu o que falar"
+        significa="AP, NCom e LS querem dizer ausência ou licença, não voto contra.">
+        <CardPautas itens={pautas} carregando={vot.isPending} titulo={null} />
       </SecaoLeiga>
-      <SecaoLeiga id="partidos" icon={<Repeat className="size-5" aria-hidden />} titulo="Partidos"
-        significa="Senadores são eleitos pelo voto majoritário e, segundo o STF, não perdem o mandato ao trocar de partido.">
-        <CardTrocas trocas={trocas} atual={s.partido} fonte={<p className="mt-2 text-xs"><Link className="link" to="/entenda/troca-de-partido">Entenda a troca de partido →</Link></p>} />
+      <SecaoLeiga id="gastos" icon={<Wallet className="size-5" aria-hidden />} titulo="Quanto gasta para trabalhar"
+        significa="Cota para passagens, combustível, escritório e divulgação, paga com dinheiro público.">
+        <GastosResumo kind="senador" id={cod} />
       </SecaoLeiga>
-      <SecaoLeiga id="gastos" icon={<Wallet className="size-5" aria-hidden />} titulo="Gastos do mandato"
-        significa="Cota parlamentar, verba de gabinete e pessoal: dinheiro público para exercer o mandato.">
-        <GastosParlamentar kind="senador" id={cod} />
+      <SecaoLeiga id="partidos" icon={<Repeat className="size-5" aria-hidden />} titulo="Partidos">
+        <CardTrocas trocas={trocas} atual={s.partido} fonte={<p className="mt-2 text-xs"><Link className="link" to="/entenda/troca-de-partido">Quando pode trocar de partido →</Link></p>} />
       </SecaoLeiga>
     </>
   );

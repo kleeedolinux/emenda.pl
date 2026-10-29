@@ -8,10 +8,10 @@ export const MAP = { w: 560, h: 520 } as const;
 export interface MapState { key: string; d: string; c: Pt; level: number; dist: number }
 export interface Chip { key: string; side: -1 | 1; valor: number }
 
-interface Props { states: MapState[]; outline: string; hub: Pt; chips: Chip[]; chipRef: (key: string) => Ref<HTMLSpanElement>; animate: boolean }
+interface Props { states: MapState[]; outline: string; hub: Pt; chips: Chip[]; chipRef: (key: string) => Ref<HTMLSpanElement>; animate: boolean; onUf?: (uf: string) => void; nomeUf?: (uf: string) => string }
 
 /** SVG do mapa + selos de valor. O canvas de partículas desenha por cima (mesmo viewBox). */
-export const GlassMap = forwardRef<SVGSVGElement, Props>(function GlassMap({ states, outline, hub, chips, chipRef, animate }, ref) {
+export const GlassMap = forwardRef<SVGSVGElement, Props>(function GlassMap({ states, outline, hub, chips, chipRef, animate, onUf, nomeUf }, ref) {
   const byKey = new Map(states.map((s) => [s.key, s]));
   const pct = (p: Pt) => ({ left: `${(p[0] / MAP.w) * 100}%`, top: `${(p[1] / MAP.h) * 100}%` });
   const LEAD = 22;
@@ -78,7 +78,7 @@ export const GlassMap = forwardRef<SVGSVGElement, Props>(function GlassMap({ sta
       {animate && (
         <>
           {/* varredura de luz num SVG próprio (só o recorte é repintado) */}
-          <svg viewBox={`0 0 ${MAP.w} ${MAP.h}`} className="pointer-events-none absolute inset-0 size-full overflow-visible" aria-hidden>
+          <svg viewBox={`0 0 ${MAP.w} ${MAP.h}`} className="pointer-events-none absolute inset-0 size-full overflow-visible" style={{ willChange: "transform" }} aria-hidden>
             <defs><clipPath id="gm-clip-fx"><path d={outline} /></clipPath></defs>
             <g clipPath="url(#gm-clip-fx)">
               <rect className="glass-sweep" x="0" y="0" width="120" height={MAP.h} fill="url(#hs-sweep)" opacity="0.6" transform="skewX(-14)" style={{ animationDelay: "2.4s" }} />
@@ -90,6 +90,16 @@ export const GlassMap = forwardRef<SVGSVGElement, Props>(function GlassMap({ sta
           </span>
         </>
       )}
+      {onUf && (
+        <svg viewBox={`0 0 ${MAP.w} ${MAP.h}`} className="absolute inset-0 size-full overflow-visible" role="group" aria-label="Estados: escolha um para ver quanto recebeu">
+          {states.map((s) => (
+            <a key={s.key} href={`/uf/${s.key}`} aria-label={nomeUf?.(s.key) ?? s.key} onClick={(e) => { e.preventDefault(); onUf(s.key); }} className="group/uf cursor-pointer outline-none">
+              <title>{`${nomeUf?.(s.key) ?? s.key}: ver quanto recebeu`}</title>
+              <path d={s.d} fill="#fff" fillOpacity="0" className="transition-[fill-opacity] group-hover/uf:[fill-opacity:0.35] group-focus-visible/uf:[fill-opacity:0.45]" stroke="none" />
+            </a>
+          ))}
+        </svg>
+      )}
       <span className="pointer-events-none absolute -translate-x-[calc(100%+10px)] -translate-y-[150%] whitespace-nowrap rounded-full bg-azul px-2 py-0.5 font-display text-[11px] font-bold text-white shadow-lg sm:text-xs dark:bg-amarelo dark:text-azul" style={pct(hub)}>
         Brasília
       </span>
@@ -98,7 +108,7 @@ export const GlassMap = forwardRef<SVGSVGElement, Props>(function GlassMap({ sta
         if (!s) return null;
         const at: Pt = [s.c[0] + c.side * (LEAD + 2), s.c[1]];
         return (
-          <span key={c.key} className={`pointer-events-none absolute ${c.key === "CE" ? "max-sm:hidden" : ""}`} style={pct(at)}>
+          <span key={c.key} className={`absolute ${onUf ? "cursor-pointer" : "pointer-events-none"} ${c.key === "CE" ? "max-sm:hidden" : ""}`} style={pct(at)} onClick={onUf ? () => onUf(c.key) : undefined}>
             <span className={`block ${c.side < 0 ? "-translate-x-full" : ""} -translate-y-1/2`}>
               <span ref={chipRef(c.key)} className="bob flex items-baseline gap-1.5 whitespace-nowrap rounded-xl border border-white/60 bg-white/90 px-2 py-1 text-[10px] shadow-[0_8px_24px_-10px_rgb(0_39_118/0.45)] sm:px-2.5 sm:text-xs dark:border-white/10 dark:bg-[#0e1714]/90" style={{ animationDelay: `${(c.key.charCodeAt(0) % 5) * 0.4}s` }}>
                 <b className="font-display text-azul dark:text-amarelo">{c.key}</b>

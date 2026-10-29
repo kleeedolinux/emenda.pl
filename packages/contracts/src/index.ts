@@ -344,3 +344,5 @@ export const LEGISLATURAS = [
   { id: 57, inicio: "2023-02-01", fim: "2027-01-31" },
 ] as const;
 export * from "./gastos";
+export * from "./novidades";
+export * from "./busca";

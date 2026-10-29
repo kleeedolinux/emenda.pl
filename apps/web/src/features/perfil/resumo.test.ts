@@ -14,7 +14,7 @@ describe("resumoSimples", () => {
       votos: { sim: 41, total: 50, fonte: "nominais" },
     })).toEqual([
       "Fulana é deputada federal pelo PT-SP desde 2019 (2 mandatos, 5 anos e 9 meses).",
-      "Enviou R$ 32 mi em emendas, 40% via Emenda Pix, principalmente para Saúde em 12 municípios.",
+      "Mandou R$ 32 mi para 12 cidades, mais para Saúde. 40% foi sem dizer para quê.",
       "Apresentou 120 proposições; votou Sim em 82% das 50 votações nominais analisadas.",
     ]);
   });
@@ -26,9 +26,9 @@ describe("resumoSimples", () => {
   ];
   test.each(casos)("%s", (_, p, frase) => expect(resumoSimples({ ...base, ...p })[0]).toBe(frase));
   test("sem emendas no Portal", () =>
-    expect(resumoSimples({ ...base, emendas: { pago: 0, pctPix: 0, funcao: null, municipios: 0 } })[1]).toBe("Não encontramos emendas pagas em seu nome no Portal da Transparência."));
+    expect(resumoSimples({ ...base, emendas: { pago: 0, pctPix: 0, funcao: null, municipios: 0 } })[1]).toBe("Não achamos dinheiro mandado por este nome que já tenha sido pago."));
   test("sem Pix e uma cidade", () =>
-    expect(resumoSimples({ ...base, emendas: { pago: 100_000_00, pctPix: 0, funcao: "Educação", municipios: 1 } })[1]).toBe("Enviou R$ 100 mil em emendas, principalmente para Educação em 1 município."));
+    expect(resumoSimples({ ...base, emendas: { pago: 100_000_00, pctPix: 0, funcao: "Educação", municipios: 1 } })[1]).toBe("Mandou R$ 100 mil para 1 cidade, mais para Educação."));
   test("só votos de pautas", () =>
     expect(resumoSimples({ ...base, votos: { sim: 3, total: 4, fonte: "pautas" } })[1]).toBe("Votou Sim em 75% das 4 votações de grandes pautas analisadas."));
   test("só proposições", () => expect(resumoSimples({ ...base, proposicoes: 1 })[1]).toBe("Apresentou 1 proposição."));
@@ -114,5 +114,7 @@ describe("apoios do perfil", () => {
     ["PEC 45/2019", "Reforma tributária"],
     ["PLP 68/2024", "Regulamentação da reforma tributária"],
     ["PL 1/2023", null],
+    [null, null],
+    [undefined, null],
   ])("pauta do Senado %s", (id, apelido) => expect(pautaDoSenado(id)?.apelido ?? null).toBe(apelido));
 });

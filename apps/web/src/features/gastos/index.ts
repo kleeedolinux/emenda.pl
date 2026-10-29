@@ -1,2 +1,2 @@
-export { GastosParlamentar } from "./GastosParlamentar";
+export { GastosParlamentar, GastosResumo, useGastosParlamentar } from "./GastosParlamentar";
 export { QuemMaisGasta } from "./QuemMaisGasta";

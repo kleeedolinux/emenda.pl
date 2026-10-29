@@ -41,7 +41,7 @@ describe("eventoShare", () => {
 describe("materiaShare", () => {
   test("mensagem viral de item da pauta", () => {
     const d = materiaShare(ev(), { id: "1", sigla: "PL 2630/2020", ementa: "Institui a Lei Brasileira de Liberdade, Responsabilidade e Transparência na Internet.", href: "/proposicao/2256735" }, AGORA, "Fake News");
-    expect(buildMessage(d)).toBe("🗳️ Hoje o Plenário da Câmara vota o PL 2630/2020 (Fake News). Acompanhe:");
+    expect(buildMessage(d)).toBe("🗳️ Hoje o Plenário da Câmara vota o PL 2630/2020 (Fake News). Acompanhe 👇");
     expect(d.url).toBe("/agenda?dia=2026-10-28&evento=camara-77");
     expect(d.subtitle).toContain("Liberdade");
   });
@@ -50,20 +50,20 @@ describe("materiaShare", () => {
 describe("resultadoShare", () => {
   test("placar extraído da descrição", () => {
     const d = resultadoShare({ id: "2196833-395", descricao: "Aprovada a Proposta. Sim: 375; não: 113; abstenção: 4; total: 492.", aprovacao: 1, proposicaoObjeto: "PEC 45/2019" });
-    expect(buildMessage(d)).toBe("✅ Resultado: PEC 45/2019 aprovada 375×113. Veja como cada deputado votou:");
+    expect(buildMessage(d)).toBe("✅ Resultado: PEC 45/2019 aprovada 375×113. Veja como votou cada deputado 👇");
     expect(ogImagePath(d)).toBe("/og/votacao/2196833-395.png");
     expect(d.url).toBe("/votacao/2196833-395");
   });
   test("sem placar nem objeto", () => {
     const d = resultadoShare({ id: "1-2", descricao: "Rejeitado o Requerimento.", aprovacao: 0 });
-    expect(buildMessage(d)).toBe("❌ Resultado: Rejeitado o Requerimento. Veja como cada deputado votou:");
+    expect(buildMessage(d)).toBe("❌ Resultado: Rejeitado o Requerimento. Veja como votou cada deputado 👇");
   });
 });
 
 describe("semanaShare", () => {
   test("conta sessões com votação", () => {
     const d = semanaShare([ev(), ev({ id: "x", casa: "senado" }), ev({ id: "y", ambito: "comissao" })], "2026-10-26");
-    expect(buildMessage(d)).toBe("🗳️ Agenda do Congresso nesta semana: 2 sessões com votação no Plenário. Veja o que será votado:");
+    expect(buildMessage(d)).toBe("🗳️ Agenda do Congresso nesta semana: 2 sessões com votação no Plenário. Veja o que será votado 👇");
     expect(d.url).toBe("/agenda");
     expect(d.ogId).toBe("hoje");
   });

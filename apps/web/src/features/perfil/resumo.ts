@@ -36,11 +36,12 @@ export function resumoSimples(i: ResumoInput): string[] {
   out.push(`${i.nome} ${i.atual ? "é" : "foi"} ${cargoTexto(i.cargo, i.sexo)} pelo ${i.partido}-${i.uf}${quando}${extra}.`);
   const e = i.emendas;
   if (e) {
-    if (e.pago <= 0) out.push("Não encontramos emendas pagas em seu nome no Portal da Transparência.");
+    if (e.pago <= 0) out.push("Não achamos dinheiro mandado por este nome que já tenha sido pago.");
     else {
-      const pix = e.pctPix >= 0.005 ? `, ${pct(e.pctPix)} via Emenda Pix` : "";
-      const onde = e.funcao ? `, principalmente para ${e.funcao}${e.municipios ? ` em ${plural(e.municipios, "município", "municípios")}` : ""}` : "";
-      out.push(`Enviou ${formatBRL(e.pago, true).replace(/ /g, " ")} em emendas${pix}${onde}.`);
+      const para = e.municipios ? ` para ${plural(e.municipios, "cidade", "cidades")}` : "";
+      const area = e.funcao ? `, mais para ${e.funcao}` : "";
+      const pix = e.pctPix >= 0.005 ? ` ${pct(e.pctPix)} foi sem dizer para quê.` : "";
+      out.push(`Mandou ${formatBRL(e.pago, true).replace(/\u00a0/g, " ")}${para}${area}.${pix}`);
     }
   }
   const partes: string[] = [];
@@ -134,7 +135,8 @@ export function contarSim(votos: ReadonlyArray<string | null | undefined>) {
 }
 
 /** Pauta de grande repercussão a partir da identificação do Senado ("PL 2903/2023"). */
-export function pautaDoSenado(identificacao: string): Pauta | null {
+export function pautaDoSenado(identificacao: string | null | undefined): Pauta | null {
+  if (!identificacao) return null;
   const k = identificacao.replace(/\s+/g, " ").trim().toUpperCase();
   return PAUTAS.find((p) => [p.senado, p].some((r) => r && `${r.sigla} ${r.numero}/${r.ano}` === k)) ?? null;
 }

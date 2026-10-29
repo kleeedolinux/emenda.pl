@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { cruzarMaisVotados } from "./maisVotados";
+import { cruzarMaisVotados } from "./cruzarMaisVotados";
 
 test("cruza eleitos do TSE com parlamentares atuais pelo nome + UF e mantém a ordem de votos", () => {
   const tse = [

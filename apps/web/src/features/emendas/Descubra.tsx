@@ -14,6 +14,7 @@ import {
   slidesRanking, ufsPerCapita, ultimosPagamentos, type Filtros,
 } from "./historias";
 import { POPULACAO_FONTE } from "./populacao";
+import { BarraTipos, topUfPorTipo } from "@/features/linguagem";
 import { COR_TIPO, nomeTipoCurto } from "./tipos";
 import { Grande, MiniColunas, Story } from "./ui";
 
@@ -220,14 +221,10 @@ function PartePix({ f, q, brasil, uf }: CardProps & { brasil: Brasil | undefined
         <>
           <Grande><CountUp value={r.pix * 100} format={(n) => `${n.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`} /></Grande>
           <p className="mt-1 text-sm text-muted">{brl(r.tipos.find((t) => t.tipo === "pix")?.pago ?? 0)} de {brl(r.total)} pagos</p>
-          <div className="mt-4 flex h-3.5 overflow-hidden rounded-full bg-surface-2" role="img" aria-label={r.tipos.map((t) => `${nomeTipoCurto(t.tipo)} ${formatPct(t.pct)}`).join(", ")}>
-            {r.tipos.map((t) => <span key={t.tipo} style={{ width: `${t.pct * 100}%`, background: COR_TIPO[t.tipo] }} className={t.tipo === "pix" ? "" : "opacity-70"} />)}
+          <div className="mt-4">
+            <BarraTipos porTipo={fonte!} href={(t) => (t === "outra" ? undefined : `/emendas?${new URLSearchParams({ tipo: t, ...(f.uf ? { uf: f.uf } : {}) })}`)}
+              detalhe={(t) => (!f.uf && brasil ? { titulo: "Estados que mais receberam", itens: topUfPorTipo(brasil.fluxo, t) } : undefined)} />
           </div>
-          <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-            {r.tipos.map((t) => (
-              <li key={t.tipo} className="flex items-center gap-1.5"><span className="size-2 shrink-0 rounded-full" style={{ background: COR_TIPO[t.tipo] }} aria-hidden /><span className="truncate">{nomeTipoCurto(t.tipo)}</span><span className="ml-auto tabular text-muted">{formatPct(t.pct)}</span></li>
-            ))}
-          </ul>
         </>
       )}
     </Story>

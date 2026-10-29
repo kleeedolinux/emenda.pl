@@ -17,8 +17,8 @@ export default function UltimasPage() {
     <>
       <PageHeader
         eyebrow="Atualizado com o Portal da Transparência"
-        title="Últimas emendas pagas"
-        subtitle={<>Os pagamentos mais recentes de <Term k="emenda">emendas parlamentares</Term>: quem indicou, quem recebeu e onde. Os itens <b>Pix</b> aparecem destacados.</>}
+        title="Dinheiro que acabou de chegar"
+        subtitle={<>Os últimos pagamentos de dinheiro mandado por deputados e senadores (<Term k="emenda">emendas</Term>): quem mandou, para onde e quem recebeu. Em amarelo: mandado sem dizer para quê.</>}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Últimas" }]}
         actions={<ShareButton fab kind="pagina" title="Últimas emendas parlamentares pagas" text="💸 Quem mandou dinheiro de emenda para onde, pagamento a pagamento. Veja as últimas emendas pagas:" url="/ultimas" />}
       />

@@ -3,9 +3,10 @@ import { useMemo, useState } from "react";
 import { buildFluxoSankey } from "@/features/emendas/fluxo";
 import { COR_TIPO, nomeTipoCurto } from "@/features/emendas/tipos";
 import { TotaisGrid } from "@/features/emendas/Totais";
+import { BarraTipos, topUfPorTipo } from "@/features/linguagem";
 import { useApi } from "@/lib/data";
 import { formatBRL } from "@/lib/format";
-import { Bars, NextSteps, Card, Donut, ErrorState, LineArea, PageHeader, Sankey, Section, Skeleton, Term } from "@/ui";
+import { Bars, NextSteps, Card, ErrorState, LineArea, PageHeader, Sankey, Section, Skeleton, Term } from "@/ui";
 import type { TipoEmenda } from "@emenda/contracts";
 
 export default function DinheiroPage() {
@@ -23,8 +24,8 @@ export default function DinheiroPage() {
     <>
       <PageHeader
         eyebrow="Dinheiro"
-        title="Fluxo do dinheiro público"
-        subtitle={<>Como o dinheiro das emendas sai do Orçamento, passa por cada tipo de emenda, chega a uma área de gasto (<Term k="função orçamentária">função</Term>) e termina em um estado. Valores mostram o que foi <Term k="pago">pago</Term>.</>}
+        title="Para onde vai o dinheiro que os políticos mandam"
+        subtitle={<>Siga da esquerda para a direita: de que jeito foi mandado, em que área foi gasto (<Term k="função orçamentária">função</Term>) e em qual estado chegou. Só o que foi <Term k="pago">pago</Term>.</>}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Dinheiro" }]}
       />
       {q.isError ? <ErrorState error={q.error} retry={() => q.refetch()} /> : d ? <TotaisGrid t={d.totais} /> : <Skeleton className="h-28" />}
@@ -44,9 +45,9 @@ export default function DinheiroPage() {
       </Section>
 
       {d && (
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card title="Pago por ano" tip="Inclui só pagamentos do próprio ano; restos a pagar aparecem nos totais."><LineArea data={[...d.porAno].sort((a, b) => a.ano - b.ano).map((a) => ({ x: a.ano, y: a.pago }))} format={brl} /></Card>
-          <Card title="Por tipo de emenda"><Donut data={d.porTipo.map((t) => ({ label: nomeTipoCurto(t.tipo), value: t.pago, color: COR_TIPO[t.tipo], highlight: t.tipo === "pix" }))} format={brl} centerLabel="Pago" /></Card>
+          <Card title="De que jeito o dinheiro foi mandado" tip="Toque numa cor para entender e ver os estados que mais receberam."><BarraTipos porTipo={d.porTipo} href={(t) => (t === "pix" ? "/pix" : t === "outra" ? undefined : `/emendas?tipo=${t}`)} detalhe={(t) => ({ titulo: "Estados que mais receberam", itens: topUfPorTipo(d.fluxo, t) })} /></Card>
           <Card title="Por área de gasto" tip="função orçamentária" className="lg:col-span-2">
             <Bars data={[...d.porFuncao].sort((a, b) => b.pago - a.pago).map((f) => ({ label: f.funcao, value: f.pago, sub: `empenhado ${brl(f.empenhado)}` }))} format={brl} />
           </Card>

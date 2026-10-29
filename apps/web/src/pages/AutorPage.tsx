@@ -2,7 +2,8 @@ import { chaveNome, dataPath, UFS, type Autor, type SiglaUf } from "@emenda/cont
 import { Info } from "lucide-react";
 import { useMemo } from "react";
 import { Link, useParams } from "react-router";
-import { COR_TIPO, nomeTipoCurto } from "@/features/emendas/tipos";
+import { BarraTipos, ModoDetalhado, tipoAutor, topPorTipo } from "@/features/linguagem";
+import { nomeProprio } from "@/features/emendas/historias";
 import { EmendasTable, FavorecidosTable, type FavorecidoExt } from "@/features/emendas/tables";
 import { TotaisGrid } from "@/features/emendas/Totais";
 import { useApi, useCamara } from "@/lib/data";
@@ -14,20 +15,13 @@ import { fotoPorNome } from "@/lib/cdn";
 type AutorExt = Autor & { favorecidos?: FavorecidoExt[] };
 interface DepResumo { id: number; nome: string; siglaPartido: string; siglaUf: string; urlFoto: string }
 
-function tipoAutor(nome: string): "bancada" | "comissao" | "relator" | "pessoa" {
-  const n = chaveNome(nome);
-  if (n.startsWith("BANCADA")) return "bancada";
-  if (n.startsWith("COMISSAO") || n.startsWith("COM ")) return "comissao";
-  if (n.includes("RELATOR")) return "relator";
-  return "pessoa";
-}
-
 export default function AutorPage() {
   const codigo = useParams().codigo ?? "";
   const q = useApi<AutorExt>(codigo ? dataPath.autor(codigo) : null);
   const d = q.data;
   const kind = d ? tipoAutor(d.nome) : "pessoa";
   const dep = useCamara<DepResumo[]>(d && kind === "pessoa" ? `/deputados?nome=${encodeURIComponent(d.nome)}&itens=5` : null);
+  // Só o mesmo nome (antes caía no 1º resultado da busca, às vezes outra pessoa).
   const match = useMemo(() => dep.data?.find((x) => chaveNome(x.nome) === d?.chave), [dep.data, d]);
 
   if (q.isError) return <><PageHeader title={`Autor ${codigo}`} breadcrumbs={[{ label: "Início", to: "/" }, { label: "Emendas", to: "/emendas" }, { label: codigo }]} /><ErrorState error={q.error} retry={() => q.refetch()} /></>;
@@ -36,9 +30,9 @@ export default function AutorPage() {
   return (
     <>
       <PageHeader
-        eyebrow={kind === "bancada" ? <Term k="bancada">Bancada estadual</Term> : kind === "comissao" ? <Term k="comissão">Comissão</Term> : kind === "relator" ? <Term k="RP9">Relatoria</Term> : "Autor de emendas"}
-        title={d.nome}
-        subtitle={`Código do autor no Portal da Transparência: ${d.codigo}`}
+        eyebrow={kind === "bancada" ? <Term k="bancada">Grupo de políticos do estado</Term> : kind === "comissao" ? <Term k="comissão">Comissão do Congresso</Term> : kind === "relator" ? <Term k="RP9">Orçamento secreto</Term> : <Term k="emenda">Político que manda dinheiro</Term>}
+        title={kind === "pessoa" ? nomeProprio(d.nome) : d.nome}
+        subtitle={<>Mandou <b>{formatBRL(d.totais.pago, true)}</b> já pagos para {d.porUf.length} {d.porUf.length === 1 ? "estado" : "estados"}.</>}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Emendas", to: "/emendas" }, { label: d.nome }]}
         media={<Avatar src={match?.urlFoto ?? (kind === "pessoa" ? fotoPorNome(d.nome) : undefined)} name={d.nome} size="lg" />}
         actions={match ? (
@@ -57,22 +51,24 @@ export default function AutorPage() {
           {kind === "relator" && "Emendas de relator (RP9) foram usadas no chamado “orçamento secreto”, em que o parlamentar que pediu o recurso não era identificado. O STF declarou a prática inconstitucional em 2022."}
         </p>
       )}
-      <TotaisGrid t={d.totais} />
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card title="Pago por ano" tip="pago"><LineArea data={[...d.porAno].sort((a, b) => a.ano - b.ano).map((a) => ({ x: a.ano, y: a.pago }))} format={(n) => formatBRL(n, true)} /></Card>
-        <Card title="Por tipo de emenda"><Donut data={d.porTipo.map((t) => ({ label: nomeTipoCurto(t.tipo), value: t.pago, color: COR_TIPO[t.tipo], highlight: t.tipo === "pix" }))} format={(n) => formatBRL(n, true)} centerLabel="Pago" /></Card>
-        <Card title="Para quais estados" className="lg:col-span-2">
-          <Bars data={[...d.porUf].sort((a, b) => b.pago - a.pago).map((u) => ({ label: UFS[u.uf as SiglaUf] ?? u.uf, sub: u.uf, value: u.pago, href: UFS[u.uf as SiglaUf] ? `/uf/${u.uf}` : undefined }))} format={(n) => formatBRL(n, true)} />
+        <Card title="De que jeito mandou"><BarraTipos porTipo={d.porTipo} detalhe={(t) => ({ titulo: "Para onde foi", itens: topPorTipo(d.emendas, t, "destino").map((x) => ({ ...x, nome: nomeProprio(x.nome) })), verMais: "?tab=emendas#detalhes" })} /></Card>
+        <Card title="Para quais estados" className="lg:col-span-2" tip="Os 8 primeiros. A lista completa está em Ver tudo.">
+          <Bars data={[...d.porUf].sort((a, b) => b.pago - a.pago).map((u) => ({ label: UFS[u.uf as SiglaUf] ?? u.uf, sub: u.uf, value: u.pago, href: UFS[u.uf as SiglaUf] ? `/uf/${u.uf}` : undefined }))} format={(n) => formatBRL(n, true)} limit={8} />
         </Card>
       </div>
 
-      <Section title="Registros">
+      <ModoDetalhado id="detalhes" titulo="Ver tudo: cada indicação, quem recebeu e números técnicos">
+        <TotaisGrid t={d.totais} />
+        <div className="mt-4">
         <Tabs tabs={[
           { id: "emendas", label: "Emendas", count: d.emendas.length, content: <EmendasTable rows={d.emendas} exportName={`autor-${d.codigo}-emendas`} showLocal showAutor={false} /> },
           ...(d.favorecidos ? [{ id: "favorecidos", label: "Favorecidos", count: d.favorecidos.length, content: <FavorecidosTable rows={d.favorecidos} exportName={`autor-${d.codigo}-favorecidos`} /> }] : []),
         ]} />
-      </Section>
+        </div>
+      </ModoDetalhado>
       <NextSteps items={[
         ...(match ? [
           { to: `/deputado/${match.id}`, label: "Perfil na Câmara", desc: "Mandato, gastos da cota e presença." },

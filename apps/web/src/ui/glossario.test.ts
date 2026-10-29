@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { GLOSSARIO, termo } from "./glossario";
+import { GLOSSARIO, TIPOS_LEIGO, termo } from "./glossario";
 
 const OBRIGATORIOS = [
   "empenhado", "liquidado", "pago", "restos a pagar", "emenda pix", "transferência especial",
@@ -19,4 +19,17 @@ describe("GLOSSARIO", () => {
   test("definições terminam com ponto", () => {
     for (const v of Object.values(GLOSSARIO)) expect(v.trim().endsWith(".")).toBe(true);
   });
+});
+
+describe("TIPOS_LEIGO (mapa único: Tip e painel do gráfico)", () => {
+  test("palavras do dia a dia", () => {
+    expect(TIPOS_LEIGO.pix.explica).toBe("Dinheiro mandado sem dizer para quê.");
+    expect(TIPOS_LEIGO.relator.rotulo).toBe("Orçamento secreto");
+    expect(TIPOS_LEIGO.bancada.explica).toBe("Dinheiro que os deputados e senadores de um estado decidem juntos para onde vai.");
+  });
+  test.each([["pix", "emenda pix"], ["relator", "RP9"], ["bancada", "bancada"], ["comissao", "comissão"], ["individual", "emenda individual"]] as const)(
+    "glossário de %s começa pela mesma frase simples", (tipo, k) => {
+      expect(termo(k)!.startsWith(TIPOS_LEIGO[tipo].explica)).toBe(true);
+      expect(termo(k)).toContain(TIPOS_LEIGO[tipo].jargao);
+    });
 });

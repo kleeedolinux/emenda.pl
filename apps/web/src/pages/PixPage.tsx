@@ -3,14 +3,16 @@ import { Link, useSearchParams } from "react-router";
 import { AlertTriangle, Zap } from "lucide-react";
 import { dataPath, UF_POR_CODIGO, UFS, type Brasil, type Pix, type PixAno, type PixItem, type SiglaUf } from "@emenda/contracts";
 import {
-  Bars, Card, Choropleth, CountUp, DataTable, ErrorState, ExternalLink, LineArea, Money, NextSteps, PageHeader, Section, Skeleton, Stat, StatGrid, Term,
+  Card, Choropleth, CountUp, DataTable, ErrorState, ExternalLink, LineArea, Money, NextSteps, PageHeader, Section, Skeleton, Stat, StatGrid, Term,
   externo, ibge, useApi, type Column,
 } from "@/ui";
 import { formatBRL, formatNumber, formatPct } from "@/lib/format";
 import { Campo, inputCls, selectCls } from "@/features/legislativo/components";
 import { filtrarPix, opcoesPix, partePix } from "@/features/pix/pix";
 import { temaPorSlug } from "@/features/entenda/temas";
-import { DiagramaPassos } from "@/features/entenda/Diagrama";
+import { BuscaUniversal, abrirBusca } from "@/features/busca";
+import { ListaVerMais, ModoDetalhado, QuemMandou } from "@/features/linguagem";
+import { ShareButton } from "@/features/share";
 
 const brl = (n: number) => formatBRL(Math.round(n), true);
 const COR = "#e0b800";
@@ -23,75 +25,77 @@ export default function PixPage() {
   const p = pix.data;
   const totalBrasil = brasil.data ? pagoTotal(brasil.data.totais) : 0;
 
+  const total = p ? pagoTotal(p.totais) : 0;
+  const parte = totalBrasil && p ? partePix(total, totalBrasil) : null;
+
   return (
     <>
       <PageHeader
-        eyebrow={<span className="inline-flex items-center gap-1"><Zap className="size-3.5" aria-hidden />Transferências especiais</span>}
-        title="Emenda Pix"
-        subtitle="Dinheiro de emenda que cai direto na conta da prefeitura ou do estado, sem convênio. Veja quanto foi, para onde, quem indicou — e como acompanhar."
-        breadcrumbs={[{ label: "Início", to: "/" }, { label: "Emenda Pix" }]}
+        eyebrow={<span className="inline-flex items-center gap-1"><Zap className="size-3.5" aria-hidden />Emenda Pix (transferência especial)</span>}
+        title="Dinheiro mandado sem dizer para quê"
+        subtitle="O político manda direto para o caixa da prefeitura ou do estado, sem dizer em quê vai ser usado. É rápido, mas muito mais difícil de fiscalizar."
+        breadcrumbs={[{ label: "Início", to: "/" }, { label: "Sem dizer para quê" }]}
+        actions={p ? <ShareButton fab kind="pagina" title="Dinheiro mandado sem dizer para quê" text={`${brl(total)} foram mandados por políticos direto para prefeituras, sem dizer para quê. Veja se sua cidade recebeu:`} url="/pix" /> : undefined}
       />
 
-      <div className="mb-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-        <Card title="O que é, em 4 passos">
-          <div className="hidden md:block"><DiagramaPassos passos={tema.passos} cor={COR} /></div>
-          <ol className="mt-3 space-y-2 text-sm">{tema.passos.map((s, i) => <li key={s.titulo}><b>{i + 1}. {s.titulo}:</b> {s.texto}</li>)}</ol>
-        </Card>
-        <Card title={<span className="inline-flex items-center gap-1.5"><AlertTriangle className="size-4 text-amarelo" aria-hidden />Por que é polêmica</span>}>
-          <div className="space-y-3 text-sm text-pretty">
-            {tema.detalhes?.map((d) => <p key={d}>{d}</p>)}
-            <ul className="space-y-1 border-t border-line pt-3 text-xs">
-              {tema.fontes.map((f) => <li key={f.href}><ExternalLink href={f.href}>{f.label}</ExternalLink></li>)}
-            </ul>
-            <Link className="link text-sm" to="/entenda/emenda-pix">Entenda em detalhes →</Link>
-          </div>
-        </Card>
-      </div>
-
-      {pix.isError ? <ErrorState error={pix.error} retry={() => pix.refetch()} /> : !p ? <Skeleton className="h-28" /> : (
-        <StatGrid>
-          <Stat label="Pago via Pix" tip="emenda pix" value={<CountUp value={pagoTotal(p.totais)} format={brl} />} hint={`desde ${p.anos[0] ?? "—"}, inclui restos a pagar`} />
-          <Stat label="Emendas Pix" value={<CountUp value={p.totais.n} />} hint={`${formatNumber(p.municipios.length)}+ municípios no topo`} />
-          <Stat label="Parte de todas as emendas pagas" value={totalBrasil ? formatPct(partePix(pagoTotal(p.totais), totalBrasil)) : "…"} hint="no mesmo período disponível" />
-          <Stat label="Empenhado" tip="empenhado" value={<CountUp value={p.totais.empenhado} format={brl} />} hint={p.totais.empenhado ? `${formatPct(pagoTotal(p.totais) / p.totais.empenhado)} já pago` : undefined} />
-        </StatGrid>
+      {pix.isError ? <ErrorState error={pix.error} retry={() => pix.refetch()} /> : !p ? <Skeleton className="h-64 rounded-3xl" /> : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.15fr_1fr]">
+          <section className="card p-5 sm:p-6">
+            <p className="text-sm font-semibold text-muted">Mandado assim desde {p.anos[0] ?? "—"}</p>
+            <p className="mt-1 font-display text-5xl font-bold tabular sm:text-6xl" style={{ color: "#a36f00" }}><CountUp value={total} format={brl} /></p>
+            {parte != null && <p className="mt-1 text-lg"><b>{Math.round(parte * 100)}%</b> de todo o dinheiro mandado por políticos</p>}
+            <h2 className="mb-2 mt-6 font-semibold">Sua cidade recebeu assim?</h2>
+            <BuscaUniversal variante="hero" fixo modoInicial="cidade" onFocoMovel={(q, m) => abrirBusca(q, m)} />
+            <details className="mt-5 text-sm">
+              <summary className="cursor-pointer font-semibold text-accent"><AlertTriangle className="mr-1 inline size-4 text-amarelo" aria-hidden />Por que isso é polêmico?</summary>
+              <div className="mt-2 space-y-2 text-pretty">
+                {tema.detalhes?.map((d) => <p key={d}>{d}</p>)}
+                <ul className="space-y-1 border-t border-line pt-2 text-xs">{tema.fontes.map((f) => <li key={f.href}><ExternalLink href={f.href}>{f.label}</ExternalLink></li>)}</ul>
+              </div>
+            </details>
+          </section>
+          <section className="card p-4 sm:p-5">
+            <h2 className="mb-3 font-display text-lg font-bold">Quem mais mandou assim</h2>
+            <QuemMandou autores={p.autores} inicial={5} />
+          </section>
+        </div>
       )}
 
       {p && (
         <>
-          <Section title="Ano a ano" tip="Pago no ano + restos a pagar pagos depois, pelo ano da emenda.">
-            <Card><LineArea data={p.porAno.map((a) => ({ x: a.ano, y: pagoTotal(a) }))} format={brl} color={COR} /></Card>
-          </Section>
-
-          <Section title="Para onde vai" tip="Estado e município de destino informados no Portal da Transparência.">
-            <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+          <Section title="Cidades que mais receberam assim" tip="Toque numa cidade para ver quem mandou e no que diz ter gasto.">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.3fr]">
               <Card>
-                <MapaPix p={p} />
+                <ListaVerMais itens={p.municipios} inicial={8} passo={20} chave={(m) => m.ibge} className="divide-y divide-line" render={(m, i) => (
+                  <Link to={`/municipio/${m.ibge}`} className="flex items-center gap-3 py-2 hover:text-accent">
+                    <span className="w-6 text-right text-xs text-muted tabular">{i + 1}</span>
+                    <span className="min-w-0 flex-1 truncate font-medium">{m.nome || m.ibge} <span className="text-xs text-muted">{m.uf}</span></span>
+                    <b className="tabular">{brl(pagoTotal(m))}</b>
+                  </Link>
+                )} />
               </Card>
-              <Card title="Municípios que mais receberam">
-                <div className="max-h-[560px] overflow-y-auto pr-1">
-                  <Bars data={p.municipios.map((m) => ({ label: m.nome || m.ibge, sub: m.uf, value: pagoTotal(m), href: `/municipio/${m.ibge}`, color: COR }))} format={brl} limit={30} />
-                </div>
-              </Card>
+              <Card><MapaPix p={p} /></Card>
             </div>
           </Section>
 
-          <Section title="Quem mais indicou" tip="Autores com mais Emenda Pix paga (todos os anos).">
-            <Card>
-              <Bars data={p.autores.map((a) => ({ label: a.nome, value: a.pago, href: `/autor/${a.codigo}`, sub: `${formatNumber(a.n)} emendas` }))} format={brl} limit={20} />
-            </Card>
+          <Section title="Ano a ano" tip="Pago no ano + o que ficou para pagar depois, pelo ano da indicação.">
+            <Card><LineArea data={p.porAno.map((a) => ({ x: a.ano, y: pagoTotal(a) }))} format={brl} color={COR} /></Card>
           </Section>
 
-          <Section title="Lista completa" tip="Todas as emendas Pix do ano escolhido. Filtre por estado, autor ou cidade e abra o município para acompanhar.">
-            <ListaPix anos={p.anos} />
-          </Section>
+          <ModoDetalhado titulo="Ver tudo: cada repasse, com filtros por ano, estado e político">
+            <StatGrid>
+              <Stat label="Pago" tip="emenda pix" value={<CountUp value={total} format={brl} />} hint="inclui restos a pagar" />
+              <Stat label="Indicações" value={<CountUp value={p.totais.n} />} />
+              <Stat label="Prometido (empenhado)" tip="empenhado" value={<CountUp value={p.totais.empenhado} format={brl} />} hint={p.totais.empenhado ? `${formatPct(total / p.totais.empenhado)} já pago` : undefined} />
+            </StatGrid>
+            <div className="mt-4"><ListaPix anos={p.anos} /></div>
+          </ModoDetalhado>
         </>
       )}
 
       <NextSteps items={[
-        { to: "/ultimas?tipo=pix", label: "Pix pagos recentemente", desc: "Últimos pagamentos, mês a mês." },
-        { to: "/entenda/emenda-pix", label: "Entenda a Emenda Pix", desc: "Regras, STF e o que mudou." },
-        { to: "/entenda/o-que-esta-aberto", label: "O que está aberto", desc: "Empenhado e ainda não pago." },
+        { to: "/ultimas?tipo=pix", label: "Pagos recentemente", desc: "Últimos repasses, mês a mês." },
+        { to: "/entenda/emenda-pix", label: "Entenda as regras", desc: "STF, prazos e o que mudou." },
       ]} />
     </>
   );

@@ -5,7 +5,8 @@ import { Banknote, ChevronDown, FileText, Home as HomeIcon, Menu, Moon, Search, 
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useNavigation } from "react-router";
 import { Logo } from "@/ui/brand/Logo";
-import { SEARCH_EVENT, SearchDialog } from "./SearchDialog";
+import { SEARCH_EVENT } from "./SearchDialog";
+import { BuscaDialog as SearchDialog } from "@/features/busca/BuscaDialog";
 import { AvisoPrivacidade, OnlinePill, usePageHits } from "./Analytics";
 import { useTheme } from "./theme";
 import { RouteTransition, ScrollProgress, Toaster, spring } from "./motion";

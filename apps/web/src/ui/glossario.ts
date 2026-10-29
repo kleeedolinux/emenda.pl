@@ -1,8 +1,19 @@
 // Glossário em português simples. Puro (sem React) para ser testável.
-const EMENDA_PIX =
-  "Emenda Pix (transferência especial): dinheiro que o parlamentar manda direto para o caixa da prefeitura ou do estado, sem dizer antes em que obra ou serviço ele será usado. É rápida, mas mais difícil de fiscalizar.";
-const RELATOR =
-  "Emenda de relator (RP9): verba distribuída pelo relator do Orçamento a pedido de parlamentares, sem que o nome de quem pediu aparecesse. Ficou conhecida como “orçamento secreto” e foi declarada inconstitucional pelo STF em 2022.";
+import type { TipoEmenda } from "@emenda/contracts";
+
+/** Mapa único dos jeitos de o dinheiro chegar: usado pelo Tip (glossário) e pelo painel dos gráficos. */
+export const TIPOS_LEIGO: Record<TipoEmenda, { rotulo: string; explica: string; jargao: string }> = {
+  individual: { rotulo: "Com destino definido", explica: "Dinheiro que um político mandou dizendo para qual obra ou serviço.", jargao: "Emenda individual" },
+  bancada: { rotulo: "Mandado pelo grupo do estado", explica: "Dinheiro que os deputados e senadores de um estado decidem juntos para onde vai.", jargao: "Emenda de bancada" },
+  comissao: { rotulo: "Mandado por uma comissão", explica: "Dinheiro que um grupo temático do Congresso (ex.: Saúde) decide para onde vai, não uma pessoa.", jargao: "Emenda de comissão" },
+  pix: { rotulo: "Sem dizer para quê", explica: "Dinheiro mandado sem dizer para quê.", jargao: "Emenda Pix (transferência especial)" },
+  relator: { rotulo: "Orçamento secreto", explica: "Dinheiro do orçamento secreto: não se sabe qual político pediu.", jargao: "Emenda de relator (RP9)" },
+  outra: { rotulo: "Outros", explica: "Outros jeitos de político indicar dinheiro.", jargao: "Outra" },
+};
+const def = (t: TipoEmenda, resto: string) => `${TIPOS_LEIGO[t].explica} Nome técnico: ${TIPOS_LEIGO[t].jargao}. ${resto}`;
+
+const EMENDA_PIX = def("pix", "Cai direto no caixa da prefeitura ou do estado. É rápido, mas mais difícil de fiscalizar.");
+const RELATOR = def("relator", "O relator do Orçamento distribuía a verba a pedido de parlamentares sem mostrar quem pediu. O STF proibiu em 2022.");
 const CEAP =
   "Cota parlamentar (CEAP): valor mensal que cada deputado ou senador pode gastar com passagens, combustível, aluguel de escritório, divulgação e outras despesas do mandato, com reembolso pago pela Casa.";
 
@@ -14,9 +25,9 @@ export const GLOSSARIO: Record<string, string> = {
   "restos a pagar": "Restos a pagar: valores empenhados em um ano e que só são pagos em anos seguintes. Muitas emendas são pagas assim.",
   "emenda pix": EMENDA_PIX,
   "transferência especial": EMENDA_PIX,
-  "emenda individual": "Emenda individual: indicação feita por um único deputado ou senador. Cada parlamentar tem uma cota anual, e parte dela é de execução obrigatória.",
-  bancada: "Emenda de bancada: indicação feita em conjunto pelos deputados e senadores de um mesmo estado, geralmente para obras maiores.",
-  comissão: "Emenda de comissão: indicação feita por uma comissão temática do Congresso (como Saúde ou Educação), e não por uma pessoa.",
+  "emenda individual": def("individual", "Cada parlamentar tem uma cota por ano, e parte dela é de pagamento obrigatório."),
+  bancada: def("bancada", "Costuma ir para obras maiores."),
+  comissão: def("comissao", "Exemplos: comissão de Saúde, de Educação."),
   relator: RELATOR,
   RP9: RELATOR,
   PL: "PL (Projeto de Lei): proposta para criar ou mudar uma lei comum. Precisa da maioria dos votos presentes para ser aprovada.",

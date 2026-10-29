@@ -30,8 +30,8 @@ function Hub() {
   const grupos = ["Dinheiro", "Congresso"] as const;
   return (
     <>
-      <PageHeader eyebrow="Entenda" title="Orçamento e Congresso, sem juridiquês"
-        subtitle="Explicações curtas, com desenhos e números reais, para quem quer acompanhar emendas, votações e leis. Cada tema traz os links das fontes oficiais."
+      <PageHeader eyebrow="Entenda" title="Entenda em 1 minuto"
+        subtitle="Por que isso importa para a sua cidade, em poucas palavras. Cada tema traz números reais e a fonte oficial."
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Entenda" }]} />
       {grupos.map((g) => (
         <section key={g} className="mb-10">

@@ -76,8 +76,8 @@ export function EntityLink({ e, children, className }: { e: Entidade; children: 
 
   const conteudo = <>{children}{e.externo && <ArrowUpRight className="ml-px inline size-3 align-[-1px]" aria-hidden />}{e.externo && <span className="sr-only"> (abre em nova aba)</span>}</>;
   const trigger = e.externo
-    ? <a href={href} target="_blank" rel="noopener noreferrer" className={clsx(linkCls, className)}>{conteudo}</a>
-    : <Link to={href} onClick={onClick} className={clsx(linkCls, className)}>{conteudo}</Link>;
+    ? <a href={href} target="_blank" rel="noopener noreferrer" className={clsx(linkCls, e.tipo === "proposicao" && "whitespace-nowrap", className)}>{conteudo}</a>
+    : <Link to={href} onClick={onClick} className={clsx(linkCls, e.tipo === "proposicao" && "whitespace-nowrap", className)}>{conteudo}</Link>;
 
   const Custom = PREVIEWS[e.tipo];
   return (

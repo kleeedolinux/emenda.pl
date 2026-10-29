@@ -6,7 +6,7 @@ import {
 } from "@/ui";
 import { corCategoria } from "@/lib/colors";
 import { formatBRL } from "@/lib/format";
-import { empilhado, formatCnpjCpf, kpis, linkFornecedor, mesAno, rotuloCategoria } from "./gastos";
+import { empilhado, formatCnpjCpf, kpis, linkFornecedor, mesAno, rotuloCategoria, totalCota } from "./gastos";
 import { O_QUE_E } from "./textos";
 
 const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
@@ -76,6 +76,42 @@ const colsPessoal = (comRem: boolean, comLocal: boolean): Column<GastoPessoa>[] 
   ...(comRem ? [{ key: "remuneracao", header: "Remuneração bruta", align: "right" as const, sort: true, tip: "Remuneração bruta fixa do mês de referência (sem horas extras, diárias e eventuais).", cell: (r: GastoPessoa) => <Money centavos={r.remuneracao ?? null} />, csv: (r: GastoPessoa) => (r.remuneracao ?? 0) / 100 }] : []),
 ];
 
+/** Hook dos gastos do parlamentar (mesma chave de cache da versão completa). */
+export function useGastosParlamentar(kind: KindParlamentar, id: string | number | null) {
+  return useApi<GastosParlamentarData>(id ? gastosPath.parlamentar(kind, id) : null);
+}
+
+/** Resumo curto: total da cota no mandato, média por mês, 3 maiores categorias e 3 maiores fornecedores. */
+export function GastosResumo({ kind, id }: { kind: KindParlamentar; id: string | number }) {
+  const q = useGastosParlamentar(kind, id);
+  if (q.isError) return <EmptyState title="Ainda não há dados de gastos para este parlamentar." />;
+  if (q.isPending) return <Skeleton className="h-40" />;
+  const g = q.data;
+  const k = totalCota(g);
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <Card>
+        <p className="text-sm text-muted">Gastou da cota do mandato <Tip content={O_QUE_E.cota} /></p>
+        <p className="font-display text-3xl font-bold tabular"><Money centavos={k.total} compact /></p>
+        {k.mediaMensal > 0 && <p className="text-sm text-muted">média de <b className="text-fg"><Money centavos={k.mediaMensal} compact /></b> por mês{g.subsidio ? <> · salário de <Money centavos={g.subsidio} compact /> por mês</> : null}</p>}
+        <div className="mt-4">
+          <Bars data={g.porCategoria.map((c) => ({ label: rotuloCategoria(c.categoria), value: c.valor }))} format={(n) => formatBRL(n, true)} limit={3} />
+        </div>
+      </Card>
+      <Card title="Quem mais recebeu da cota">
+        <ul className="divide-y divide-line">
+          {[...g.topFornecedores].sort((a, b) => b.valor - a.valor).slice(0, 3).map((f, i) => (
+            <li key={`${f.cnpjCpf}-${i}`} className="flex items-center gap-3 py-2 text-sm">
+              <span className="min-w-0 flex-1 truncate font-medium">{f.nome || "—"}</span>
+              <b className="shrink-0 tabular"><Money centavos={f.valor} compact /></b>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
+  );
+}
+
 /** Gastos de um deputado ou senador: cota (CEAP/CEAPS), pessoal de gabinete, subsídio e auxílios. */
 export function GastosParlamentar({ kind, id }: { kind: KindParlamentar; id: string | number }) {
   const q = useApi<GastosParlamentarData>(id ? gastosPath.parlamentar(kind, id) : null);
@@ -116,7 +152,7 @@ export function GastosParlamentar({ kind, id }: { kind: KindParlamentar; id: str
         )}
       </StatGrid>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card title={`Cota parlamentar por ano (${cotaNome})`} tip={O_QUE_E.cota}>
           <Empilhadas g={g} />
         </Card>
@@ -147,7 +183,7 @@ export function GastosParlamentar({ kind, id }: { kind: KindParlamentar; id: str
         />
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card title="Salário e benefícios">
           <KeyValue
             items={[

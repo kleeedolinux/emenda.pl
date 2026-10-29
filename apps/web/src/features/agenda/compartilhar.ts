@@ -64,7 +64,7 @@ export function resultadoShare(v: Pick<CamaraVotacao, "id" | "descricao" | "apro
   };
   // A descrição já diz o resultado ("Rejeitado o Requerimento."): evita "… rejeitada".
   if (!v.proposicaoObjeto && /^(aprovad|rejeitad)/i.test(desc) && !p) {
-    base.text = `${resultado === "rejeitada" ? "❌" : "✅"} Resultado: ${desc.replace(/\.$/, "")}. Veja como cada deputado votou:`;
+    base.text = `${resultado === "rejeitada" ? "❌" : "✅"} Resultado: ${desc.replace(/\.$/, "")}. Veja como votou cada deputado 👇`;
   }
   return base;
 }
@@ -79,7 +79,7 @@ export function semanaShare(votarao: AgendaEvento[], _inicio: string): ShareData
     quando: "Nesta semana",
     casa: "Congresso",
     destaque: `${n} ${n === 1 ? "SESSÃO" : "SESSÕES"} COM VOTAÇÃO`,
-    text: `🗳️ Agenda do Congresso nesta semana: ${n} ${n === 1 ? "sessão" : "sessões"} com votação no Plenário. Veja o que será votado:`,
+    text: `🗳️ Agenda do Congresso nesta semana: ${n} ${n === 1 ? "sessão" : "sessões"} com votação no Plenário. Veja o que será votado 👇`,
     items: votarao.slice(0, 8).map((e) => ({ hora: e.hora, sigla: `${e.casa === "camara" ? "Câmara" : "Senado"} · ${e.dia.slice(8)}/${e.dia.slice(5, 7)}`, titulo: e.titulo })),
   };
 }

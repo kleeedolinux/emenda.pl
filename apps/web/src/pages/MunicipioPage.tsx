@@ -1,109 +1,134 @@
 import { dataPath, UFS, type Municipio, type Prefeito, type SiglaUf } from "@emenda/contracts";
+import { Building, Landmark } from "lucide-react";
 import { useParams } from "react-router";
-import { COR_TIPO, nomeTipoCurto } from "@/features/emendas/tipos";
 import { ConveniosTable, EmendasTable, FavorecidosTable, type Convenio, type FavorecidoExt } from "@/features/emendas/tables";
-import { TotaisGrid } from "@/features/emendas/Totais";
+import { AreasGasto, BarraTipos, fraseChegou, ListaVerMais, ModoDetalhado, porMorador, QuemMandou, QuemMandouSkeleton, topPorTipo, usePopulacao } from "@/features/linguagem";
+import { nomeProprio } from "@/features/emendas/historias";
 import { ufDoMunicipio, useApi, type IbgeMunicipio } from "@/lib/data";
-import { formatBRL, formatNumber, formatPct } from "@/lib/format";
-import { Avatar, NextSteps, Badge, Bars, Card, Donut, EmptyState, ErrorState, ExternalLink, KeyValue, PageHeader, PartyBadge, Section, Skeleton, Tabs, Term } from "@/ui";
-import { ShareButton } from "@/features/share";
-import { fotoPrefeito, fotoVicePrefeito } from "@/lib/cdn";
+import { formatBRL, formatCNPJ, formatNumber, isCNPJ } from "@/lib/format";
+import { fotoPrefeito } from "@/lib/cdn";
 import { EmblemaMunicipio } from "@/features/emblemas/EmblemaMunicipio";
+import { Avatar, CountUp, EmptyState, ErrorState, ExternalLink, NextSteps, PageHeader, PartyBadge, Skeleton, Tabs, Tip } from "@/ui";
+import { ShareButton } from "@/features/share";
 
 /** Campos opcionais que o ETL pode publicar além do contrato mínimo. */
 type MunicipioExt = Municipio & { vice?: Prefeito | null; convenios?: Convenio[]; favorecidos: FavorecidoExt[]; populacao?: number };
 
+const brl = (n: number) => formatBRL(Math.round(n), true);
+
 export default function MunicipioPage() {
   const ibgeId = useParams().ibge ?? "";
-  const q = useApi<MunicipioExt>(/^\d{7}$/.test(ibgeId) ? dataPath.municipio(ibgeId) : null);
-  const info = useApi<IbgeMunicipio>(/^\d{7}$/.test(ibgeId) ? `/api/ibge/v1/localidades/municipios/${ibgeId}` : null);
+  const valido = /^\d{7}$/.test(ibgeId);
+  const q = useApi<MunicipioExt>(valido ? dataPath.municipio(ibgeId) : null);
   const d = q.data;
+  // Nome/UF do IBGE só quando o município não tem dados (404).
+  const info = useApi<IbgeMunicipio>(valido && q.isError ? `/api/ibge/v1/localidades/municipios/${ibgeId}` : null);
+  const pop = usePopulacao(valido ? ibgeId : null);
   const uf = d?.uf ?? (info.data ? ufDoMunicipio(info.data) : "");
+  const nomeUf = UFS[uf as SiglaUf] ?? uf;
   const nome = d?.nome ?? info.data?.nome ?? `Município ${ibgeId}`;
-  const pix = d?.porTipo.find((t) => t.tipo === "pix");
+  const populacao = d?.populacao ?? pop.data?.populacao;
+  const pago = d?.totais.pago ?? 0;
+  const pix = d?.porTipo.filter((t) => t.tipo === "pix").reduce((s, t) => s + t.pago, 0) ?? 0;
+  const politicos = d?.autores.filter((a) => a.pago > 0).length ?? 0;
+  const morador = porMorador(pago, populacao);
+  const gastos = d?.emendas.map((e) => ({ funcao: e.funcao, valor: e.pago })) ?? [];
 
   return (
     <>
       <PageHeader
-        eyebrow={<>Município · <Term k="código IBGE">IBGE {ibgeId}</Term></>}
-        title={nome}
+        eyebrow={uf ? `Cidade · ${nomeUf}` : "Cidade"}
         media={uf ? <EmblemaMunicipio ibge={ibgeId} uf={uf} nome={nome} size={56} credito /> : undefined}
-        subtitle={uf ? `${UFS[uf as SiglaUf] ?? uf}` : undefined}
-        breadcrumbs={[{ label: "Início", to: "/" }, ...(uf ? [{ label: UFS[uf as SiglaUf] ?? uf, to: `/uf/${uf}` }] : []), { label: nome }]}
-        actions={<ShareButton fab kind="municipio" title={nome} subtitle={uf ? UFS[uf as SiglaUf] ?? uf : undefined} url={`/municipio/${ibgeId}`} ogId={ibgeId} metric={d ? { value: d.totais.pago, format: "brl", label: "pagos em emendas parlamentares" } : undefined} bars={d?.autores.slice(0, 5).map((a) => ({ label: a.nome, value: a.pago }))} />}
+        title={nome}
+        breadcrumbs={[{ label: "Início", to: "/" }, ...(uf ? [{ label: nomeUf, to: `/uf/${uf}` }] : []), { label: nome }]}
+        actions={<ShareButton fab kind="municipio" title={nome} subtitle={nomeUf || undefined} url={`/municipio/${ibgeId}`} ogId={ibgeId}
+          text={d ? `${fraseChegou({ nome, pago, politicos, pctPix: pago ? pix / pago : 0 })} Veja quem mandou:` : undefined}
+          metric={d ? { value: pago, format: "brl", label: "mandados por políticos" } : undefined} bars={d?.autores.slice(0, 5).map((a) => ({ label: a.nome, value: a.pago }))} />}
       />
 
-      <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_1fr]">
-        <Card title="Prefeitura" tip="prefeito">
-          {d?.prefeito ? (
-            <div className="space-y-3">
-              <PessoaCargo p={d.prefeito} cargo="Prefeito(a)" foto={fotoPrefeito(ibgeId)} />
-              {d.vice && <PessoaCargo p={d.vice} cargo="Vice-prefeito(a)" foto={fotoVicePrefeito(ibgeId)} />}
-            </div>
-          ) : q.isPending ? <Skeleton className="h-16" /> : <p className="text-sm text-muted">Prefeito(a) não informado(a) na base do TSE para este município.</p>}
-        </Card>
-        <Card title="Dados do IBGE">
-          {info.data ? (
-            <KeyValue items={[
-              ["Código IBGE", <span className="tabular">{info.data.id}</span>, "código IBGE"],
-              ["Microrregião", info.data.microrregiao?.nome],
-              ["Mesorregião", info.data.microrregiao?.mesorregiao?.nome],
-              ["Região imediata", info.data["regiao-imediata"]?.nome],
-              ["Região", info.data.microrregiao?.mesorregiao?.UF?.regiao?.nome ?? info.data["regiao-imediata"]?.["regiao-intermediaria"]?.UF?.regiao?.nome],
-              ...(d?.populacao ? [["População", formatNumber(d.populacao)] as [string, string]] : []),
-            ]} />
-          ) : info.isError ? <p className="text-sm text-muted">IBGE indisponível no momento.</p> : <Skeleton className="h-24" />}
-          <p className="mt-3 text-xs"><ExternalLink href={`https://cidades.ibge.gov.br/brasil/${(uf || "").toLowerCase()}/${ibgeId}`}>Ver no IBGE Cidades</ExternalLink></p>
-        </Card>
-      </div>
-
-      {q.isError ? <ErrorState error={q.error} retry={() => q.refetch()} /> : d ? <TotaisGrid t={d.totais} /> : <Skeleton className="h-28" />}
-
-      {d && (
+      {q.isError ? (
+        (q.error as { status?: number }).status === 404
+          ? <EmptyState title={`${nome} não recebeu dinheiro mandado por políticos no período.`} hint="Ou o valor ainda não foi pago. Veja outras cidades do estado." />
+          : <ErrorState error={q.error} retry={() => q.refetch()} />
+      ) : !d ? <Skeleton className="h-72 rounded-3xl" /> : (
         <>
-          {pix && pix.pago > 0 && (
-            <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-amarelo/50 bg-amarelo/10 p-4 text-sm">
-              <Badge tone="amarelo">Emenda Pix</Badge>
-              <span><b className="tabular">{formatBRL(pix.pago)}</b> ({d.totais.pago ? formatPct(pix.pago / d.totais.pago) : "—"} do pago) chegaram como <Term k="transferência especial">transferência especial</Term>, direto no caixa da prefeitura, sem finalidade definida antes.</span>
+          {/* 1ª tela: quanto chegou, por morador, de que jeito e quem mandou */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.15fr_1fr]">
+            <section aria-labelledby="quanto" className="card p-5 sm:p-6">
+              <h2 id="quanto" className="text-sm font-semibold text-muted">Dinheiro que deputados e senadores mandaram para cá <Tip content="Emendas parlamentares: parte do Orçamento federal que cada político escolhe para onde vai. Contamos o que de fato foi pago." /></h2>
+              <p className="mt-1 font-display text-5xl font-bold tracking-tight tabular sm:text-6xl"><CountUp value={pago} format={brl} /></p>
+              {morador != null && (
+                <p className="mt-1 text-lg">
+                  <b className="tabular">R$ {formatNumber(morador)}</b> por morador
+                  <span className="text-sm text-muted"> · {formatNumber(populacao!)} moradores <Tip content={`População estimada pelo IBGE${pop.data ? ` (${pop.data.ano})` : ""}.`} /></span>
+                </p>
+              )}
+              {d.totais.rapPago > 0 && <p className="mt-1 text-sm text-muted">+ {brl(d.totais.rapPago)} de indicações de anos anteriores pagas depois <Tip content="Restos a pagar: dinheiro prometido num ano e pago só nos anos seguintes." /></p>}
+              <p className="mt-3 text-pretty text-fg/85">{fraseChegou({ nome, pago, politicos, pctPix: pago ? pix / pago : 0 })}</p>
+              <div className="mt-5">
+                <h3 className="mb-2 text-sm font-semibold">De que jeito chegou</h3>
+                <BarraTipos porTipo={d.porTipo} detalhe={(t) => ({ titulo: "Quem mandou", itens: topPorTipo(d.emendas, t, "autor").map((x) => ({ ...x, nome: nomeProprio(x.nome) })), verMais: "?tab=emendas#detalhes" })} />
+              </div>
+            </section>
+            <section aria-labelledby="quem" className="card p-4 sm:p-5">
+              <h2 id="quem" className="mb-3 font-display text-lg font-bold">Quem mandou</h2>
+              <QuemMandou autores={d.autores} inicial={3} />
+            </section>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <section aria-labelledby="gasto" className="card p-4 sm:p-5">
+              <h2 id="gasto" className="mb-3 font-display text-lg font-bold">No que foi gasto</h2>
+              <AreasGasto itens={gastos} inicial={5} />
+            </section>
+            <section aria-labelledby="recebeu" className="card p-4 sm:p-5">
+              <h2 id="recebeu" className="mb-1 font-display text-lg font-bold">Quem recebeu o dinheiro</h2>
+              <p className="mb-3 text-sm text-muted">Prefeitura, fundos, empresas e entidades que receberam na ponta. <Tip content="Soma de todos os pagamentos a cada recebedor registrados no Portal da Transparência, de todos os anos e origens. Por isso pode passar do total acima." /></p>
+              <ListaVerMais itens={d.favorecidos} inicial={5} chave={(f) => f.documento + f.nome} className="divide-y divide-line"
+                vazio={<p className="text-sm text-muted">Sem favorecidos publicados.</p>}
+                render={(f) => (
+                  <details className="group py-2">
+                    <summary className="flex cursor-pointer list-none items-center gap-3">
+                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-muted">{/munic|prefeit|fundo/i.test(f.nome) ? <Landmark className="size-4" aria-hidden /> : <Building className="size-4" aria-hidden />}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">{f.nome}</span>
+                      <b className="shrink-0 text-sm tabular">{brl(f.valor)}</b>
+                    </summary>
+                    <p className="ml-11 mt-1 text-xs text-muted">
+                      {f.naturezaJuridica ?? f.tipo}{f.documento ? <> · {isCNPJ(f.documento) ? <ExternalLink href={`https://cnpj.biz/${f.documento}`}>CNPJ {formatCNPJ(f.documento)}</ExternalLink> : f.documento}</> : null}
+                    </p>
+                  </details>
+                )} />
+            </section>
+          </div>
+
+          {d.prefeito && (
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-line bg-surface p-3 text-sm">
+              <Avatar src={fotoPrefeito(ibgeId)} name={d.prefeito.nome} size="sm" />
+              <span className="min-w-0">Quem administra o dinheiro na cidade: <b>{d.prefeito.nome}</b>, prefeito(a) eleito(a) em {d.prefeito.eleicao}</span>
+              <PartyBadge sigla={d.prefeito.partido} />
             </div>
           )}
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <Card title="Por tipo de emenda">
-              <Donut data={d.porTipo.map((t) => ({ label: nomeTipoCurto(t.tipo), value: t.pago, color: COR_TIPO[t.tipo], highlight: t.tipo === "pix" }))} format={(n) => formatBRL(n, true)} centerLabel="Pago" />
-            </Card>
-            <Card title="Quem enviou" tip="Autores das emendas, por valor pago a este município.">
-              {d.autores.length ? (
-                <Bars limit={10} data={[...d.autores].sort((a, b) => b.pago - a.pago).map((a) => ({ label: a.nome, value: a.pago, href: `/autor/${encodeURIComponent(a.codigo)}`, sub: `${a.n}` }))} format={(n) => formatBRL(n, true)} />
-              ) : <EmptyState title="Sem autores" />}
-            </Card>
-          </div>
-          <Section title="Todos os registros">
+
+          <ModoDetalhado id="detalhes" titulo={`Ver tudo: ${formatNumber(d.emendas.length)} indicações, ${formatNumber(d.favorecidos.length)} recebedores${d.convenios?.length ? `, ${formatNumber(d.convenios.length)} convênios` : ""}`}>
             <Tabs tabs={[
-              { id: "emendas", label: "Emendas", count: d.emendas.length, content: <EmendasTable rows={d.emendas} exportName={`emendas-${ibgeId}`} /> },
-              { id: "favorecidos", label: "Favorecidos", count: d.favorecidos.length, content: <FavorecidosTable rows={d.favorecidos} exportName={`favorecidos-${ibgeId}`} /> },
+              { id: "emendas", label: "Indicações (emendas)", count: d.emendas.length, content: <EmendasTable rows={d.emendas} exportName={`emendas-${ibgeId}`} /> },
+              { id: "favorecidos", label: "Quem recebeu", count: d.favorecidos.length, content: <FavorecidosTable rows={d.favorecidos} exportName={`favorecidos-${ibgeId}`} /> },
               ...(d.convenios?.length ? [{ id: "convenios", label: "Convênios", count: d.convenios.length, content: <ConveniosTable rows={d.convenios} exportName={`convenios-${ibgeId}`} /> }] : []),
             ]} />
-          </Section>
+            <p className="mt-4 text-xs text-muted">Código IBGE {ibgeId} · <ExternalLink href={`https://cidades.ibge.gov.br/brasil/${(uf || "").toLowerCase()}/${ibgeId}`}>IBGE Cidades</ExternalLink></p>
+          </ModoDetalhado>
         </>
       )}
-      <NextSteps items={[
-        ...[...(d?.autores ?? [])].sort((a, b) => b.pago - a.pago).slice(0, 3).map((a) => ({ to: `/autor/${encodeURIComponent(a.codigo)}`, label: a.nome, desc: `Enviou ${formatBRL(a.pago, true)} para ${nome}. Veja perfil, votações e outras emendas.` })),
-        ...(uf ? [{ to: `/uf/${uf}`, label: `Todos os municípios de ${uf}`, desc: "Compare sua cidade com as vizinhas." }, { to: `/deputados?uf=${uf}`, label: `Deputados de ${uf}`, desc: "Quem representa seu estado em Brasília." }] : []),
-        { to: "/proposicoes", label: "Leis em votação", desc: "O que o Congresso está decidindo agora." },
-      ]} />
-    </>
-  );
-}
 
-function PessoaCargo({ p, cargo, foto }: { p: Prefeito; cargo: string; foto?: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <Avatar src={foto} name={p.nome} />
-      <div className="min-w-0">
-        <p className="text-xs text-muted">{cargo} · eleição {p.eleicao}</p>
-        <p className="truncate font-semibold">{p.nome}</p>
-        <div className="mt-0.5 flex items-center gap-2"><PartyBadge sigla={p.partido} />{p.situacao && <span className="text-xs text-muted">{p.situacao}</span>}</div>
-      </div>
-    </div>
+      {/* q.isPending não mostra próximos passos; QuemMandouSkeleton cobre a 1ª tela */}
+      {q.isPending && <div className="mt-4"><QuemMandouSkeleton /></div>}
+      {uf && (
+        <NextSteps items={[
+          { to: `/uf/${uf}`, label: `Outras cidades de ${nomeUf}`, desc: "Compare com as vizinhas." },
+          { to: `/deputados?uf=${uf}`, label: `Deputados de ${nomeUf}`, desc: "Quem representa seu estado em Brasília." },
+          { to: "/pix", label: "Dinheiro sem dizer para quê", desc: "Onde mais isso acontece." },
+        ]} />
+      )}
+    </>
   );
 }

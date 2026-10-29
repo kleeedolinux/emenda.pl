@@ -243,13 +243,15 @@ export function LayerFront() {
 }
 
 // ---------- Efeitos animados em SVGs próprios e pequenos ----------
+// Camada própria no compositor: o quadro repinta só o efeito, não a ilustração que está na mesma camada do parallax.
+const FX_LAYER: CSSProperties = { willChange: "transform" };
 // Animar dentro das camadas grandes forçaria re-rasterizar toda a ilustração a cada quadro.
 // Aqui só o recorte + o reflexo são repintados.
 
 /** Reflexo de luz nas torres/domo e ondulação no espelho d'água. */
 export function LayerMidFx() {
   return (
-    <svg {...svgProps()}>
+    <svg {...svgProps(FX_LAYER)}>
       <defs>
         <clipPath id="hs-mid-glass">
           <rect x={TOWER_L.x} y={TOWER_TOP.y} width={TOWER_L.w} height={PLATFORM_Y - TOWER_TOP.y} />
@@ -273,7 +275,7 @@ export function LayerMidFx() {
 /** Reflexo de luz nas fachadas de vidro dos ministérios. */
 export function LayerFrontFx() {
   return (
-    <svg {...svgProps()}>
+    <svg {...svgProps(FX_LAYER)}>
       <defs><clipPath id="hs-front-glass">{[...LEFT, ...RIGHT].map((b, i) => <path key={i} d={b.front} />)}</clipPath></defs>
       <g clipPath="url(#hs-front-glass)">
         <rect className="glass-sweep" x="0" y="150" width="160" height="200" fill="url(#hs-sweep)" transform="skewX(-18)" style={{ animationDelay: "1.6s" }} />

@@ -18,10 +18,12 @@ import { VotosDeputado } from "@/features/legislativo/VotosDeputado";
 import { EmendasAutor } from "@/features/legislativo/EmendasAutor";
 import { formatBRL, isCNPJ } from "@/lib/format";
 import { ShareButton } from "@/features/share";
-import { GastosParlamentar } from "@/features/gastos";
-import { HandCoins, Repeat, Vote, Wallet } from "lucide-react";
+import { GastosParlamentar, GastosResumo, useGastosParlamentar } from "@/features/gastos";
+import { FileText, HandCoins, Repeat, Vote, Wallet } from "lucide-react";
 import { contarSim, perfilEmendas, resumoSimples, trocasCamara } from "@/features/perfil/resumo";
-import { BlocoEmendas, ResumoSimplesCard, SecaoLeiga } from "@/features/perfil/CardsPerfil";
+import { BlocoEmendas, ResumoSimplesCard, SecaoLeiga, TilesPerfil } from "@/features/perfil/CardsPerfil";
+import { ModoDetalhado } from "@/features/linguagem";
+import { totalCota } from "@/features/gastos/gastos";
 import { CardPautas, usePautasDeputado } from "@/features/perfil/Pautas";
 import { CardTrocas } from "@/features/perfil/Trocas";
 import type { Mandato } from "@/features/legislativo/mandatos";
@@ -54,9 +56,8 @@ export default function DeputadoPage() {
   return (
     <>
       <PageHeader
-        eyebrow={<>Deputado(a) federal · <Term k="deputado federal">o que faz?</Term></>}
+        eyebrow={<>Deputado(a) federal{s ? ` · ${UFS[s.siglaUf as SiglaUf] ?? s.siglaUf}` : ""} <Term k="deputado federal">o que faz?</Term></>}
         title={d ? nome : <Skeleton className="h-9 w-64" />}
-        subtitle={d ? <>Nome civil: {d.nomeCivil}</> : undefined}
         media={<Avatar src={s?.urlFoto} name={nome} size="xl" />}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Deputados", to: "/deputados" }, { label: nome }]}
         actions={d && (
@@ -77,8 +78,7 @@ export default function DeputadoPage() {
           semAutor={!!autores.data && !autor} historico={hist.data ?? []} />
       )}
 
-      <h2 className="mb-1 mt-10 text-xl font-bold">Modo repositório: todos os detalhes</h2>
-      <p className="mb-4 text-sm text-muted">Dados completos e tabelas para quem quer conferir cada registro.</p>
+      <ModoDetalhado id="detalhes" titulo="Ver tudo: mandatos, votações, despesas, comissões e dados oficiais">
 
       {dep.isPending ? <Skeleton className="h-40" /> : d && s && (
         <div className="mb-6 grid gap-4 lg:grid-cols-2">
@@ -129,12 +129,14 @@ export default function DeputadoPage() {
           { id: "proposicoes", label: "Proposições", content: <Proposicoes id={id} janela={janela} /> },
           { id: "votacoes", label: "Votações", content: <VotosDeputado id={id} janela={janela} /> },
           { id: "despesas", label: "Cota parlamentar", content: <Despesas id={id} janela={janela} /> },
+          { id: "gastos", label: "Gastos e pessoal", content: <GastosParlamentar kind="deputado" id={id} /> },
           { id: "frentes", label: "Frentes", content: <Frentes id={id} legislatura={m?.legislatura} /> },
           { id: "orgaos", label: "Comissões e órgãos", content: <Orgaos id={id} janela={m ? janela : null} /> },
           { id: "historico", label: "Histórico", content: <Historico id={id} itens={hist.data ?? []} /> },
           { id: "perfil", label: "Profissões", content: <Perfil id={id} /> },
         ]} />
       )}
+      </ModoDetalhado>
     </>
   );
 }
@@ -157,27 +159,48 @@ function PerfilLeigo({ id, nome, sexo, partido, uf, mandatos, autorCodigo, semAu
     proposicoes: nProps,
     votos: pautas.carregando ? null : { ...votos, fonte: "pautas" },
   });
+  const gastos = useGastosParlamentar("deputado", id);
+  const lista = useCamaraPagina<ProposicaoLista>(desde ? cam.proposicoesAutor(id, 1, desde, undefined, 5) : null);
+  const pe = autor.data ? perfilEmendas(autor.data.emendas) : null;
+  const gk = gastos.data ? totalCota(gastos.data) : null;
+  const t = <span className="inline-block h-8 w-20 animate-pulse rounded bg-surface-2" />;
   return (
     <>
       <ResumoSimplesCard frases={frases} carregando={autor.isPending && !!autorCodigo} />
-      <nav aria-label="Seções do perfil" className="mb-6 flex flex-wrap gap-2 text-sm">
-        {[["#dinheiro", "Dinheiro"], ["#votos", "Votos"], ["#partidos", "Partidos"], ["#gastos", "Gastos"]].map(([h, l]) => <a key={h} href={h} className="rounded-full border border-line px-3 py-1 hover:bg-surface-2">{l}</a>)}
-      </nav>
-      <SecaoLeiga id="dinheiro" icon={<HandCoins className="size-5" aria-hidden />} titulo="Dinheiro que indicou (emendas)"
-        significa="Emendas são a parte do Orçamento da União que o parlamentar escolhe para onde vai. “Pago” é o que de fato chegou ao destino. Emenda Pix cai direto na conta da prefeitura ou do estado.">
+      <TilesPerfil itens={[
+        { href: "#dinheiro", icon: <HandCoins className="size-4" aria-hidden />, rotulo: "Dinheiro que mandou", valor: pe ? formatBRL(pe.pago, true) : semAutor ? "R$ 0" : t, sub: pe ? `para ${formatNumber(pe.municipios)} cidades` : undefined },
+        { href: "#gastos", icon: <Wallet className="size-4" aria-hidden />, rotulo: "Gastos da cota", valor: gk ? formatBRL(gk.total, true) : gastos.isError ? "—" : t, sub: gk?.mediaMensal ? `${formatBRL(gk.mediaMensal, true)} por mês` : "no mandato" },
+        { href: "#votos", icon: <Vote className="size-4" aria-hidden />, rotulo: "Como votou", valor: pautas.carregando ? t : votos.total ? `${votos.sim} Sim` : "—", sub: pautas.carregando ? undefined : votos.total ? `em ${votos.total} votações polêmicas` : "sem voto registrado nas polêmicas" },
+        { href: "#projetos", icon: <FileText className="size-4" aria-hidden />, rotulo: "Projetos", valor: nProps != null ? formatNumber(nProps) : t, sub: "apresentados" },
+      ]} />
+      <SecaoLeiga id="dinheiro" icon={<HandCoins className="size-5" aria-hidden />} titulo="Dinheiro que mandou para cidades e estados"
+        significa="Parte do Orçamento federal que o deputado escolhe para onde vai (emendas parlamentares).">
         <BlocoEmendas autor={autor.data} carregando={autor.isPending} semCorrespondencia={semAutor} />
       </SecaoLeiga>
-      <SecaoLeiga id="votos" icon={<Vote className="size-5" aria-hidden />} titulo="Como votou no que mais repercutiu"
-        significa="Em votação nominal cada voto fica registrado. Ausência não é voto contra. Para ver todas as votações, use a aba “Votações” abaixo.">
-        <CardPautas itens={pautas.itens} carregando={pautas.carregando} />
+      <SecaoLeiga id="votos" icon={<Vote className="size-5" aria-hidden />} titulo="Como votou no que mais deu o que falar">
+        <CardPautas itens={pautas.itens} carregando={pautas.carregando} titulo={null} />
       </SecaoLeiga>
-      <SecaoLeiga id="partidos" icon={<Repeat className="size-5" aria-hidden />} titulo="Partidos"
-        significa="Deputados só podem trocar de partido sem perder o mandato na janela partidária ou com justa causa.">
-        <CardTrocas trocas={trocas} atual={partido} fonte={<p className="mt-2 text-xs"><Link className="link" to="/entenda/troca-de-partido">Entenda a janela partidária →</Link></p>} />
+      <SecaoLeiga id="projetos" icon={<FileText className="size-5" aria-hidden />} titulo="Projetos que apresentou">
+        <Card>
+          {lista.isPending ? <Skeleton className="h-32" /> : lista.data?.dados.length ? (
+            <ul className="divide-y divide-line">
+              {lista.data.dados.map((p) => (
+                <li key={p.id} className="py-2 text-sm">
+                  <Link className="link font-semibold" to={`/proposicao/${p.id}`}>{p.siglaTipo} {p.numero}/{p.ano}</Link>
+                  <span className="line-clamp-2 text-muted">{p.ementa}</span>
+                </li>
+              ))}
+            </ul>
+          ) : <EmptyState title="Nenhum projeto encontrado." />}
+          <p className="mt-3 text-sm"><Link className="link" to={`?tab=proposicoes#detalhes`}>Ver todos os projetos →</Link></p>
+        </Card>
       </SecaoLeiga>
-      <SecaoLeiga id="gastos" icon={<Wallet className="size-5" aria-hidden />} titulo="Gastos do mandato"
-        significa="Cota parlamentar, verba de gabinete e pessoal: dinheiro público para exercer o mandato.">
-        <GastosParlamentar kind="deputado" id={id} />
+      <SecaoLeiga id="gastos" icon={<Wallet className="size-5" aria-hidden />} titulo="Quanto gasta para trabalhar"
+        significa="Cota para passagens, combustível, escritório e divulgação, paga com dinheiro público.">
+        <GastosResumo kind="deputado" id={id} />
+      </SecaoLeiga>
+      <SecaoLeiga id="partidos" icon={<Repeat className="size-5" aria-hidden />} titulo="Partidos">
+        <CardTrocas trocas={trocas} atual={partido} fonte={<p className="mt-2 text-xs"><Link className="link" to="/entenda/troca-de-partido">Quando pode trocar de partido →</Link></p>} />
       </SecaoLeiga>
     </>
   );
@@ -237,7 +260,7 @@ function Despesas({ id, janela }: { id: number; janela: Periodo }) {
     { key: "nomeFornecedor", header: "Fornecedor", sort: true },
     { key: "cnpjCpfFornecedor", header: "CNPJ/CPF", tip: "CNPJ", cell: (r) => {
       const doc = r.cnpjCpfFornecedor ?? "";
-      return isCNPJ(doc) ? <ExternalLink href={externo.cnpj(doc)}>{formatDocumento(doc)}</ExternalLink> : <span className="tabular">{formatDocumento(doc) || "—"}</span>;
+      return isCNPJ(doc) ? <ExternalLink href={externo.cnpj(doc)} className="whitespace-nowrap tabular">{formatDocumento(doc)}</ExternalLink> : <span className="whitespace-nowrap tabular">{formatDocumento(doc) || "—"}</span>;
     } },
     { key: "valorLiquido", header: "Valor", align: "right", sort: true, cell: (r) => <Money centavos={Math.round(r.valorLiquido * 100)} />, csv: (r) => r.valorLiquido },
     { key: "urlDocumento", header: "Nota", cell: (r) => (r.urlDocumento ? <ExternalLink href={r.urlDocumento}>ver</ExternalLink> : "—") },

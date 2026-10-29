@@ -8,6 +8,8 @@ export interface FlowState { key: string; d: string; c: Pt; level: number }
 export interface FlowFrame { map: { x: number; y: number; k: number }; src: Pt | null }
 export interface FlowOptions {
   canvas: HTMLCanvasElement;
+  /** Canvas estático dos fios (redesenhado só quando o mapa se move): o quadro animado não repinta as trilhas. */
+  trails?: HTMLCanvasElement;
   states: FlowState[];
   hub: Pt; // Brasília, coordenadas do viewBox do mapa
   slots: Slot[];
@@ -18,6 +20,11 @@ export interface FlowOptions {
 
 const ease = cubicBezier(...easing.inOut);
 const TAIL = 9, TAIL_STEP = 0.016, PULSE = 1.1;
+// Estilos da cauda pré-calculados (nenhuma string montada por quadro).
+const TAIL_STYLE = Array.from({ length: TAIL + 1 }, (_, i) => {
+  const a = 1 - i / (TAIL + 1);
+  return { w: 2.4 * a + 0.3, dark: `rgba(255,214,0,${(a * 0.55).toFixed(3)})`, light: `rgba(0,140,55,${(a * 0.6).toFixed(3)})` };
+});
 
 function sprite(color: string, glow: string): HTMLCanvasElement {
   const c = document.createElement("canvas");
@@ -34,7 +41,9 @@ function sprite(color: string, glow: string): HTMLCanvasElement {
 }
 
 export function createFlow(o: FlowOptions) {
-  const ctx = o.canvas.getContext("2d", { alpha: true })!;
+  const ctx = o.canvas.getContext("2d", { alpha: true, desynchronized: true })!;
+  const tctx = o.trails?.getContext("2d", { alpha: true }) ?? null;
+  let trailsDark: boolean | null = null;
   const paths = new Map(o.states.map((s) => [s.key, new Path2D(s.d)]));
   const byKey = new Map(o.states.map((s) => [s.key, s]));
   const pulses = new Map<string, number>(); // chave -> instante da última chegada
@@ -48,8 +57,7 @@ export function createFlow(o: FlowOptions) {
     const r = o.canvas.getBoundingClientRect();
     dpr = Math.min(window.devicePixelRatio || 1, r.width < 640 ? 1.5 : 2);
     w = r.width; h = r.height;
-    o.canvas.width = Math.round(w * dpr);
-    o.canvas.height = Math.round(h * dpr);
+    for (const c of o.trails ? [o.canvas, o.trails] : [o.canvas]) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
     frameSig = "";
   }
 
@@ -60,6 +68,20 @@ export function createFlow(o: FlowOptions) {
     const P = (p: Pt): Pt => [f.map.x + p[0] * f.map.k, f.map.y + p[1] * f.map.k];
     const hub = P(o.hub);
     routes = new Map(o.states.map((s) => [s.key, route(f.src, hub, P(s.c), 0.32)]));
+    trailsDark = null;
+  }
+
+  // Fios de luz tênues. Num canvas próprio, só quando as rotas ou o tema mudam.
+  function strokeTrails(g: CanvasRenderingContext2D, dark: boolean) {
+    g.lineCap = "round";
+    g.lineWidth = 1;
+    g.strokeStyle = dark ? "rgba(255,223,0,0.10)" : "rgba(0,112,43,0.13)";
+    g.beginPath();
+    for (const r of routes.values()) {
+      if (r.a) { g.moveTo(r.a.p0[0], r.a.p0[1]); g.quadraticCurveTo(r.a.c[0], r.a.c[1], r.a.p1[0], r.a.p1[1]); }
+      g.moveTo(r.b.p0[0], r.b.p0[1]); g.quadraticCurveTo(r.b.c[0], r.b.c[1], r.b.p1[0], r.b.p1[1]);
+    }
+    g.stroke();
   }
 
   function draw(t: number, animate: boolean) {
@@ -70,16 +92,11 @@ export function createFlow(o: FlowOptions) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    // 1. trilhas fixas (fios de luz) -- tênues
+    // 1. trilhas fixas (fios de luz)
+    if (tctx) {
+      if (trailsDark !== dark) { trailsDark = dark; tctx.setTransform(dpr, 0, 0, dpr, 0, 0); tctx.clearRect(0, 0, w, h); strokeTrails(tctx, dark); }
+    } else strokeTrails(ctx, dark);
     ctx.lineCap = "round";
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = dark ? "rgba(255,223,0,0.10)" : "rgba(0,112,43,0.13)";
-    ctx.beginPath();
-    for (const r of routes.values()) {
-      if (r.a) { ctx.moveTo(r.a.p0[0], r.a.p0[1]); ctx.quadraticCurveTo(r.a.c[0], r.a.c[1], r.a.p1[0], r.a.p1[1]); }
-      ctx.moveTo(r.b.p0[0], r.b.p0[1]); ctx.quadraticCurveTo(r.b.c[0], r.b.c[1], r.b.p1[0], r.b.p1[1]);
-    }
-    ctx.stroke();
 
     // 2. pulsos dos estados que receberam dinheiro (Path2D no espaço do viewBox)
     ctx.save();
@@ -115,9 +132,9 @@ export function createFlow(o: FlowOptions) {
     }
     ctx.globalCompositeOperation = dark ? "lighter" : "source-over";
     for (let i = 1; i <= TAIL; i++) {
-      const a = 1 - i / (TAIL + 1);
-      ctx.strokeStyle = dark ? `rgba(255,214,0,${(a * 0.55).toFixed(3)})` : `rgba(0,140,55,${(a * 0.6).toFixed(3)})`;
-      ctx.lineWidth = 2.4 * a + 0.3;
+      const st = TAIL_STYLE[i]!;
+      ctx.strokeStyle = dark ? st.dark : st.light;
+      ctx.lineWidth = st.w;
       ctx.beginPath();
       for (let k = 0; k < n; k++) {
         const b = k * (TAIL + 1) * 2;

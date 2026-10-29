@@ -67,7 +67,7 @@ function AutorCard({ a, i, idx, anos }: { a: AutorLinha; i: number; idx: IndiceP
         </span>
         <div className="min-w-0 flex-1">
           <Link to={urlAutor(a.codigo)} className="line-clamp-2 font-semibold leading-tight after:absolute after:inset-0 after:rounded-2xl after:content-[''] group-hover:text-accent">{nome}</Link>
-          <div className="mt-1 flex h-5 items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs text-muted">
+          <div className="mt-1 flex min-h-5 flex-wrap items-center gap-x-1.5 whitespace-nowrap text-xs text-muted">
             {p ? <><span className="relative z-10"><PartyBadge sigla={p.partido} /></span><span>{p.uf}</span><span>· {p.casa === "Senado" ? "Senador(a)" : "Deputado(a)"}</span></> : <span>{formatNumber(a.n)} emendas</span>}
           </div>
         </div>

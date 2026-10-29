@@ -1,14 +1,12 @@
 // Cena do hero (chunk lazy): Brasília em camadas com parallax + Brasil de vidro + fluxo de partículas.
-import { UF_POR_CODIGO } from "@emenda/contracts";
-import { geoMercator, geoPath } from "d3-geo";
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "motion/react";
 import { useEffect, useMemo, useRef, type Ref } from "react";
 import { createPortal } from "react-dom";
-import { ibge, useMalha } from "@/lib/data";
 import { useActive } from "@/ui/motion/useActive";
 import { createFlow, type FlowFrame } from "./FlowCanvas";
 import { apportion, buildSlots, type Pt } from "./flow";
 import { GlassMap, MAP, type Chip, type MapState } from "./GlassMap";
+import { HERO_UF } from "./paths";
 import { LayerFar, LayerFront, LayerFrontFx, LayerMid, LayerMidFx } from "./Skyline";
 
 export interface HeroSceneProps {
@@ -16,42 +14,48 @@ export interface HeroSceneProps {
   anchor: HTMLElement | null;
   /** Valor pago por UF (sigla -> centavos), de brasil.json. */
   pesoPorUf?: Record<string, number>;
+  /** Clique num estado (mapa ou selo). */
+  onUf?: (uf: string) => void;
+  nomeUf?: (uf: string) => string;
 }
 
 const CHIPS: Array<[string, -1 | 1]> = [["SP", -1], ["RJ", 1], ["BA", 1], ["CE", 1]];
-const isDark = () => {
-  const t = document.documentElement.dataset.theme;
-  return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-};
+/** Tema escuro, lido só quando muda (nada de matchMedia por quadro). */
+function themeWatcher() {
+  const mq = matchMedia("(prefers-color-scheme: dark)");
+  const read = () => { const t = document.documentElement.dataset.theme; return t ? t === "dark" : mq.matches; };
+  let dark = read();
+  const on = () => { dark = read(); };
+  const mo = new MutationObserver(on);
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  mq.addEventListener("change", on);
+  return { dark: () => dark, stop: () => { mo.disconnect(); mq.removeEventListener("change", on); } };
+}
+/** Folga (px) para o parallax e a entrada do mapa não saírem do canvas. */
+const PAD = 48;
 
-export default function HeroScene({ section, anchor, pesoPorUf }: HeroSceneProps) {
+export default function HeroScene({ section, anchor, pesoPorUf, onUf, nomeUf }: HeroSceneProps) {
   const reduce = !!useReducedMotion();
   const secRef = useRef<HTMLElement | null>(section);
   secRef.current = section;
   const active = useActive(secRef);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const trailsRef = useRef<HTMLCanvasElement>(null);
   const mapRef = useRef<SVGSVGElement>(null);
   const towerRef = useRef<SVGCircleElement>(null);
   const chipEls = useRef(new Map<string, HTMLSpanElement>());
-  const q = useMalha(ibge.malhaBrasilUF());
 
   // ---------- geometria do mapa ----------
+  // Caminhos pré-projetados (scripts/hero-paths.ts): sem download da malha nem d3 no primeiro quadro.
   const geo = useMemo(() => {
-    if (!q.data?.features?.length) return null;
-    const fc = q.data as unknown as Parameters<ReturnType<typeof geoMercator>["fitSize"]>[1];
-    const proj = geoMercator().fitExtent([[14, 14], [MAP.w - 14, MAP.h - 14]], fc);
-    const gp = geoPath(proj);
-    const raw = q.data.features.map((f) => {
-      const g = f as unknown as Parameters<typeof gp>[0];
-      return { key: UF_POR_CODIGO[String(f.properties.codarea)] ?? String(f.properties.codarea), d: gp(g) ?? "", c: gp.centroid(g) as Pt };
-    });
+    const raw = HERO_UF;
     const hub: Pt = raw.find((s) => s.key === "DF")?.c ?? [MAP.w * 0.62, MAP.h * 0.55];
     const vals = raw.map((s) => pesoPorUf?.[s.key] ?? 0);
     const max = Math.max(1, ...vals);
     const far = Math.max(...raw.map((s) => Math.hypot(s.c[0] - hub[0], s.c[1] - hub[1])));
     const states: MapState[] = raw.map((s, i) => ({ ...s, level: Math.sqrt(vals[i]! / max), dist: Math.hypot(s.c[0] - hub[0], s.c[1] - hub[1]) / far }));
     return { states, hub, outline: states.map((s) => s.d).join("") };
-  }, [q.data, pesoPorUf]);
+  }, [pesoPorUf]);
 
   const chips: Chip[] = useMemo(() => (pesoPorUf ? CHIPS.filter(([k]) => pesoPorUf[k]).map(([key, side]) => ({ key, side, valor: pesoPorUf[key]! })) : []), [pesoPorUf]);
 
@@ -90,8 +94,21 @@ export default function HeroScene({ section, anchor, pesoPorUf }: HeroSceneProps
   // ---------- partículas ----------
   const flowRef = useRef<ReturnType<typeof createFlow> | null>(null);
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvas = canvasRef.current, trails = trailsRef.current;
     if (!geo || !canvas) return;
+    const theme = themeWatcher();
+    // Canvas só do tamanho da área do mapa (+ torre no desktop): menos pixels por quadro para pintar e compor.
+    const fit = () => {
+      const m = mapRef.current?.getBoundingClientRect();
+      if (!m || !m.width) return;
+      const sr = section.getBoundingClientRect();
+      let l = m.left, t = m.top, r = m.right, b = m.bottom;
+      const tw = towerRef.current?.getBoundingClientRect();
+      if (tw && tw.width > 0 && sr.width >= 1024) { l = Math.min(l, tw.left); t = Math.min(t, tw.top); r = Math.max(r, tw.right); b = Math.max(b, tw.bottom); }
+      l = Math.max(sr.left, l - PAD); t = Math.max(sr.top, t - PAD); r = Math.min(sr.right, r + PAD); b = Math.min(sr.bottom, b + PAD);
+      for (const c of trails ? [canvas, trails] : [canvas]) Object.assign(c.style, { left: `${l - sr.left}px`, top: `${t - sr.top}px`, width: `${r - l}px`, height: `${b - t}px` });
+    };
+    fit();
     const dests: Record<string, number> = {};
     for (const s of geo.states) if (s.key !== "DF") dests[s.key] = pesoPorUf?.[s.key] ?? 1;
     const n = section.clientWidth < 640 ? 40 : 84;
@@ -113,10 +130,11 @@ export default function HeroScene({ section, anchor, pesoPorUf }: HeroSceneProps
     window.addEventListener("resize", markDirty);
     const flow = createFlow({
       canvas,
+      trails: trails ?? undefined,
       states: geo.states.map((s) => ({ key: s.key, d: s.d, c: s.c, level: s.level })),
       hub: geo.hub,
       slots,
-      dark: isDark,
+      dark: theme.dark,
       // Medir força layout: só quando algo mudou (parallax, resize) ou durante a entrada do mapa.
       measure: () => {
         if (!dirty && cache && performance.now() > settleAt) return cache;
@@ -130,11 +148,13 @@ export default function HeroScene({ section, anchor, pesoPorUf }: HeroSceneProps
       },
     });
     flowRef.current = flow;
-    const ro = new ResizeObserver(() => { markDirty(); flow.resize(); if (reduce) requestAnimationFrame(() => flow.still()); });
+    const ro = new ResizeObserver(() => { fit(); markDirty(); flow.resize(); if (reduce) requestAnimationFrame(() => flow.still()); });
+    // A entrada do mapa (map-in) muda o tamanho medido: reajusta quando termina.
+    const refit = window.setTimeout(() => { fit(); markDirty(); flow.resize(); }, 1500);
     ro.observe(section);
     flow.resize();
     if (reduce) requestAnimationFrame(() => flow.still());
-    return () => { ro.disconnect(); flow.destroy(); flowRef.current = null; unsubs.forEach((u) => u()); window.removeEventListener("resize", markDirty); };
+    return () => { ro.disconnect(); clearTimeout(refit); theme.stop(); flow.destroy(); flowRef.current = null; unsubs.forEach((u) => u()); window.removeEventListener("resize", markDirty); };
   }, [geo, pesoPorUf, reduce, section, spx, spy, scrollYProgress]);
 
   useEffect(() => {
@@ -154,10 +174,11 @@ export default function HeroScene({ section, anchor, pesoPorUf }: HeroSceneProps
         <motion.div className="absolute inset-y-0 -inset-x-[3%]" style={st(front)}><LayerFront />{!reduce && <LayerFrontFx />}</motion.div>
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-bg" />
       </div>
+      <canvas ref={trailsRef} className="pointer-events-none absolute inset-0 z-20 size-full" aria-hidden />
       <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 z-20 size-full" aria-hidden />
       {anchor && geo && createPortal(
         <motion.div className="absolute inset-0" style={reduce ? undefined : { x: mapX, y: mapY }}>
-          <GlassMap ref={mapRef} states={geo.states} outline={geo.outline} hub={geo.hub} chips={chips} chipRef={chipRef} animate={!reduce} />
+          <GlassMap ref={mapRef} states={geo.states} outline={geo.outline} hub={geo.hub} chips={chips} chipRef={chipRef} animate={!reduce} onUf={onUf} nomeUf={nomeUf} />
         </motion.div>,
         anchor,
       )}

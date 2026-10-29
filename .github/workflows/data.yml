@@ -16,8 +16,25 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p etl
+      - name: Snapshot anterior (branch data) para o diff de novidades
+        run: |
+          if git fetch -q --depth=1 origin data; then
+            git worktree add -q --detach "$RUNNER_TEMP/prev" FETCH_HEAD
+          else
+            echo "sem branch data: novidades em modo bootstrap"
+          fi
       - run: scripts/build-data.sh --out data/out
       - run: scripts/gastos-fetch.sh
+      - name: Novidades (diff + APIs Câmara/Senado)
+        run: |
+          cargo run -q -p etl --release --bin emenda-novidades -- \
+            --prev "$RUNNER_TEMP/prev" --cur data/out --out data/out || {
+            echo "::warning::emenda-novidades falhou; mantendo o arquivo anterior"
+            cp -r "$RUNNER_TEMP/prev/v1/novidades" "$RUNNER_TEMP/prev/v1/novidades.json" data/out/v1/ 2>/dev/null || true
+          }
+      - uses: oven-sh/setup-bun@v2
+      - name: Índice da busca universal (v1/busca.json)
+        run: bun scripts/busca-indice.ts --out data/out || echo "::warning::busca-indice falhou; o site usa as APIs como reserva"
       - name: Publicar no branch data
         run: |
           cd data/out

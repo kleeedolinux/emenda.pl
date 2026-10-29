@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Link } from "react-router";
 import { Badge, Card, EmptyState, ExternalLink, Spinner, VoteBadge, camara, formatDate } from "@/ui";
 import { fetchJson } from "@/lib/data";
+import { ListaVerMais } from "@/features/linguagem";
 import { cam, fontes, type Pagina, type VotacaoLista, type VotacaoSenado } from "@/features/legislativo/api";
 import { PAUTAS, type Pauta } from "@/features/legislativo/pautas";
 import type { VotoCamara } from "@/features/legislativo/votacao";
@@ -52,26 +53,24 @@ export function pautasSenador(vs: readonly VotacaoSenado[]): VotoPauta[] {
   return [...m.values()];
 }
 
-export function CardPautas({ itens, carregando }: { itens: VotoPauta[]; carregando?: boolean }) {
+export function CardPautas({ itens, carregando, titulo = "Como votou no que mais deu o que falar" }: { itens: VotoPauta[]; carregando?: boolean; titulo?: string | null }) {
   const ord = useMemo(() => [...itens].sort((a, b) => (b.data ?? "").localeCompare(a.data ?? "")), [itens]);
   return (
-    <Card title="Como votou nas pautas mais polêmicas" tip={DICA}>
+    <Card title={titulo ?? undefined} tip={titulo ? DICA : undefined}>
       {carregando && <Spinner label="Lendo votações…" />}
       {!carregando && ord.length === 0 && <EmptyState title="Nenhuma votação nominal dessas pautas no período." />}
-      <ul className="divide-y divide-line">
-        {ord.map((x) => (
-          <li key={x.pauta.apelido} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
-            <span className="min-w-0">
-              <span className="font-medium">{x.pauta.apelido}</span> <Badge>{x.pauta.tema}</Badge>
-              <span className="block text-xs text-muted">
-                {x.pauta.sigla} {x.pauta.numero}/{x.pauta.ano}{x.data ? ` · votação de ${formatDate(x.data)}` : ""} ·{" "}
-                {x.href ? (x.externo ? <ExternalLink href={x.href}>detalhes</ExternalLink> : <Link className="link" to={x.href}>ver placar</Link>) : null}
-              </span>
+      <ListaVerMais itens={ord} inicial={5} chave={(x) => x.pauta.apelido} className="divide-y divide-line" render={(x) => (
+        <div className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+          <span className="min-w-0">
+            <span className="font-medium">{x.pauta.apelido}</span> <Badge>{x.pauta.tema}</Badge>
+            <span className="block text-xs text-muted">
+              {x.pauta.sigla} {x.pauta.numero}/{x.pauta.ano}{x.data ? ` · votação de ${formatDate(x.data)}` : ""} ·{" "}
+              {x.href ? (x.externo ? <ExternalLink href={x.href}>detalhes</ExternalLink> : <Link className="link" to={x.href}>ver placar</Link>) : null}
             </span>
-            {x.voto ? <VoteBadge voto={x.voto} /> : <Spinner label="" />}
-          </li>
-        ))}
-      </ul>
+          </span>
+          {x.voto ? <VoteBadge voto={x.voto} /> : <Spinner label="" />}
+        </div>
+      )} />
     </Card>
   );
 }

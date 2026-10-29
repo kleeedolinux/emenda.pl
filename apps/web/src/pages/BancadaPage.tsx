@@ -10,6 +10,7 @@ import { useAutores } from "@/features/legislativo/hooks";
 import { Fontes } from "@/features/legislativo/components";
 import { ShareButton } from "@/features/share";
 import { bancadaPorId, documentoFrente } from "@/features/bancadas/catalogo";
+import { pdfFrente } from "@/lib/cdn";
 import { composicao, dataRegistro, resolverBancada, somaEmendas, somaGastos, votoGrupo, type FrenteDetalhe, type MembroFrente } from "@/features/bancadas/bancadas";
 import { BarraComparada, DonutPartidos, GradeMembros } from "@/features/bancadas/components";
 import { pathFrente, pathMembros, useVotosPautas } from "@/features/bancadas/hooks";
@@ -29,7 +30,7 @@ export default function BancadaPage() {
   const membros = mem.data ?? [];
   const url = `/bancada/${b?.slug ?? id}`;
   const registro = dataRegistro(f?.situacao);
-  const doc = f?.urlDocumento || documentoFrente(id);
+  const doc = (f?.urlDocumento && pdfFrente(id)) || f?.urlDocumento || documentoFrente(id);
 
   return (
     <>

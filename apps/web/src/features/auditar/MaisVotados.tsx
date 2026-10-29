@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { Avatar, Card, PartyBadge, Skeleton, Tip, formatNumber, useApi } from "@/ui";
 import { cam, dedupeDeputados, mapSenadores, sen, type DeputadoLista, type SenadorResumo } from "@/features/legislativo/api";
 import { useCamaraTodas, useSenado } from "@/features/legislativo/hooks";
-import { cruzarMaisVotados, type MaisVotadosArquivo, type ParlamentarAtual } from "./maisVotados";
+import { cruzarMaisVotados, type MaisVotadosArquivo, type ParlamentarAtual } from "./cruzarMaisVotados";
 
 /** Destaque dos mais votados em 2022 (TSE), com atalho para o boletim de cada um. */
 export function MaisVotados({ limite = 12 }: { limite?: number }) {

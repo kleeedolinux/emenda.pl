@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { GastosRanking } from "@emenda/contracts";
-import { empilhado, formatCnpjCpf, kpis, linkFornecedor, mesAno, rankingLinhas, rotuloCategoria } from "./gastos";
+import { empilhado, formatCnpjCpf, kpis, linkFornecedor, mesAno, rankingLinhas, rotuloCategoria, totalCota } from "./gastos";
 
 describe("formatCnpjCpf", () => {
   test.each([
@@ -30,6 +30,12 @@ describe("rotuloCategoria", () => {
 test("mesAno", () => {
   expect(mesAno("2026-10")).toBe("out/2026");
   expect(mesAno(null)).toBe("—");
+});
+
+test("totalCota: usa o mandato; sem mandato cai na soma por categoria", () => {
+  const cat = [{ categoria: "A", valor: 300, n: 1 }, { categoria: "B", valor: 200, n: 1 }];
+  expect(totalCota({ mandato: { inicio: "2023-02", total: 1000, meses: 10, mediaMensal: 100 }, porCategoria: cat })).toEqual({ total: 1000, mediaMensal: 100 });
+  expect(totalCota({ mandato: { inicio: "2019-02", total: 0, meses: 0, mediaMensal: 0 }, porCategoria: cat })).toEqual({ total: 500, mediaMensal: 0 });
 });
 
 test("kpis: mandato, média e % do teto da cota", () => {
