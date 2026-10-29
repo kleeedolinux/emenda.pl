@@ -1,6 +1,7 @@
 //! emenda.pl ETL: Portal da Transparência + TSE + IBGE -> JSON estático v1.
 
 pub mod abertas;
+pub mod assets;
 pub mod feed;
 pub mod gastos;
 pub mod model;

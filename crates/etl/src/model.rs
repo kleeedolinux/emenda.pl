@@ -165,6 +165,9 @@ pub struct Convenio {
 pub struct Vice {
     pub nome: String,
     pub partido: String,
+    /// TSE SQ_CANDIDATO (asset mirror photos); not part of the JSON contract.
+    #[serde(skip)]
+    pub sq: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -175,6 +178,9 @@ pub struct Prefeito {
     pub situacao: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vice: Option<Vice>,
+    /// TSE SQ_CANDIDATO (asset mirror photos); not part of the JSON contract.
+    #[serde(skip)]
+    pub sq: String,
 }
 
 #[derive(Serialize)]

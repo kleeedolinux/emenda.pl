@@ -213,6 +213,7 @@ pub fn tse(p: &Path, mun: &HashMap<String, String>) -> Result<Tse> {
                     Vice {
                         nome: r.get("NM_URNA_CANDIDATO"),
                         partido: r.get("SG_PARTIDO"),
+                        sq: r.get("SQ_CANDIDATO"),
                     },
                 );
                 continue;
@@ -232,6 +233,7 @@ pub fn tse(p: &Path, mun: &HashMap<String, String>) -> Result<Tse> {
                 eleicao: 2024,
                 situacao: sit,
                 vice: None,
+                sq: r.get("SQ_CANDIDATO"),
             };
             best.insert(ue, (ord, k, r.get("SG_UF"), r.get("NM_UE"), pf));
         }

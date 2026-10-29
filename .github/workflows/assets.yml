@@ -1,0 +1,63 @@
+# Espelho de fotos (deputados, senadores, prefeitos/vices), logos, bandeiras e PDFs oficiais -> branch órfão `assets` (servido em cdn.emenda.online pelo Worker).
+# Diário: incremental (só itens novos). Dia 1: completo (revalida tudo com If-None-Match/If-Modified-Since).
+name: assets
+on:
+  schedule:
+    - cron: "0 10 * * *" # todo dia 07:00 BRT; dia 1 = completo
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "incremental | completo"
+        required: false
+        default: incremental
+permissions:
+  contents: write
+concurrency: { group: assets, cancel-in-progress: false }
+jobs:
+  espelho:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p etl --test assets
+      - run: cargo build --release -p etl --bin emenda-assets
+      - name: Modo
+        id: modo
+        run: |
+          m="${{ github.event.inputs.modo }}"
+          if [ -z "$m" ]; then
+            if [ "$(date -u +%d)" = "01" ]; then m=completo; else m=incremental; fi
+          fi
+          echo "modo=$m" >> "$GITHUB_OUTPUT"
+      - name: Branch anterior
+        run: |
+          url="https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          if git ls-remote --exit-code --heads "$url" assets >/dev/null; then
+            git clone -q --depth 1 --branch assets "$url" out
+          else
+            mkdir out && git -C out init -q -b assets
+          fi
+      - name: TSE 2022/2024 + IBGE (fotos de eleitos)
+        run: |
+          mkdir -p cache
+          curl -fsSL --retry 3 -o cache/consulta_cand_2024.zip https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2024.zip
+          curl -fsSL --retry 3 -o cache/ibge.json https://servicodados.ibge.gov.br/api/v1/localidades/municipios
+          curl -fsSL --retry 3 -o cache/consulta_cand_2022.zip https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2022.zip
+      - name: Espelhar
+        id: run
+        run: |
+          ./target/release/emenda-assets --out out --modo "${{ steps.modo.outputs.modo }}" \
+            --tse cache/consulta_cand_2024.zip --ibge cache/ibge.json \
+            --tse2022 cache/consulta_cand_2022.zip | tee -a "$GITHUB_OUTPUT"
+      - name: Publicar no branch assets
+        if: steps.run.outputs.mudou == 'true'
+        run: |
+          cd out
+          git config user.name "emenda.pl bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -q --orphan publicar
+          git add -A
+          git commit -qm "assets $(date -u +%F) (${{ steps.modo.outputs.modo }})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" publicar:assets
