@@ -19,7 +19,7 @@ get https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2
 get https://servicodados.ibge.gov.br/api/v1/localidades/municipios "$cache/ibge_municipios.json" \
   || get https://emenda.online/api/ibge/v1/localidades/municipios "$cache/ibge_municipios.json" # IBGE recusa IPs de fora do Brasil
 unzip -oq "$cache/emendas.zip" -d "$cache/emendas"
-cargo run -q -p etl --release --manifest-path "$root/Cargo.toml" -- \
+cargo run -q -p etl --release --bin emenda-etl --manifest-path "$root/Cargo.toml" -- \
   --input "$cache/emendas" --out "$out" \
   --tse "$cache/consulta_cand_2024.zip" --ibge "$cache/ibge_municipios.json"
 echo "ok: $out/v1 ($(du -sh "$out/v1" | cut -f1))"

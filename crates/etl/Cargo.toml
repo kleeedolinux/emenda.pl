@@ -2,6 +2,7 @@
 name = "etl"
 version = "0.10.0"
 edition = "2021"
+default-run = "emenda-etl"
 license = "GPL-3.0-only"
 authors = ["Júlia Klee <onmikron@gmail.com>"]
 description = "ETL: dados abertos de emendas parlamentares -> JSON estático (contrato v1)"
