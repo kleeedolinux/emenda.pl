@@ -75,8 +75,14 @@ pub(crate) async fn handle(req: &Request, path: &str) -> Result<Response> {
     let cache = Cache::default();
     let key = cdn::cache_key(path);
     if let Ok(Some(mut hit)) = cache.get(key.as_str(), true).await {
-        hit.headers_mut().set("x-emenda-cache", "HIT")?;
-        return conditional(req, hit);
+        // Respostas do Cache API têm headers imutáveis: copia para uma resposta nova.
+        let h = Headers::new();
+        for (k, v) in hit.headers().entries() {
+            h.set(&k, &v)?;
+        }
+        h.set("x-emenda-cache", "HIT")?;
+        let fresh = Response::from_stream(hit.stream()?)?.with_headers(h);
+        return conditional(req, fresh);
     }
     // Photo by name: resolve through the name index; served and cached under the alias path.
     let alvo = match cdn::alias(path) {
