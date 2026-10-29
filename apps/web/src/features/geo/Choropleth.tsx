@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion, useSpring } from "motion/rea
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { useMalha } from "@/lib/data";
+import { paraEnquadrar } from "./enquadrar";
 import { sequentialScale } from "@/lib/colors";
 import { formatNumber } from "@/lib/format";
 import { ErrorState, Skeleton } from "@/ui/primitives";
@@ -40,7 +41,7 @@ export function Choropleth({ url, values, label, href, format = (n) => formatNum
 
   const paths = useMemo(() => {
     if (!q.data?.features?.length) return [];
-    const fc = q.data as unknown as Parameters<ReturnType<typeof geoMercator>["fitSize"]>[1];
+    const fc = paraEnquadrar(q.data) as unknown as Parameters<ReturnType<typeof geoMercator>["fitSize"]>[1];
     const proj = geoMercator().fitSize([W, height], fc);
     const gp = geoPath(proj);
     return q.data.features.map((f) => {
