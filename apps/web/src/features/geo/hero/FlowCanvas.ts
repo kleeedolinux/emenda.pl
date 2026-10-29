@@ -41,7 +41,7 @@ function sprite(color: string, glow: string): HTMLCanvasElement {
 }
 
 export function createFlow(o: FlowOptions) {
-  const ctx = o.canvas.getContext("2d", { alpha: true, desynchronized: true })!;
+  const ctx = o.canvas.getContext("2d", { alpha: true })!;
   const tctx = o.trails?.getContext("2d", { alpha: true }) ?? null;
   let trailsDark: boolean | null = null;
   const paths = new Map(o.states.map((s) => [s.key, new Path2D(s.d)]));

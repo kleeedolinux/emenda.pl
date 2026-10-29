@@ -31,8 +31,6 @@ function themeWatcher() {
   mq.addEventListener("change", on);
   return { dark: () => dark, stop: () => { mo.disconnect(); mq.removeEventListener("change", on); } };
 }
-/** Folga (px) para o parallax e a entrada do mapa não saírem do canvas. */
-const PAD = 48;
 
 export default function HeroScene({ section, anchor, pesoPorUf, onUf, nomeUf }: HeroSceneProps) {
   const reduce = !!useReducedMotion();
@@ -97,18 +95,6 @@ export default function HeroScene({ section, anchor, pesoPorUf, onUf, nomeUf }: 
     const canvas = canvasRef.current, trails = trailsRef.current;
     if (!geo || !canvas) return;
     const theme = themeWatcher();
-    // Canvas só do tamanho da área do mapa (+ torre no desktop): menos pixels por quadro para pintar e compor.
-    const fit = () => {
-      const m = mapRef.current?.getBoundingClientRect();
-      if (!m || !m.width) return;
-      const sr = section.getBoundingClientRect();
-      let l = m.left, t = m.top, r = m.right, b = m.bottom;
-      const tw = towerRef.current?.getBoundingClientRect();
-      if (tw && tw.width > 0 && sr.width >= 1024) { l = Math.min(l, tw.left); t = Math.min(t, tw.top); r = Math.max(r, tw.right); b = Math.max(b, tw.bottom); }
-      l = Math.max(sr.left, l - PAD); t = Math.max(sr.top, t - PAD); r = Math.min(sr.right, r + PAD); b = Math.min(sr.bottom, b + PAD);
-      for (const c of trails ? [canvas, trails] : [canvas]) Object.assign(c.style, { left: `${l - sr.left}px`, top: `${t - sr.top}px`, width: `${r - l}px`, height: `${b - t}px` });
-    };
-    fit();
     const dests: Record<string, number> = {};
     for (const s of geo.states) if (s.key !== "DF") dests[s.key] = pesoPorUf?.[s.key] ?? 1;
     const n = section.clientWidth < 640 ? 40 : 84;
@@ -148,13 +134,11 @@ export default function HeroScene({ section, anchor, pesoPorUf, onUf, nomeUf }: 
       },
     });
     flowRef.current = flow;
-    const ro = new ResizeObserver(() => { fit(); markDirty(); flow.resize(); if (reduce) requestAnimationFrame(() => flow.still()); });
-    // A entrada do mapa (map-in) muda o tamanho medido: reajusta quando termina.
-    const refit = window.setTimeout(() => { fit(); markDirty(); flow.resize(); }, 1500);
+    const ro = new ResizeObserver(() => { markDirty(); flow.resize(); if (reduce) requestAnimationFrame(() => flow.still()); });
     ro.observe(section);
     flow.resize();
     if (reduce) requestAnimationFrame(() => flow.still());
-    return () => { ro.disconnect(); clearTimeout(refit); theme.stop(); flow.destroy(); flowRef.current = null; unsubs.forEach((u) => u()); window.removeEventListener("resize", markDirty); };
+    return () => { ro.disconnect(); theme.stop(); flow.destroy(); flowRef.current = null; unsubs.forEach((u) => u()); window.removeEventListener("resize", markDirty); };
   }, [geo, pesoPorUf, reduce, section, spx, spy, scrollYProgress]);
 
   useEffect(() => {
