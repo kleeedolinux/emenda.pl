@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { Autor, Brasil, Pix } from "@emenda/contracts";
-import { antesEDepois, resumoSecreto } from "./secreto";
+import type { Autor, AutorResumo, Brasil, Pix } from "@emenda/contracts";
+import { antesEDepois, comissoesDoTopo, resumoSecreto, somarPorAno } from "./secreto";
 
 const brasil = {
   porTipo: [{ tipo: "relator", pago: 100 }, { tipo: "relator", pago: 50 }, { tipo: "pix", pago: 999 }],
@@ -29,7 +29,26 @@ describe("resumoSecreto", () => {
 describe("antesEDepois (o que mudou depois)", () => {
   test("une os anos dos dois jeitos de mandar dinheiro", () => {
     expect(antesEDepois([{ ano: 2020, pago: 5 }, { ano: 2021, pago: 7 }], pix)).toEqual([
-      { ano: 2020, secreto: 5, pix: 1 }, { ano: 2021, secreto: 7, pix: 0 }, { ano: 2023, secreto: 0, pix: 8 },
+      { ano: 2020, secreto: 5, pix: 1, comissao: 0 }, { ano: 2021, secreto: 7, pix: 0, comissao: 0 }, { ano: 2023, secreto: 0, pix: 8, comissao: 0 },
+    ]);
+  });
+});
+
+describe("dinheiro das comissões (o que cresceu depois)", () => {
+  test("escolhe as comissões que mais mandaram (não relator, não bancada, não pessoa)", () => {
+    const autores = [
+      { codigo: "1", nome: "COM. DA SAUDE", pago: 5 }, { codigo: "2", nome: "BANCADA DA BAHIA", pago: 99 },
+      { codigo: "3", nome: "COMISSAO DE ASSUNTOS SOCIAIS - CAS", pago: 9 }, { codigo: "8100", nome: "RELATOR GERAL", pago: 100 }, { codigo: "4", nome: "FULANO", pago: 50 },
+    ] as unknown as AutorResumo[];
+    expect(comissoesDoTopo(autores, 5)).toEqual(["3", "1"]);
+  });
+  test("soma ano a ano", () => {
+    const a = [{ porAno: [{ ano: 2023, pago: 2 }, { ano: 2024, pago: 3 }] }, { porAno: [{ ano: 2024, pago: 4 }] }] as unknown as Autor[];
+    expect(somarPorAno(a)).toEqual([{ ano: 2023, pago: 2 }, { ano: 2024, pago: 7 }]);
+  });
+  test("tabela antes e depois inclui comissões", () => {
+    expect(antesEDepois([{ ano: 2021, pago: 7 }], pix, [{ ano: 2023, pago: 5 }])).toEqual([
+      { ano: 2020, secreto: 0, pix: 1, comissao: 0 }, { ano: 2021, secreto: 7, pix: 0, comissao: 0 }, { ano: 2023, secreto: 0, pix: 8, comissao: 5 },
     ]);
   });
 });

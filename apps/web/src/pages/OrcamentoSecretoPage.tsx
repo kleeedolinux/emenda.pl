@@ -1,21 +1,23 @@
 // /orcamento-secreto: história do orçamento secreto (emendas de relator-geral) com dados oficiais e fontes.
-import { dataPath, UF_POR_CODIGO, UFS, type Autor, type Brasil, type Pix, type SiglaUf } from "@emenda/contracts";
+import { dataPath, UF_POR_CODIGO, UFS, type Autor, type AutorResumo, type Brasil, type Pix, type SiglaUf } from "@emenda/contracts";
+import { useQueries } from "@tanstack/react-query";
 import { EyeOff } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useMemo, type ReactNode } from "react";
 import { Link } from "react-router";
 import { AreasGasto, CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import { F } from "@/features/entenda/temas";
-import { antesEDepois, resumoSecreto } from "@/features/orcamento/secreto";
+import { antesEDepois, comissoesDoTopo, resumoSecreto, somarPorAno } from "@/features/orcamento/secreto";
 import { ShareButton } from "@/features/share";
 import { bandeiraUf } from "@/lib/cdn";
-import { ibge, useApi } from "@/lib/data";
+import { fetchJson, ibge, useApi } from "@/lib/data";
 import { formatBRL } from "@/lib/format";
 import { Choropleth, CountUp, ErrorState, ExternalLink, NextSteps, Skeleton } from "@/ui";
 
 const brl = (n: number) => formatBRL(n, true);
 const URL_PAGINA = "/orcamento-secreto";
 const VERMELHO = "#dc2626";
+const N_COMISSOES = 12;
 
 function Bloco({ id, titulo, share, children }: { id: string; titulo: string; share: string; children: ReactNode }) {
   return (
@@ -51,7 +53,13 @@ export default function OrcamentoSecretoPage() {
   const rel = useApi<Autor>(dataPath.autor("8100"));
   const pix = useApi<Pix>(dataPath.pix());
   const r = useMemo(() => (b.data ? resumoSecreto(b.data, rel.data) : null), [b.data, rel.data]);
-  const linha = useMemo(() => (r ? antesEDepois(r.porAno, pix.data) : []), [r, pix.data]);
+  // Comissões: as que mais mandaram, ano a ano (cada uma tem seu arquivo).
+  const autores = useApi<AutorResumo[]>(dataPath.autores());
+  const codigos = useMemo(() => (autores.data ? comissoesDoTopo(autores.data, N_COMISSOES) : []), [autores.data]);
+  const coms = useQueries({ queries: codigos.map((c) => ({ queryKey: ["json", dataPath.autor(c)], queryFn: ({ signal }: { signal: AbortSignal }) => fetchJson<Autor>(dataPath.autor(c), signal), staleTime: Infinity })) });
+  const comPronto = codigos.length > 0 && coms.every((q) => !q.isPending);
+  const comissao = useMemo(() => (comPronto ? somarPorAno(coms.flatMap((q) => (q.data ? [q.data] : []))) : []), [comPronto]); // eslint-disable-line react-hooks/exhaustive-deps
+  const linha = useMemo(() => (r ? antesEDepois(r.porAno, pix.data, comissao) : []), [r, pix.data, comissao]);
   const gancho = r ? `${brl(r.total)} foram distribuídos sem mostrar quem pediu. Veja para onde foi 👇` : "";
   const values = useMemo(() => {
     const v: Record<string, number | undefined> = {};
@@ -117,18 +125,19 @@ export default function OrcamentoSecretoPage() {
             <AreasGasto itens={b.data!.fluxo.filter((f) => f.tipo === "relator").map((f) => ({ funcao: f.funcao, valor: f.pago }))} inicial={6} />
           </Bloco>
 
-          <Bloco id="depois" titulo="O que mudou depois" share="Depois que o STF acabou com o orçamento secreto, cresceu o dinheiro mandado sem dizer para quê. Veja os números 👇">
+          <Bloco id="depois" titulo="O que mudou depois" share="Depois que o STF acabou com o orçamento secreto, cresceu o dinheiro mandado sem dizer para quê e pelas comissões. Veja os números 👇">
             <ol className="relative grid gap-4 border-l-2 border-line pl-5">
               <li><b>2020–2022:</b> o relator do Orçamento distribui bilhões sem mostrar quem pediu.</li>
               <li><b>Dezembro de 2022:</b> o STF decide que isso não pode continuar.</li>
-              <li><b>Depois:</b> parte do dinheiro passa a ser mandada de outros jeitos, como o dinheiro mandado sem dizer para quê.</li>
+              <li><b>Depois:</b> parte do dinheiro passa a ser mandada de outros jeitos: sem dizer para quê (Pix) e pelas comissões do Congresso.</li>
             </ol>
             {linha.length > 0 && (
               <table className="mt-5 w-full text-sm">
-                <thead><tr className="text-left text-muted"><th className="py-1 font-medium">Ano</th><th className="py-1 text-right font-medium">Orçamento secreto</th><th className="py-1 text-right font-medium"><Link className="link" to="/pix">Sem dizer para quê</Link></th></tr></thead>
-                <tbody>{linha.map((l) => <tr key={l.ano} className="border-t border-line"><td className="py-1.5">{l.ano}</td><td className="py-1.5 text-right tabular" style={{ color: l.secreto ? VERMELHO : undefined }}>{l.secreto ? brl(l.secreto) : "—"}</td><td className="py-1.5 text-right tabular">{l.pix ? brl(l.pix) : "—"}</td></tr>)}</tbody>
+                <thead><tr className="text-left text-muted"><th className="py-1 font-medium">Ano</th><th className="py-1 text-right font-medium">Orçamento secreto</th><th className="py-1 text-right font-medium"><Link className="link" to="/pix">Sem dizer para quê</Link></th><th className="py-1 text-right font-medium"><Link className="link" to="/comissoes">Comissões</Link></th></tr></thead>
+                <tbody>{linha.map((l) => <tr key={l.ano} className="border-t border-line"><td className="py-1.5">{l.ano}</td><td className="py-1.5 text-right tabular" style={{ color: l.secreto ? VERMELHO : undefined }}>{l.secreto ? brl(l.secreto) : "—"}</td><td className="py-1.5 text-right tabular">{l.pix ? brl(l.pix) : "—"}</td><td className="py-1.5 text-right tabular">{!comPronto ? "…" : l.comissao ? brl(l.comissao) : "—"}</td></tr>)}</tbody>
               </table>
             )}
+            {linha.length > 0 && <p className="mt-2 text-xs text-muted">Comissões: soma das {N_COMISSOES} comissões que mais mandaram dinheiro (valores pagos, ano a ano, segundo o Portal da Transparência).</p>}
           </Bloco>
 
           <section className="card p-4 sm:p-6">
