@@ -7,7 +7,7 @@ import { cam, dedupeDeputados, mapSenadores, sen, type DeputadoLista, type Parti
 import { useCamaraTodas, useSenado } from "@/features/legislativo/hooks";
 import { tipoAutor } from "@/features/linguagem/linguagem";
 import { fetchJson, HttpError, useApi, useMunicipiosIbge } from "@/lib/data";
-import { itensDoIndice, itensEstados, itensLeis } from "./itens";
+import { itensDoIndice, itensEstados, itensBancadas, itensLeis } from "./itens";
 import type { ItemBusca, TipoBusca } from "./ranker";
 
 const DIA = 86_400_000;
@@ -23,7 +23,13 @@ export function useIndiceBusca(ativo: boolean): { itens: ItemBusca[]; carregando
   });
   const reserva = useIndiceReserva(ativo && pronto.isError);
   // Leis: fatia à parte, carregada só quando a busca é usada (não pesa no primeiro carregamento).
-  const leis = useQuery({ queryKey: ["busca-leis"], queryFn: async () => itensLeis((await import("@/features/legislativo/pautas")).PAUTAS), enabled: ativo, staleTime: Infinity });
+  const leis = useQuery({
+    queryKey: ["busca-leis"], enabled: ativo, staleTime: Infinity,
+    queryFn: async () => {
+      const [{ PAUTAS }, { BANCADAS_TEMATICAS }] = await Promise.all([import("@/features/legislativo/pautas"), import("@/features/bancadas/catalogo")]);
+      return [...itensLeis(PAUTAS), ...itensBancadas(BANCADAS_TEMATICAS)];
+    },
+  });
   const itens = useMemo(() => [...(pronto.data ? itensDoIndice(pronto.data) : reserva.itens), ...(leis.data ?? [])], [pronto.data, reserva.itens, leis.data]);
   const carregando: TipoBusca[] = ativo && pronto.isPending ? ["cidade", "deputado", "senador", "partido"] : reserva.carregando;
   return { itens, carregando };

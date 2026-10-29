@@ -78,7 +78,7 @@ export function desfecho(i: { situacaoCamara?: string | null; situacaoSenado?: s
   else if (/rejeitad/.test(t)) tipo = "rejeitada";
   else if (/arquivad/.test(t)) tipo = "arquivada";
   const promulgadaCongresso = norma?.tipo === "emenda.constitucional" || norma?.tipo === "decreto.legislativo" || norma?.tipo === "resolucao";
-  const rotulo = { lei: "Virou norma jurídica", vetada: "Vetada totalmente", rejeitada: "Rejeitada", arquivada: "Arquivada", tramitando: "Em tramitação" }[tipo];
+  const rotulo = { lei: "Virou lei", vetada: "Vetada pelo presidente", rejeitada: "Rejeitada", arquivada: "Arquivada", tramitando: "Ainda em discussão" }[tipo];
   return { tipo, rotulo, veto, norma, presidente: norma && !promulgadaCongresso ? presidenteNaData(norma.data) : null, promulgadaCongresso };
 }
 
@@ -101,4 +101,19 @@ export function normaDaTramitacao(ts: { dataHora: string; descricaoTramitacao: s
     }
   }
   return { norma, veto, vetoDerrubado };
+}
+
+export type StatusLeigo = "Virou lei" | "Vetada" | "Rejeitada" | "Arquivada" | "No Senado" | "Esperando o presidente" | "Em votação na Câmara" | "Parada";
+/** `statusProposicao.descricaoSituacao` -> uma palavra que qualquer pessoa entende. */
+export function statusLeigo(situacao: string | null | undefined): StatusLeigo {
+  const d = desfecho({ situacaoCamara: situacao });
+  if (d.tipo === "lei") return "Virou lei";
+  if (d.tipo === "vetada") return "Vetada";
+  if (d.tipo === "rejeitada") return "Rejeitada";
+  if (d.tipo === "arquivada") return "Arquivada";
+  const t = semAcento(situacao ?? "").toLowerCase();
+  if (/sancao|promulgac/.test(t)) return "Esperando o presidente";
+  if (/senado/.test(t)) return "No Senado";
+  if (/pronta para pauta|plenario|deliberacao|em votacao/.test(t)) return "Em votação na Câmara";
+  return "Parada";
 }

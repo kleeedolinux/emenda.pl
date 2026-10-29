@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { presidenteNaData, parseNormaGerada, linksNorma, desfecho, normaDaTramitacao } from "./normas";
+import { presidenteNaData, parseNormaGerada, linksNorma, desfecho, normaDaTramitacao, statusLeigo } from "./normas";
 
 describe("presidenteNaData", () => {
   test.each([
@@ -97,4 +97,18 @@ describe("normaDaTramitacao (Câmara)", () => {
     expect([r.norma?.tipo, r.norma?.numero]).toEqual([tipo as never, n]);
   });
   test("sem norma", () => expect(normaDaTramitacao([t("2023-01-01T00:00", "Apresentação", "x")]).norma).toBeNull());
+});
+
+describe("statusLeigo: situação da Câmara em palavras do dia a dia", () => {
+  test.each([
+    ["Transformado em Norma Jurídica", "Virou lei"],
+    ["Arquivada", "Arquivada"],
+    ["Pronta para Pauta no Plenário (PLEN)", "Em votação na Câmara"],
+    ["Aguardando Deliberação", "Em votação na Câmara"],
+    ["Aguardando Designação de Relator", "Parada"],
+    ["Aguardando Parecer do Relator na Comissão", "Parada"],
+    ["Remetida ao Senado Federal", "No Senado"],
+    ["Aguardando Sanção", "Esperando o presidente"],
+    [null, "Parada"],
+  ])("%s -> %s", (s, o) => expect(statusLeigo(s) as string).toBe(o));
 });

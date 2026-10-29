@@ -166,7 +166,7 @@ export default function ProposicaoPage() {
 function CardDesfecho({ d, vetoDerrubado, p, senado, carregandoSenado }: { d: Desfecho; vetoDerrubado: boolean; p: ProposicaoDetalhe; senado: ProcessoSenado | null; carregandoSenado: boolean }) {
   const l = d.norma ? linksNorma(d.norma) : null;
   return (
-    <Card title="Desfecho" tip="Resultado final da proposição, juntando o que dizem a Câmara e o Senado.">
+    <Card title="Como terminou" tip="Resultado final do projeto, juntando o que dizem a Câmara e o Senado.">
       <div className="space-y-3 text-sm">
         <p className="flex items-center gap-2 text-lg font-bold"><Gavel className="size-5 text-accent" aria-hidden />{d.rotulo}</p>
         {d.norma ? (

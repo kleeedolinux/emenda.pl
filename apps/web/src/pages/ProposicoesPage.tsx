@@ -10,7 +10,7 @@ import {
 } from "@/features/legislativo/api";
 import { useCamaraPagina } from "@/features/legislativo/hooks";
 import { PAUTAS, type Pauta } from "@/features/legislativo/pautas";
-import { desfecho } from "@/features/legislativo/normas";
+import { desfecho, statusLeigo } from "@/features/legislativo/normas";
 import { Campo, Fontes, Paginador, inputCls, selectCls } from "@/features/legislativo/components";
 import { AutoLink } from "@/features/links";
 
@@ -159,7 +159,7 @@ function StatusPauta({ id }: { id: number }) {
   const q = useCamara<ProposicaoDetalhe>(cam.proposicao(id));
   if (!q.data) return <Skeleton className="h-5 w-24" />;
   const d = desfecho({ situacaoCamara: q.data.statusProposicao.descricaoSituacao });
-  return <Badge tone={TOM[d.tipo]}>{d.tipo === "tramitando" ? q.data.statusProposicao.descricaoSituacao ?? d.rotulo : d.rotulo}</Badge>;
+  return <Badge tone={TOM[d.tipo]}>{statusLeigo(q.data.statusProposicao.descricaoSituacao)}</Badge>;
 }
 
 function CardPauta({ p }: { p: Pauta }) {

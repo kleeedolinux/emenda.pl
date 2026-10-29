@@ -15,8 +15,10 @@ const idx: IndiceBusca = {
 const realFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = realFetch; (window as { fetch: typeof fetch }).fetch = realFetch; });
 
-function montar(modo: "cidade" | "tudo" = "cidade") {
-  globalThis.fetch = (async (u: string) => (String(u).includes("busca.json") ? Response.json(idx) : new Response("", { status: 404 }))) as unknown as typeof fetch;
+function montar(modo: "cidade" | "tudo" | "lei" = "cidade") {
+  globalThis.fetch = (async (u: string) => (String(u).includes("busca.json") ? Response.json(idx)
+    : String(u).includes("proposicoes/2256735") ? Response.json({ dados: { id: 2256735, statusProposicao: { descricaoSituacao: "Aguardando Designação de Relator" } } })
+    : new Response("", { status: 404 }))) as unknown as typeof fetch;
   (window as { fetch: typeof fetch }).fetch = globalThis.fetch;
   const r = createMemoryRouter([{ path: "/", element: <BuscaUniversal variante="hero" modoInicial={modo} /> }, { path: "*", element: <p>destino</p> }]);
   render(<QueryClientProvider client={new QueryClient()}><RouterProvider router={r} /></QueryClientProvider>);
@@ -67,5 +69,14 @@ describe("BuscaUniversal (estilo Google)", () => {
     expect(lista.textContent).toContain("Pessoas");
     expect(lista.textContent).toContain("Nino Coutinho");
     expect(lista.textContent).toContain("Prefeito(a) de Iraquara");
+  });
+
+  test("lei mostra a situação em palavras simples", async () => {
+    montar("lei");
+    await digitar("2630");
+    const lista = await screen.findByRole("listbox");
+    const op = within(lista).getAllByRole("option")[0]!;
+    expect(op.textContent).toContain("PL 2630/2020");
+    expect(await within(op).findByText("Parada")).toBeTruthy();
   });
 });

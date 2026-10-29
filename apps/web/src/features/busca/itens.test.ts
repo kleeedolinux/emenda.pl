@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { IndiceBusca } from "@emenda/contracts";
-import { itensDoIndice, itensLeis } from "./itens";
+import { itensBancadas, itensDoIndice, itensLeis } from "./itens";
+import { BANCADAS_TEMATICAS } from "@/features/bancadas/catalogo";
 import { PAUTAS } from "@/features/legislativo/pautas";
 import { rankear } from "./ranker";
 
@@ -10,7 +11,7 @@ const idx: IndiceBusca = {
   deputados: [[209787, "Nikolas Ferreira", "PL", "MG", 100]],
   senadores: [["3795", "Otto Alencar", "PSD", "BA", 900]],
   partidos: [["PL", "Partido Liberal"]],
-  autores: [["8100", "RELATOR GERAL", 70]],
+  autores: [["8100", "RELATOR GERAL", 70], ["6011", "COM. DESENV REGIONAL E TURISMO", 9], ["7100", "BANCADA DA BAHIA", 8]],
   prefeitos: [[2914406, "NINO COUTINHO", "PSD"]],
 };
 
@@ -47,4 +48,19 @@ describe("prefeitos e leis", () => {
   });
   test("PEC 45 -> reforma tributária", () => expect(rankear(itens, "PEC 45")[0]?.sub).toContain("Reforma tributária"));
   test("reforma tributaria (sem acento) acha a PEC 45", () => expect(rankear(itens, "reforma tributaria").map((x) => x.titulo)).toContain("PEC 45/2019"));
+});
+
+describe("comissões e bancadas como tipos próprios", () => {
+  const itens = [...itensDoIndice(idx), ...itensBancadas(BANCADAS_TEMATICAS)];
+  test("comissão do Portal vira tipo comissao, com nome comum", () => {
+    expect(itens.find((x) => x.id === "a:6011")).toMatchObject({ tipo: "comissao", titulo: "Comissão de Desenvolvimento Regional e Turismo" });
+  });
+  test("bancada do estado vira tipo bancada", () => {
+    expect(itens.find((x) => x.id === "a:7100")).toMatchObject({ tipo: "bancada", titulo: "Bancada da Bahia" });
+  });
+  test("bancada temática acha pelo apelido popular", () => {
+    expect(rankear(itens, "ruralista", { tipos: ["bancada"] })[0]).toMatchObject({ tipo: "bancada", href: "/bancada/54323" });
+    expect(rankear(itens, "bala", { tipos: ["bancada"] })[0]?.titulo).toBe("Bancada da bala");
+  });
+  test("relator continua como quem mandou", () => expect(itens.find((x) => x.id === "a:8100")?.tipo).toBe("autor"));
 });

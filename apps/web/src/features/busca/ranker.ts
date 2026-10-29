@@ -2,7 +2,7 @@ import { UFS } from "@emenda/contracts";
 
 // Busca universal: normalização, ranqueamento tolerante a acento/erro, leis por "PL 2630/2020" e recentes. Puro.
 
-export type TipoBusca = "cidade" | "estado" | "deputado" | "senador" | "partido" | "lei" | "autor" | "prefeito";
+export type TipoBusca = "cidade" | "estado" | "deputado" | "senador" | "partido" | "lei" | "autor" | "prefeito" | "comissao" | "bancada";
 
 export interface ItemBusca {
   id: string;
@@ -94,7 +94,7 @@ export function rankear(itens: readonly ItemBusca[], q: string, o: { tipos?: rea
 }
 
 // ---------- Filtros (modo + estado) na URL ----------
-export const MODOS_BUSCA = ["tudo", "cidade", "estado", "deputado", "senador", "prefeito", "partido", "lei"] as const;
+export const MODOS_BUSCA = ["tudo", "cidade", "estado", "deputado", "senador", "prefeito", "partido", "lei", "comissao", "bancada"] as const;
 export type ModoBusca = (typeof MODOS_BUSCA)[number];
 export interface FiltrosBusca { q: string; modo: ModoBusca; uf: string | null }
 
@@ -183,6 +183,7 @@ const GRUPOS: Array<[string, readonly TipoBusca[]]> = [
   ["Pessoas", ["deputado", "senador", "prefeito", "autor"]],
   ["Leis", ["lei"]],
   ["Partidos", ["partido"]],
+  ["Comissões e bancadas", ["comissao", "bancada"]],
 ];
 /** Modo Tudo: resultados em grupos com título, na ordem fixa; dentro do grupo, a ordem do ranqueamento. */
 export function agrupar<T extends { tipo: TipoBusca }>(itens: readonly T[]): Array<{ grupo: string; itens: T[] }> {

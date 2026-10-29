@@ -11,6 +11,9 @@ import { EmblemaMunicipio } from "@/features/emblemas/EmblemaMunicipio";
 import { partyColor } from "@/lib/colors";
 import { formatBRL } from "@/lib/format";
 import { Avatar, PartyBadge } from "@/ui/primitives";
+import { cam, type ProposicaoDetalhe } from "@/features/legislativo/api";
+import { statusLeigo } from "@/features/legislativo/normas";
+import { useCamara } from "@/lib/data";
 import { useIndiceBusca, useValorCidades } from "./indice";
 import { agrupar, destacar, detectarLei, filtrosParaUrl, hrefLei, lerRecentes, rankear, salvarRecente, type FiltrosBusca, type ItemBusca, type ModoBusca, type TipoBusca } from "./ranker";
 
@@ -25,11 +28,13 @@ export const MODOS: Array<{ id: ModoBusca; rotulo: string; ph: string; tipos?: T
   { id: "prefeito", rotulo: "Prefeito", ph: "Nome do prefeito ou da cidade", tipos: ["prefeito"] },
   { id: "partido", rotulo: "Partido", ph: "Sigla ou nome. Ex.: PT, PL", tipos: ["partido"] },
   { id: "lei", rotulo: "Lei", ph: "Número ou apelido. Ex.: 2630, fake news", tipos: ["lei"] },
+  { id: "comissao", rotulo: "Comissão", ph: "Nome da comissão. Ex.: Saúde, Turismo", tipos: ["comissao"] },
+  { id: "bancada", rotulo: "Bancada", ph: "Estado ou apelido. Ex.: Bahia, ruralista", tipos: ["bancada"] },
 ];
 
-const TODOS: TipoBusca[] = ["cidade", "estado", "deputado", "senador", "prefeito", "partido", "autor", "lei"];
+const TODOS: TipoBusca[] = ["cidade", "estado", "deputado", "senador", "prefeito", "partido", "autor", "comissao", "bancada", "lei"];
 const storage = () => { try { return window.localStorage; } catch { return null; } };
-const ROTULO_TIPO: Record<TipoBusca, string> = { cidade: "Cidade", estado: "Estado", deputado: "Deputado(a)", senador: "Senador(a)", partido: "Partido", lei: "Lei", autor: "Quem mandou", prefeito: "Prefeito(a)" };
+const ROTULO_TIPO: Record<TipoBusca, string> = { cidade: "Cidade", estado: "Estado", deputado: "Deputado(a)", senador: "Senador(a)", partido: "Partido", lei: "Lei", autor: "Quem mandou", prefeito: "Prefeito(a)", comissao: "Comissão", bancada: "Bancada" };
 
 function useDebounced<T>(v: T, ms: number): T {
   const [d, setD] = useState(v);
@@ -46,7 +51,7 @@ function Imagem({ it }: { it: ItemBusca }) {
     return <span className="grid size-12 shrink-0 place-items-center"><img src={logoPartido(it.selo)} alt="" width={40} height={40} loading="lazy" onError={() => setErro(true)} className="size-10 rounded-md bg-white object-contain p-0.5 ring-1 ring-line" /></span>;
   if (it.tipo === "partido" || it.tipo === "estado")
     return <span className="grid size-12 shrink-0 place-items-center rounded-xl px-1 text-xs font-bold text-white" style={{ background: it.tipo === "partido" ? partyColor(it.selo ?? "") : "#002776" }}>{it.selo}</span>;
-  const Icon = it.tipo === "cidade" ? MapPin : it.tipo === "lei" ? FileText : it.tipo === "autor" ? Users : Landmark;
+  const Icon = it.tipo === "cidade" ? MapPin : it.tipo === "lei" ? FileText : it.tipo === "autor" || it.tipo === "bancada" ? Users : Landmark;
   const icone = (
     <span className="relative grid size-12 shrink-0 place-items-center rounded-xl bg-verde/12 text-accent">
       <Icon className="size-5" aria-hidden />
@@ -56,6 +61,15 @@ function Imagem({ it }: { it: ItemBusca }) {
   if (it.tipo === "cidade" && it.uf && it.id.startsWith("m:"))
     return <span className="grid size-12 shrink-0 place-items-center"><EmblemaMunicipio ibge={it.id.slice(2)} uf={it.uf} nome={it.titulo} size={28} fallback={icone} /></span>;
   return icone;
+}
+
+/** Situação da lei, ao vivo, em uma palavra: "Virou lei", "Em votação na Câmara", "Parada". */
+function StatusLei({ id }: { id: string }) {
+  const q = useCamara<ProposicaoDetalhe>(cam.proposicao(id));
+  if (!q.data) return null;
+  const s = statusLeigo(q.data.statusProposicao?.descricaoSituacao);
+  const cor = s === "Virou lei" ? "bg-verde/15 text-accent" : s === "Parada" || s === "Arquivada" || s === "Rejeitada" || s === "Vetada" ? "bg-surface-2 text-muted" : "bg-amarelo/25 text-fg";
+  return <span className={clsx("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", cor)}>{s}</span>;
 }
 
 function Linha2({ it }: { it: ItemBusca }) {
@@ -188,7 +202,8 @@ export function BuscaUniversal({ variante = "painel", modoInicial = "tudo", ufIn
                 <b className="block text-sm tabular">{formatBRL(valor, true)}</b>
                 <span className="text-muted">{h.tipo === "cidade" ? "recebidos" : "mandados"}</span>
               </span>
-            ) : modo === "estado" && h.tipo === "estado" && !h.id.startsWith("abrir:") ? <span className="shrink-0 text-xs font-semibold text-accent">filtrar</span> : null}
+            ) : h.tipo === "lei" && h.id.startsWith("lei:") ? <StatusLei id={h.id.slice(4)} />
+            : modo === "estado" && h.tipo === "estado" && !h.id.startsWith("abrir:") ? <span className="shrink-0 text-xs font-semibold text-accent">filtrar</span> : null}
           </li>,
         ];
       })}

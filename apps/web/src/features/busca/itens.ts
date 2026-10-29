@@ -4,6 +4,7 @@ import { tipoAutor } from "@/features/linguagem/linguagem";
 import { bandeiraUf, fotoPrefeito } from "@/lib/cdn";
 import { nomeLeigo } from "@/lib/nomes";
 import type { Pauta } from "@/features/legislativo/pautas";
+import type { BancadaTematica } from "@/features/bancadas/catalogo";
 import type { ItemBusca } from "./ranker";
 
 export const fotoCamara = (id: number | string) => `https://www.camara.leg.br/internet/deputado/bandep/${id}.jpg`;
@@ -37,9 +38,11 @@ export function itensDoIndice(i: IndiceBusca): ItemBusca[] {
     ...i.partidos.map(([sigla, nome]): ItemBusca => ({
       id: `p:${sigla}`, tipo: "partido", titulo: sigla, extra: nome, sub: nome, href: `/partido/${encodeURIComponent(sigla)}`, selo: sigla, peso: 30,
     })),
-    ...i.autores.map(([cod, nome, pago]): ItemBusca => ({
-      id: `a:${cod}`, tipo: "autor", titulo: nome, sub: SUB_AUTOR[tipoAutor(nome)], href: `/autor/${encodeURIComponent(cod)}`, valor: pago || undefined, peso: 5,
-    })),
+    ...i.autores.map(([cod, nome, pago]): ItemBusca => {
+      const t = tipoAutor(nome);
+      const tipo = t === "comissao" ? "comissao" : t === "bancada" ? "bancada" : "autor";
+      return { id: `a:${cod}`, tipo, titulo: tipo === "autor" ? nome : nomeLeigo(nome), extra: tipo === "autor" ? undefined : nome, sub: SUB_AUTOR[t], href: `/autor/${encodeURIComponent(cod)}`, valor: pago || undefined, peso: 5 };
+    }),
   ];
 }
 
@@ -49,5 +52,13 @@ export function itensLeis(pautas: readonly Pauta[]): ItemBusca[] {
     id: `lei:${p.camaraId}`, tipo: "lei", titulo: `${p.sigla} ${p.numero}/${p.ano}`,
     apelido: p.apelido, extra: `${p.tema} ${p.resumo}`, sub: `${p.apelido.replace(/[“”]/g, "")} · ${p.tema}`,
     href: `/proposicao/${p.camaraId}`, peso: 40,
+  }));
+}
+
+/** Bancadas temáticas (frentes parlamentares) pelo apelido popular: "ruralista", "bala", "evangélica". */
+export function itensBancadas(lista: readonly BancadaTematica[]): ItemBusca[] {
+  return lista.map((b) => ({
+    id: `bt:${b.id}`, tipo: "bancada", titulo: b.apelido, apelido: b.aliases.join(" "), extra: `${b.oficial} ${b.tema}`,
+    sub: `Bancada temática · ${b.tema}`, href: `/bancada/${b.id}`, peso: 30,
   }));
 }
