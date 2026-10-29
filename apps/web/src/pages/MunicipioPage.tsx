@@ -7,6 +7,8 @@ import { ufDoMunicipio, useApi, type IbgeMunicipio } from "@/lib/data";
 import { formatBRL, formatNumber, formatPct } from "@/lib/format";
 import { Avatar, NextSteps, Badge, Bars, Card, Donut, EmptyState, ErrorState, ExternalLink, KeyValue, PageHeader, PartyBadge, Section, Skeleton, Tabs, Term } from "@/ui";
 import { ShareButton } from "@/features/share";
+import { fotoPrefeito, fotoVicePrefeito } from "@/lib/cdn";
+import { EmblemaMunicipio } from "@/features/emblemas/EmblemaMunicipio";
 
 /** Campos opcionais que o ETL pode publicar além do contrato mínimo. */
 type MunicipioExt = Municipio & { vice?: Prefeito | null; convenios?: Convenio[]; favorecidos: FavorecidoExt[]; populacao?: number };
@@ -25,6 +27,7 @@ export default function MunicipioPage() {
       <PageHeader
         eyebrow={<>Município · <Term k="código IBGE">IBGE {ibgeId}</Term></>}
         title={nome}
+        media={uf ? <EmblemaMunicipio ibge={ibgeId} uf={uf} nome={nome} size={56} credito /> : undefined}
         subtitle={uf ? `${UFS[uf as SiglaUf] ?? uf}` : undefined}
         breadcrumbs={[{ label: "Início", to: "/" }, ...(uf ? [{ label: UFS[uf as SiglaUf] ?? uf, to: `/uf/${uf}` }] : []), { label: nome }]}
         actions={<ShareButton fab kind="municipio" title={nome} subtitle={uf ? UFS[uf as SiglaUf] ?? uf : undefined} url={`/municipio/${ibgeId}`} ogId={ibgeId} metric={d ? { value: d.totais.pago, format: "brl", label: "pagos em emendas parlamentares" } : undefined} bars={d?.autores.slice(0, 5).map((a) => ({ label: a.nome, value: a.pago }))} />}
@@ -34,8 +37,8 @@ export default function MunicipioPage() {
         <Card title="Prefeitura" tip="prefeito">
           {d?.prefeito ? (
             <div className="space-y-3">
-              <PessoaCargo p={d.prefeito} cargo="Prefeito(a)" />
-              {d.vice && <PessoaCargo p={d.vice} cargo="Vice-prefeito(a)" />}
+              <PessoaCargo p={d.prefeito} cargo="Prefeito(a)" foto={fotoPrefeito(ibgeId)} />
+              {d.vice && <PessoaCargo p={d.vice} cargo="Vice-prefeito(a)" foto={fotoVicePrefeito(ibgeId)} />}
             </div>
           ) : q.isPending ? <Skeleton className="h-16" /> : <p className="text-sm text-muted">Prefeito(a) não informado(a) na base do TSE para este município.</p>}
         </Card>
@@ -92,10 +95,10 @@ export default function MunicipioPage() {
   );
 }
 
-function PessoaCargo({ p, cargo }: { p: Prefeito; cargo: string }) {
+function PessoaCargo({ p, cargo, foto }: { p: Prefeito; cargo: string; foto?: string }) {
   return (
     <div className="flex items-center gap-3">
-      <Avatar name={p.nome} />
+      <Avatar src={foto} name={p.nome} />
       <div className="min-w-0">
         <p className="text-xs text-muted">{cargo} · eleição {p.eleicao}</p>
         <p className="truncate font-semibold">{p.nome}</p>

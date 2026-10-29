@@ -9,6 +9,7 @@ import { useApi, useCamara } from "@/lib/data";
 import { formatBRL } from "@/lib/format";
 import { Avatar, NextSteps, Bars, ButtonLink, Card, Donut, ErrorState, LineArea, PageHeader, PartyBadge, Section, Skeleton, Tabs, Term } from "@/ui";
 import { ShareButton } from "@/features/share";
+import { fotoPorNome } from "@/lib/cdn";
 
 type AutorExt = Autor & { favorecidos?: FavorecidoExt[] };
 interface DepResumo { id: number; nome: string; siglaPartido: string; siglaUf: string; urlFoto: string }
@@ -27,7 +28,7 @@ export default function AutorPage() {
   const d = q.data;
   const kind = d ? tipoAutor(d.nome) : "pessoa";
   const dep = useCamara<DepResumo[]>(d && kind === "pessoa" ? `/deputados?nome=${encodeURIComponent(d.nome)}&itens=5` : null);
-  const match = useMemo(() => dep.data?.find((x) => chaveNome(x.nome) === d?.chave) ?? dep.data?.[0], [dep.data, d]);
+  const match = useMemo(() => dep.data?.find((x) => chaveNome(x.nome) === d?.chave), [dep.data, d]);
 
   if (q.isError) return <><PageHeader title={`Autor ${codigo}`} breadcrumbs={[{ label: "Início", to: "/" }, { label: "Emendas", to: "/emendas" }, { label: codigo }]} /><ErrorState error={q.error} retry={() => q.refetch()} /></>;
   if (!d) return <Skeleton className="h-96" />;
@@ -39,7 +40,7 @@ export default function AutorPage() {
         title={d.nome}
         subtitle={`Código do autor no Portal da Transparência: ${d.codigo}`}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Emendas", to: "/emendas" }, { label: d.nome }]}
-        media={<Avatar src={match?.urlFoto} name={d.nome} size="lg" />}
+        media={<Avatar src={match?.urlFoto ?? (kind === "pessoa" ? fotoPorNome(d.nome) : undefined)} name={d.nome} size="lg" />}
         actions={match ? (
           <>
             <ShareButton fab kind="autor" title={d.nome} url={`/autor/${d.codigo}`} ogId={d.codigo} metric={{ value: d.totais.pago, format: "brl", label: "pagas" }} bars={[...d.porUf].sort((a, b) => b.pago - a.pago).slice(0, 5).map((x) => ({ label: x.uf, value: x.pago }))} />
