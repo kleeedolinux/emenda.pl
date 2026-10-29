@@ -6,6 +6,7 @@ pub mod feed;
 pub mod gastos;
 pub mod model;
 pub mod norm;
+pub mod novidades;
 pub mod pix;
 pub mod read;
 
