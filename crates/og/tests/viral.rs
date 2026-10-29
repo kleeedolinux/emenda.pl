@@ -67,6 +67,12 @@ fn viral_faces_max_three_with_photo_or_initials() {
     assert_eq!(s.matches(r#"class="face""#).count(), 3);
     assert_eq!(s.matches("data:image/png;base64,").count(), 2);
     assert!(s.contains(">BL<"), "initials fallback");
+    assert!(s.contains(">QUEM MANDOU<"));
+    let v = OgViral {
+        faces_titulo: "Alguns deputados".into(),
+        ..municipio()
+    };
+    assert!(viral_svg(&v).contains(">ALGUNS DEPUTADOS<"));
 }
 
 #[test]
@@ -132,4 +138,20 @@ fn viral_long_text_is_fitted_not_overflowing() {
     };
     let s = viral_svg(&v);
     assert!(s.contains('…'));
+}
+
+#[test]
+fn viral_accepts_gif_logo() {
+    // 1x1 GIF (Câmara party logos are GIFs).
+    let gif: Vec<u8> = vec![
+        0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0, 0x80, 0, 0, 0xff, 0xff, 0xff, 0, 0, 0,
+        0x21, 0xf9, 4, 1, 0, 0, 0, 0, 0x2c, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 0x44, 1, 0, 0x3b,
+    ];
+    let v = OgViral {
+        selo: Some("PP".into()),
+        logo: Some(gif),
+        ..municipio()
+    };
+    assert!(viral_svg(&v).contains("data:image/gif;base64,"));
+    assert_eq!(png_dims(&viral_png(&v).unwrap()), (WIDTH, HEIGHT));
 }

@@ -17,7 +17,7 @@ directory = "../web/dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
 run_worker_first = [
-  "/", "/api/*", "/data/*", "/og/*", "/v1", "/v1/*",
+  "/", "/api/*", "/data/*", "/og/*", "/og-img/*", "/v1", "/v1/*",
   "/deputado/*", "/senador/*", "/municipio/*", "/uf/*",
   "/autor/*", "/proposicao/*", "/votacao/*", "/partido/*", "/agenda",
   # SEO / AI (src/seo): server meta, JSON-LD, prerender, Markdown twins, sitemaps, llms.txt
@@ -26,6 +26,8 @@ run_worker_first = [
   "/deputados", "/senadores", "/proposicoes", "/partidos", "/bancadas", "/bancada/*",
   "/comissoes", "/comissao/*", "/federacoes", "/federacao/*", "/estaduais", "/sobre",
   "/auditar/*", "/api",
+  # OG cards for pages outside src/seo (src/viral.rs EXTRA_PAGES)
+  "/novidades", "/congresso", "/stf", "/stf/*",
   # Public API extras (src/mcp.rs, src/feeds.rs)
   "/mcp", "/rss/*",
   # Asset mirror (src/cdn.rs): host cdn.emenda.online serves /foto|logo|bandeira|brasao|credito|indice|pdf/*, /manifest.json; /cdn/* on any host

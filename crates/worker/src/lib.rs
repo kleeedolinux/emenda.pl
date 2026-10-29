@@ -5,11 +5,14 @@ pub mod cards;
 pub mod cdn;
 pub mod espelho;
 pub mod feeds;
+pub mod foto;
 pub mod mcp;
 pub mod meta;
 pub mod money;
+pub mod ogcache;
 pub mod route;
 pub mod seo;
+pub mod viral;
 
 #[cfg(target_arch = "wasm32")]
 mod glue;

@@ -17,9 +17,11 @@ pub enum Kind {
     Voto,
     /// Pauta do dia: id `YYYY-MM-DD` or `hoje`.
     Agenda,
+    /// Any other page: id = page path without the leading slash (`pix`, `auditar/camara/1`), or `home`.
+    Pagina,
 }
 
-const SLUGS: [(Kind, &str); 10] = [
+const SLUGS: [(Kind, &str); 11] = [
     (Kind::Deputado, "deputado"),
     (Kind::Senador, "senador"),
     (Kind::Municipio, "municipio"),
@@ -30,6 +32,7 @@ const SLUGS: [(Kind, &str); 10] = [
     (Kind::Partido, "partido"),
     (Kind::Voto, "voto"),
     (Kind::Agenda, "agenda"),
+    (Kind::Pagina, "pagina"),
 ];
 
 impl Kind {
@@ -98,20 +101,20 @@ pub fn chave_nome(s: &str) -> String {
     mapped.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-fn s(v: &Value, ptr: &str) -> Option<String> {
+pub(crate) fn s(v: &Value, ptr: &str) -> Option<String> {
     match v.pointer(ptr)? {
         Value::String(x) if !x.trim().is_empty() => Some(x.trim().to_string()),
         Value::Number(n) => Some(n.to_string()),
         _ => None,
     }
 }
-fn i(v: &Value, ptr: &str) -> Option<i64> {
+pub(crate) fn i(v: &Value, ptr: &str) -> Option<i64> {
     let x = v.pointer(ptr)?;
     x.as_i64()
         .or_else(|| x.as_f64().map(|f| f as i64))
         .or_else(|| x.as_str()?.parse().ok())
 }
-fn truncate(t: &str, max: usize) -> String {
+pub(crate) fn truncate(t: &str, max: usize) -> String {
     if t.chars().count() <= max {
         return t.into();
     }

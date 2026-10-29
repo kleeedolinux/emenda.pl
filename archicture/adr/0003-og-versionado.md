@@ -1,0 +1,5 @@
+# 0003 - imagens OG versionadas e imutáveis
+Status: accepted
+Context: cada rota tem card OG dinâmico (resvg, caro em CPU); cache só por colo com TTL fixo re-renderiza sem necessidade. R2 foi descartado pelo usuário.
+Decision: meta injeta `/og/<kind>/<id>.png?v=<versão>`; versão = `ogcache::RENDER_REV` + `generatedAt` do `v1/meta.json` (agenda: hora de Brasília). `v` igual à atual e render completo -> `Cache-Control: public, max-age=31536000, immutable` + ETag, chave de cache `path?v=`. Sem `v`, `v` divergente ou lixo -> renderiza, TTL curto com stale-while-revalidate, chave só `path` (outros parâmetros ignorados). Render de fallback (fonte falhou) -> `max-age=60`, sem cache. Rotas fora do `seo` usam `Kind::Pagina` (`/og/pagina/<path>.png`). Fotos para canvas do cliente: `/og-img/*` (bytes same-origin com CORS, sem redirect).
+Consequences: render uma vez por colo e versão; crawlers e navegadores guardam para sempre; mudar layout exige subir `RENDER_REV`; 1 fetch de `meta.json` por miss de borda.

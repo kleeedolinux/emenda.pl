@@ -1,8 +1,10 @@
 //! wasm32 glue: Workers runtime I/O around the pure modules.
 use crate::analytics::{self, Recent};
-use crate::cards::{self, CardSpec, Kind};
+use crate::cards::{self, Kind};
 use crate::meta;
 use crate::route::{self, CacheClass, DataSource, Disposition, Route, Target, Upstream};
+use crate::seo::Fetched;
+use crate::{foto, ogcache, viral};
 use serde_json::{json, Value};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -57,7 +59,12 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let r = route::route(&method, url.path(), url.query());
     let cors = matches!(
         r,
-        Route::Proxy { .. } | Route::Og(_) | Route::Health | Route::Options | Route::Stats
+        Route::Proxy { .. }
+            | Route::Og(_)
+            | Route::OgImg(_)
+            | Route::Health
+            | Route::Options
+            | Route::Stats
     );
     let mut resp = match &r {
         Route::Options => Response::empty()?.with_status(204),
@@ -78,6 +85,10 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         }
         Route::Asset => asset(&env, &req).await?,
         Route::Hit => hit(&env, &req).await?,
+        Route::Og(t) => {
+            let origin = route::public_origin(url.scheme(), &host);
+            og_route(&env, &req, &origin, t).await?
+        }
         Route::Stats => {
             let key = route::cache_key(url.as_str());
             cached(&key, CacheClass::Stats, || stats(&env)).await?
@@ -165,7 +176,7 @@ async fn produce(r: &Route, env: &Env, origin: &str, path: &str) -> Out {
             rest,
             query,
         } => proxy(env, *upstream, rest, query.as_deref()).await,
-        Route::Og(t) => og_png(env, t).await,
+        Route::OgImg(i) => og_img(i).await,
         Route::Page(t) => page(env, t, origin, path).await,
         _ => Out::error(404, "not found"),
     }
@@ -298,67 +309,6 @@ pub(crate) async fn data_fetch(env: &Env, rest: &str) -> Result<Response> {
     }
 }
 
-async fn data(env: &Env, rest: &str) -> Option<Value> {
-    json_of(data_fetch(env, rest).await).await
-}
-
-async fn card_for(env: &Env, t: &Target) -> Option<CardSpec> {
-    let id = &t.id;
-    match t.kind {
-        Kind::Default => Some(cards::default_card()),
-        Kind::Deputado => {
-            let dep = camara(&format!("deputados/{id}")).await?;
-            let autores = data(env, "v1/autores.json").await;
-            let n = get(
-                &format!("https://dadosabertos.camara.leg.br/api/v2/proposicoes?idDeputadoAutor={id}&itens=1"),
-                "application/json",
-            )
-            .await
-            .ok()
-            .and_then(|r| r.headers().get("x-total-count").ok().flatten())
-            .and_then(|v| v.parse().ok());
-            cards::deputado(&dep, autores.as_ref(), n)
-        }
-        Kind::Senador => {
-            let url = route::upstream_url(Upstream::Senado, &format!("senador/{id}"), None, "");
-            let sen = json_of(get(&url, "application/json").await).await?;
-            let autores = data(env, "v1/autores.json").await;
-            cards::senador(&sen, autores.as_ref())
-        }
-        Kind::Municipio => cards::municipio(&data(env, &format!("v1/municipio/{id}.json")).await?),
-        Kind::Uf => cards::uf(&data(env, &format!("v1/uf/{id}.json")).await?),
-        Kind::Autor => cards::autor(&data(env, &format!("v1/autor/{id}.json")).await?),
-        Kind::Proposicao => cards::proposicao(&camara(&format!("proposicoes/{id}")).await?),
-        Kind::Votacao => {
-            let v = camara(&format!("votacoes/{id}")).await?;
-            let votos = camara(&format!("votacoes/{id}/votos")).await;
-            cards::votacao(&v, votos.as_ref())
-        }
-        Kind::Partido => {
-            let list = camara(&format!("partidos?sigla={id}")).await?;
-            let pid = list.pointer("/dados/0/id")?.as_i64()?;
-            cards::partido(&camara(&format!("partidos/{pid}")).await?)
-        }
-        // Rendered by `share_png`.
-        Kind::Voto | Kind::Agenda => None,
-    }
-}
-
-fn og_kind(k: Kind) -> og::OgKind {
-    match k {
-        Kind::Default => og::OgKind::Default,
-        Kind::Deputado => og::OgKind::Deputado,
-        Kind::Senador => og::OgKind::Senador,
-        Kind::Municipio => og::OgKind::Municipio,
-        Kind::Uf => og::OgKind::Uf,
-        Kind::Autor => og::OgKind::Autor,
-        Kind::Proposicao => og::OgKind::Proposicao,
-        Kind::Votacao => og::OgKind::Votacao,
-        Kind::Partido => og::OgKind::Partido,
-        Kind::Voto | Kind::Agenda => og::OgKind::Default,
-    }
-}
-
 async fn photo(url: Option<&str>) -> Option<Vec<u8>> {
     match get(url?, "image/*").await {
         Ok(mut r) if r.status_code() == 200 => r.bytes().await.ok(),
@@ -421,44 +371,281 @@ async fn share_png(t: &Target) -> Option<Vec<u8>> {
     }
 }
 
-async fn to_og(c: CardSpec) -> og::OgCard {
-    let photo = photo(c.photo_url.as_deref()).await;
-    og::OgCard {
-        kind: og_kind(c.kind),
-        eyebrow: c.eyebrow,
-        title: c.title,
-        subtitle: c.subtitle,
-        stats: c
-            .stats
-            .into_iter()
-            .map(|(label, value)| og::OgStat { label, value })
-            .collect(),
-        badge: c.badge,
-        accent: None,
-        photo,
+fn png_out(body: Vec<u8>) -> Out {
+    Out {
+        status: 200,
+        ctype: "image/png".into(),
+        body,
     }
 }
 
-async fn og_png(env: &Env, t: &Target) -> Out {
+/// PNG + whether it is complete (`false`: fallback after an upstream failure).
+async fn og_png(env: &Env, t: &Target) -> (Out, bool) {
     if let Some(body) = share_png(t).await {
-        return Out {
-            status: 200,
-            ctype: "image/png".into(),
-            body,
-        };
+        return (png_out(body), true);
     }
-    let card = card_for(env, t).await.unwrap_or_else(cards::default_card);
-    let png = match og::png(&to_og(card).await) {
-        Ok(p) => Ok(p),
-        Err(_) => og::png(&to_og(cards::default_card()).await),
+    if let Some((body, durable)) = viral_png(env, t).await {
+        return (png_out(body), durable);
+    }
+    match og::png(&og::OgCard::site_default()) {
+        Ok(body) => (png_out(body), false),
+        Err(_) => (Out::error(500, "og render failed"), false),
+    }
+}
+
+/// Current OG version (`?v=`): render revision + ETL `generatedAt` (agenda: hour bucket).
+async fn og_version(env: &Env, kind: Kind) -> String {
+    let now = Date::now().as_millis() as f64;
+    let meta = if kind == Kind::Agenda {
+        None
+    } else {
+        json_of(data_fetch(env, "v1/meta.json").await).await
     };
-    match png {
-        Ok(body) => Out {
+    ogcache::og_version(kind, &ogcache::data_version(meta.as_ref(), now), now)
+}
+
+fn og_response(body: Vec<u8>, cc: &str, etag: &str, state: &str) -> Result<Response> {
+    let mut r = Response::from_bytes(body)?;
+    let h = r.headers_mut();
+    h.set("Content-Type", "image/png")?;
+    h.set("Cache-Control", cc)?;
+    h.set("ETag", etag)?;
+    h.set("x-emenda-cache", state)?;
+    Ok(r)
+}
+
+async fn cache_hit(cache: &Cache, key: &str) -> Option<(Vec<u8>, String)> {
+    let mut hit = cache.get(key, true).await.ok()??;
+    let cc = hit.headers().get("Cache-Control").ok()??;
+    Some((hit.bytes().await.ok()?, cc))
+}
+
+/// `/og/*`: versioned URLs are immutable; others render with a short TTL under the path-only key.
+async fn og_route(env: &Env, req: &Request, origin: &str, t: &Target) -> Result<Response> {
+    let url = req.url()?;
+    let path = url.path();
+    let req_v = ogcache::request_version(url.query());
+    let inm = req.headers().get("If-None-Match")?;
+    let cache = Cache::default();
+    let serve = |body: Vec<u8>, cc: &str, key: &str, state: &str| -> Result<Response> {
+        let etag = ogcache::etag(key);
+        if crate::cdn::etag_match(inm.as_deref(), &etag) {
+            let mut r = Response::empty()?.with_status(304);
+            r.headers_mut().set("ETag", &etag)?;
+            r.headers_mut().set("Cache-Control", cc)?;
+            return Ok(r);
+        }
+        og_response(body, cc, &etag, state)
+    };
+    // Versioned entries exist only for the matching version: a hit needs no version check.
+    if let Some(v) = req_v.as_deref() {
+        let key = ogcache::cache_key(origin, path, Some(v));
+        if let Some((body, cc)) = cache_hit(&cache, &key).await {
+            return serve(body, &cc, &key, "HIT");
+        }
+    }
+    let current = og_version(env, t.kind).await;
+    let versioned = req_v.as_deref() == Some(current.as_str());
+    let key = ogcache::cache_key(origin, path, versioned.then_some(current.as_str()));
+    if !versioned {
+        if let Some((body, cc)) = cache_hit(&cache, &key).await {
+            return serve(body, &cc, &key, "HIT");
+        }
+    }
+    let (out, durable) = og_png(env, t).await;
+    if out.status != 200 {
+        return respond(out);
+    }
+    let f = ogcache::freshness(req_v.as_deref(), &current, durable);
+    let cc = ogcache::cache_control(f);
+    if f != ogcache::Freshness::Fallback {
+        let stored = og_response(out.body.clone(), cc, &ogcache::etag(&key), "HIT")?;
+        let _ = cache.put(key.as_str(), stored).await;
+    }
+    serve(out.body, cc, &key, "MISS")
+}
+
+// ---------- viral cards ----------
+
+async fn viral_png(env: &Env, t: &Target) -> Option<(Vec<u8>, bool)> {
+    let (spec, durable) = match viral::extra_page(&t.id).filter(|_| t.kind == Kind::Pagina) {
+        Some(s) => (s, true),
+        None => {
+            let page = viral::page_of(t)?;
+            let today = cards::dia_brasilia(Date::now().as_millis() as f64);
+            let srcs = crate::seo::pages::sources(&page, &today);
+            let extra = viral::extra_sources(&page);
+            let (d, x) = futures_util::join!(
+                crate::seo::glue_seo::fetch_all(env, &srcs),
+                crate::seo::glue_seo::fetch_all(env, &extra)
+            );
+            let now = crate::seo::iso_brasilia(Date::now().as_millis() as f64);
+            let doc = crate::seo::pages::build(&page, &d, &now);
+            let ok = !d.iter().chain(&x).any(|f| *f == Fetched::Failed);
+            (viral::spec(&page, &d, &x, &doc), ok)
+        }
+    };
+    og::viral_png(&resolve(spec).await)
+        .ok()
+        .map(|b| (b, durable))
+}
+
+async fn bytes(url: &str) -> Option<Vec<u8>> {
+    match get(url, "image/*").await {
+        Ok(mut r) if r.status_code() == 200 => r.bytes().await.ok().filter(|b| !b.is_empty()),
+        _ => None,
+    }
+}
+
+/// First URL answering 200 with an SVG or a known raster image.
+async fn first_svg_or_image(urls: &[String]) -> Option<Vec<u8>> {
+    for u in urls {
+        if let Some(b) = bytes(u).await {
+            let head = String::from_utf8_lossy(&b[..b.len().min(256)]).to_string();
+            if foto::sniff(&b).is_some() || head.contains("<svg") {
+                return Some(b);
+            }
+        }
+    }
+    None
+}
+
+async fn first_bytes(urls: &[String]) -> Option<Vec<u8>> {
+    for u in urls {
+        if let Some(b) = bytes(u).await.filter(|b| foto::sniff(b).is_some()) {
+            return Some(b);
+        }
+    }
+    None
+}
+
+async fn senado_lista() -> Option<Value> {
+    let url = route::upstream_url(Upstream::Senado, foto::SENADO_LISTA, None, "");
+    json_of(get(&url, "application/json").await).await
+}
+
+/// Author name -> senador in office, else deputado (last 4 legislatures). Exact names only.
+async fn pessoa(chave: &str, senado: Option<&Value>) -> Option<foto::Pessoa> {
+    if let Some(p) = senado.and_then(|l| foto::senador_por_nome(l, chave)) {
+        return Some(p);
+    }
+    camara(&foto::nome_query(chave))
+        .await
+        .and_then(|r| foto::deputado_por_nome(&r, chave))
+}
+
+/// Photo bytes (+ resolved person for name lookups).
+async fn foto_bytes(
+    f: &foto::Foto,
+    size: u32,
+    senado: Option<&Value>,
+) -> (Option<Vec<u8>>, Option<foto::Pessoa>) {
+    let img = match f {
+        foto::Foto::Url(u) => return (bytes(u).await, None),
+        foto::Foto::Deputado(id) => foto::OgImg::Deputado(*id),
+        foto::Foto::Senador(id) => foto::OgImg::Senador(*id),
+        foto::Foto::Nome(c) => match pessoa(c, senado).await {
+            Some(p) => {
+                let b = first_bytes(&foto::candidates(&p.img(), size)).await;
+                return (b, Some(p));
+            }
+            None => return (None, None),
+        },
+    };
+    (first_bytes(&foto::candidates(&img, size)).await, None)
+}
+
+async fn face(f: viral::FaceSpec, senado: Option<&Value>) -> og::OgFace {
+    let (photo, p) = match &f.foto {
+        Some(x) => foto_bytes(x, 160, senado).await,
+        None => (None, None),
+    };
+    match p {
+        Some(p) => og::OgFace {
+            detalhe: [p.tag(), f.detalhe]
+                .into_iter()
+                .filter(|x| !x.is_empty())
+                .collect::<Vec<_>>()
+                .join(" · "),
+            nome: p.nome,
+            photo,
+        },
+        None => og::OgFace {
+            nome: f.nome,
+            detalhe: f.detalhe,
+            photo,
+        },
+    }
+}
+
+async fn resolve(v: viral::ViralSpec) -> og::OgViral {
+    let by_name = |f: &Option<foto::Foto>| matches!(f, Some(foto::Foto::Nome(_)));
+    let senado = if by_name(&v.retrato) || v.faces.iter().any(|f| by_name(&f.foto)) {
+        senado_lista().await
+    } else {
+        None
+    };
+    let senado = senado.as_ref();
+    let flag = async {
+        match &v.uf {
+            Some(u) => first_svg_or_image(&foto::flag_candidates(u)).await,
+            None => None,
+        }
+    };
+    let logo = async {
+        match v
+            .partido
+            .as_ref()
+            .filter(|p| p.bytes().all(|b| b.is_ascii_alphanumeric()))
+        {
+            Some(p) => first_bytes(&foto::logo_candidates(p)).await,
+            None => None,
+        }
+    };
+    let retrato = async {
+        match &v.retrato {
+            Some(f) => foto_bytes(f, 512, senado).await.0,
+            None => None,
+        }
+    };
+    let (faces, retrato, bandeira, logo) = futures_util::join!(
+        futures_util::future::join_all(v.faces.iter().take(3).cloned().map(|f| face(f, senado))),
+        retrato,
+        flag,
+        logo
+    );
+    og::OgViral {
+        rotulo: v.rotulo,
+        secundario: v.secundario,
+        numero: v.numero,
+        frase: v.frase,
+        gancho: v.gancho,
+        faces,
+        faces_titulo: v.faces_titulo,
+        retrato,
+        selo: v.selo,
+        logo,
+        bandeira,
+        placar: v.placar,
+    }
+}
+
+/// `/og-img/*`: photo bytes, same-origin (no redirects).
+async fn og_img(img: &foto::OgImg) -> Out {
+    let found = match img {
+        foto::OgImg::Nome(c) => match pessoa(c, senado_lista().await.as_ref()).await {
+            Some(p) => first_bytes(&foto::candidates(&p.img(), 512)).await,
+            None => None,
+        },
+        i => first_bytes(&foto::candidates(i, 512)).await,
+    };
+    match found {
+        Some(body) => Out {
             status: 200,
-            ctype: "image/png".into(),
+            ctype: foto::sniff(&body).unwrap_or("image/jpeg").into(),
             body,
         },
-        Err(_) => Out::error(500, "og render failed"),
+        None => Out::error(404, "photo not found"),
     }
 }
 
@@ -470,7 +657,8 @@ async fn page(env: &Env, t: &Target, origin: &str, path: &str) -> Out {
     if html.is_empty() {
         return Out::error(502, "index.html unavailable");
     }
-    let m = meta::page_meta(t, origin, path, None);
+    let v = og_version(env, t.kind).await;
+    let m = meta::page_meta(t, origin, path, None, Some(&v));
     let html = meta::inject(&html, &meta::render(&m)).unwrap_or(html);
     Out {
         status: 200,

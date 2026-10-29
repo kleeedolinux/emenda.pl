@@ -45,6 +45,8 @@ pub struct OgViral {
     pub gancho: String,
     /// Up to 3 are rendered (ignored when `retrato` or `placar` is set).
     pub faces: Vec<OgFace>,
+    /// Heading above the faces; empty -> "Quem mandou".
+    pub faces_titulo: String,
     /// Big portrait on the right (PNG, JPEG or WebP).
     pub retrato: Option<Vec<u8>>,
     /// Party sigla (or other short badge).
@@ -58,6 +60,9 @@ pub struct OgViral {
 }
 
 fn image_mime(bytes: &[u8]) -> Option<&'static str> {
+    if bytes.starts_with(b"GIF8") {
+        return Some("image/gif");
+    }
     photo_mime(bytes).or_else(|| {
         let head = String::from_utf8_lossy(&bytes[..bytes.len().min(256)]);
         let t = head.trim_start_matches('\u{feff}').trim_start();
@@ -304,14 +309,19 @@ fn portrait(s: &mut String, bytes: &[u8]) -> bool {
     true
 }
 
-fn faces(s: &mut String, list: &[OgFace]) {
+fn faces(s: &mut String, list: &[OgFace], titulo: &str) {
     let list = &list[..list.len().min(3)];
     if list.is_empty() {
         return;
     }
     let r = 52.0;
     let x = PANEL_X + 16.0;
-    tracked(s, x, 156.0, 18.0, MUTED, "Quem mandou", PANEL_W);
+    let titulo = if titulo.trim().is_empty() {
+        "Quem mandou"
+    } else {
+        titulo.trim()
+    };
+    tracked(s, x, 156.0, 18.0, MUTED, titulo, PANEL_W);
     for (i, f) in list.iter().enumerate() {
         let cy = 228.0 + i as f32 * 128.0;
         let cx = x + r;
@@ -361,12 +371,12 @@ fn faces(s: &mut String, list: &[OgFace]) {
         let tw = W - PAD - tx;
         let (ns, nl) = fit(f.nome.trim(), Font::Bold, &[30.0, 27.0, 24.0, 21.0], tw, 1);
         s.push_str(&text(tx, cy - 2.0, Font::Bold, ns, INK, "", &nl.join("")));
-        let (_, dl) = fit(f.detalhe.trim(), Font::SemiBold, &[23.0], tw, 1);
+        let (ds, dl) = fit(f.detalhe.trim(), Font::SemiBold, &[23.0, 21.0, 19.0], tw, 1);
         s.push_str(&text(
             tx,
             cy + 30.0,
             Font::SemiBold,
-            23.0,
+            ds,
             VERDE_LIGHT,
             "",
             &dl.join(""),
@@ -438,7 +448,7 @@ pub fn viral_svg(v: &OgViral) -> String {
         plenario(&mut s, p);
         true
     } else if !v.faces.is_empty() {
-        faces(&mut s, &v.faces);
+        faces(&mut s, &v.faces, &v.faces_titulo);
         true
     } else {
         false

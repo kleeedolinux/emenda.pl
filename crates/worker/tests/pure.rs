@@ -295,6 +295,7 @@ fn meta_injection() {
         "https://emenda.pl",
         "/deputado/204554",
         Some("Fulano <script>"),
+        None,
     );
     let out = meta::inject(html, &meta::render(&m)).unwrap();
     assert!(!out.contains("old"));
@@ -320,7 +321,13 @@ fn meta_injection() {
         assert!(out.contains(needle), "{needle}");
     }
     assert_eq!(meta::inject("<head></head>", "x"), None);
-    let d = meta::page_meta(&t(Kind::Default, ""), "https://emenda.pl", "/sobre", None);
+    let d = meta::page_meta(
+        &t(Kind::Default, ""),
+        "https://emenda.pl",
+        "/sobre",
+        None,
+        None,
+    );
     assert_eq!(d.image, "https://emenda.pl/og/default.png");
 }
 

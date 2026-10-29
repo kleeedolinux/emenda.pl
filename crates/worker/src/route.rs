@@ -52,6 +52,8 @@ pub enum Route {
         query: Option<String>,
     },
     Og(Target),
+    /// `/og-img/*`: politician photo, same-origin with CORS.
+    OgImg(crate::foto::OgImg),
     Page(Target),
     Asset,
 }
@@ -93,6 +95,9 @@ pub fn route(method: &str, path: &str, query: Option<&str>) -> Route {
     if path.starts_with("/api/") || path == "/api" || path == "/data" {
         return Route::NotFound;
     }
+    if let Some(rest) = path.strip_prefix("/og-img/") {
+        return crate::foto::parse(rest).map_or(Route::NotFound, Route::OgImg);
+    }
     if let Some(rest) = path.strip_prefix("/og/") {
         if rest == "default.png" {
             return Route::Og(Target::default_page());
@@ -122,7 +127,11 @@ pub fn route(method: &str, path: &str, query: Option<&str>) -> Route {
                 None => t,
             }
         }),
-        (Some("voto" | "agenda"), _) => None,
+        (Some("voto" | "agenda" | "pagina"), _) => None,
+        (Some(slug), _) if crate::viral::is_extra_page(slug) => Some(Target {
+            kind: Kind::Pagina,
+            id: slug.into(),
+        }),
         (Some(slug), Some(id)) => target(slug, id),
         _ => None,
     };
@@ -170,6 +179,7 @@ fn target(slug: &str, id: &str) -> Option<Target> {
                 && d.bytes().all(|b| b.is_ascii_digit())
         }),
         Kind::Agenda => id == "hoje" || crate::cards::valid_day(id),
+        Kind::Pagina => crate::viral::valid_pagina(id),
     };
     let id = match kind {
         Kind::Uf | Kind::Partido => id.to_ascii_uppercase(),
@@ -214,6 +224,8 @@ pub enum CacheClass {
     CamaraList,
     Senado,
     Og,
+    /// `/og-img/*` photos.
+    OgImg,
     /// Agenda cards change during the day.
     OgAgenda,
     Html,
@@ -231,6 +243,7 @@ pub fn cache_class(r: &Route) -> Option<CacheClass> {
         },
         Route::Og(t) if t.kind == Kind::Agenda => CacheClass::OgAgenda,
         Route::Og(_) => CacheClass::Og,
+        Route::OgImg(_) => CacheClass::OgImg,
         Route::Page(_) => CacheClass::Html,
         Route::Stats => CacheClass::Stats,
         Route::Asset => CacheClass::Asset,
@@ -261,6 +274,7 @@ pub fn ttl_secs(c: CacheClass) -> u32 {
         CacheClass::Stats => 30,
         CacheClass::Og => 24 * H,
         CacheClass::OgAgenda => H,
+        CacheClass::OgImg => 7 * 24 * H,
         CacheClass::Asset => 365 * 24 * H,
     }
 }

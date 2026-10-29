@@ -3,7 +3,7 @@
 use super::negotiate::{self, Format};
 use super::{head, markdown, pages, prerender, sitemap, Fetched, Page, SeoRoute, Source, ORIGIN};
 use crate::glue::{data_fetch, from_assets, get};
-use crate::route::{self, Route, Upstream};
+use crate::route::{self, Upstream};
 use futures_util::future::{join_all, select, Either};
 use sha2::{Digest, Sha256};
 use std::time::Duration;
@@ -102,16 +102,13 @@ async fn index_html(env: &Env) -> Option<String> {
     }
 }
 
-fn og_image(page: &Page) -> String {
-    let path = page.path();
-    let (p, q) = match path.split_once('?') {
-        Some((p, q)) => (p.to_string(), Some(q.to_string())),
-        None => (path, None),
+fn og_image(page: &Page, meta: Option<&serde_json::Value>, now_ms: f64) -> String {
+    let kind = match page.kind {
+        super::PageKind::Agenda => crate::cards::Kind::Agenda,
+        _ => crate::cards::Kind::Pagina,
     };
-    match route::route("GET", &p, q.as_deref()) {
-        Route::Page(t) => format!("{ORIGIN}{}", t.og_path()),
-        _ => format!("{ORIGIN}/og/default.png"),
-    }
+    let v = crate::ogcache::og_version(kind, &crate::ogcache::data_version(meta, now_ms), now_ms);
+    format!("{ORIGIN}{}", crate::viral::og_url(page, Some(&v)))
 }
 
 async fn page_response(
@@ -144,7 +141,11 @@ async fn page_response(
         let doc = pages::build(page, &d, &now);
         let body = match &html {
             Some(index) => {
-                let headb = head::render(&doc, ORIGIN, &og_image(page));
+                let headb = head::render(
+                    &doc,
+                    ORIGIN,
+                    &og_image(page, d.first().and_then(Fetched::ok), now_ms),
+                );
                 let out = crate::meta::inject(index, &headb).unwrap_or_else(|| index.clone());
                 let frag = prerender::render(&doc, ORIGIN);
                 prerender::inject_root(&out, &frag).unwrap_or(out)
@@ -225,7 +226,7 @@ fn complete(d: &[Fetched]) -> bool {
     !d.iter().any(|f| matches!(f, Fetched::Failed))
 }
 
-async fn fetch_all(env: &Env, sources: &[Source]) -> Vec<Fetched> {
+pub(crate) async fn fetch_all(env: &Env, sources: &[Source]) -> Vec<Fetched> {
     join_all(sources.iter().map(|s| fetch_one(env, s))).await
 }
 

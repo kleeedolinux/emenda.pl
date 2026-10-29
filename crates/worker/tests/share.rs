@@ -97,6 +97,7 @@ fn meta_for_voto_and_agenda() {
         "https://emenda.online",
         "/votacao/1-2?dep=3",
         None,
+        None,
     );
     assert_eq!(m.image, "https://emenda.online/og/voto/1-2/3.png");
     assert_eq!(m.url, "https://emenda.online/votacao/1-2?dep=3");
@@ -105,6 +106,7 @@ fn meta_for_voto_and_agenda() {
         &t(Kind::Agenda, "2026-10-28"),
         "https://emenda.online",
         "/agenda?dia=2026-10-28",
+        None,
         None,
     );
     assert_eq!(a.image, "https://emenda.online/og/agenda/2026-10-28.png");

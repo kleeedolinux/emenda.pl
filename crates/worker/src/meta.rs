@@ -32,7 +32,14 @@ pub struct PageMeta {
 }
 
 /// `name` overrides the generic label (e.g. resolved deputado name).
-pub fn page_meta(t: &Target, origin: &str, path: &str, name: Option<&str>) -> PageMeta {
+/// `og_v`: OG image version (`ogcache::og_version`), appended as `?v=` so crawlers can cache forever.
+pub fn page_meta(
+    t: &Target,
+    origin: &str,
+    path: &str,
+    name: Option<&str>,
+    og_v: Option<&str>,
+) -> PageMeta {
     let origin = origin.trim_end_matches('/');
     let (label, desc) = match t.kind {
         Kind::Default => (None, DEFAULT_DESC.to_string()),
@@ -76,6 +83,10 @@ pub fn page_meta(t: &Target, origin: &str, path: &str, name: Option<&str>) -> Pa
             }),
             "O que a Câmara e o Senado discutem e votam, e o resultado das votações.".into(),
         ),
+        Kind::Pagina => match crate::viral::extra_page(&t.id) {
+            Some(v) => (Some(v.frase), v.gancho),
+            None => (None, DEFAULT_DESC.to_string()),
+        },
     };
     let title = match name.map(str::to_string).or(label) {
         Some(n) => format!("{n} · {SITE}"),
@@ -85,7 +96,10 @@ pub fn page_meta(t: &Target, origin: &str, path: &str, name: Option<&str>) -> Pa
         title,
         description: desc,
         url: format!("{origin}{path}"),
-        image: format!("{origin}{}", t.og_path()),
+        image: match og_v {
+            Some(v) => format!("{origin}{}", crate::ogcache::with_version(&t.og_path(), v)),
+            None => format!("{origin}{}", t.og_path()),
+        },
     }
 }
 
