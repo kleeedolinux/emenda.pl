@@ -907,3 +907,20 @@ fn cobertura_por_categoria() {
         assert!(!eh_pessoa(n), "{n}");
     }
 }
+
+#[test]
+fn espera_entre_tentativas_respeita_retry_after() {
+    use etl::assets::rede::espera;
+    use std::time::Duration;
+    let casos: [(u32, Option<&str>, u64); 6] = [
+        (0, None, 1),
+        (2, None, 4),
+        (3, Some("30"), 30),
+        (0, Some("2"), 2),
+        (0, Some("9999"), 120),                        // cap
+        (1, Some("Wed, 21 Oct 2015 07:28:00 GMT"), 2), // date form -> backoff
+    ];
+    for (n, ra, s) in casos {
+        assert_eq!(espera(n, ra), Duration::from_secs(s), "{n} {ra:?}");
+    }
+}

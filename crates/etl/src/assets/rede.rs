@@ -10,6 +10,8 @@ pub enum Erro {
     /// Body larger than the cap (bytes seen, at least).
     Grande(u64),
     Status(u16),
+    /// HTTP 429 with the raw `Retry-After` value, if any.
+    Limitado(Option<String>),
     Rede(String),
 }
 
@@ -18,6 +20,7 @@ impl std::fmt::Display for Erro {
         match self {
             Erro::Grande(n) => write!(f, "arquivo grande demais ({n} bytes)"),
             Erro::Status(s) => write!(f, "HTTP {s}"),
+            Erro::Limitado(_) => write!(f, "HTTP 429"),
             Erro::Rede(e) => write!(f, "rede: {e}"),
         }
     }
@@ -54,25 +57,26 @@ impl Http {
         }
     }
 
-    /// Retries transport errors, 429 and 5xx with exponential backoff (1s, 2s, 4s).
+    /// Retries transport errors and 5xx (1s, 2s, 4s) and 429 (`Retry-After`, else 8s, 16s, 32s).
     fn retry<T>(&self, f: impl Fn() -> Result<T, Erro>) -> Result<T, Erro> {
         let mut n = 0;
         loop {
-            match f() {
-                Err(Erro::Rede(_)) | Err(Erro::Status(429 | 500..=599))
-                    if n + 1 < self.tentativas =>
-                {
-                    std::thread::sleep(Duration::from_secs(1 << n));
-                    n += 1;
+            let pausa = match f() {
+                Err(Erro::Rede(_) | Erro::Status(500..=599)) if n + 1 < self.tentativas => {
+                    espera(n, None)
                 }
+                Err(Erro::Limitado(ra)) if n + 1 < self.tentativas => espera(n + 3, ra.as_deref()),
                 r => return r,
-            }
+            };
+            std::thread::sleep(pausa);
+            n += 1;
         }
     }
 
     fn call(&self, req: ureq::Request) -> Result<ureq::Response, Erro> {
         match req.call() {
             Ok(r) => Ok(r),
+            Err(ureq::Error::Status(429, r)) => Err(Erro::Limitado(header(&r, "Retry-After"))),
             Err(ureq::Error::Status(s, _)) => Err(Erro::Status(s)),
             Err(e) => Err(Erro::Rede(e.to_string())),
         }
@@ -180,6 +184,14 @@ impl Http {
             Ok(dados)
         })
     }
+}
+
+/// Pause before retry `n`: `Retry-After` seconds (capped at 120s) or `2^n` seconds.
+pub fn espera(n: u32, retry_after: Option<&str>) -> Duration {
+    let s = retry_after
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .map_or(1 << n.min(10), |s| s.min(120));
+    Duration::from_secs(s)
 }
 
 /// `bytes 0-0/12345` -> 12345.
