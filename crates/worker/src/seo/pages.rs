@@ -24,6 +24,7 @@ pub fn sources(p: &Page, today: &str) -> Vec<Source> {
     let mut v = vec![data(META.into())];
     match p.kind {
         Home | Emendas | Dinheiro | OrcamentoSecreto => v.push(data("v1/brasil.json".into())),
+        QuemRecebe => v.push(data("v1/beneficiados.json".into())),
         Uf => v.push(data(format!("v1/uf/{id}.json"))),
         Municipio => v.push(data(format!("v1/municipio/{id}.json"))),
         Autor => v.push(data(format!("v1/autor/{id}.json"))),
@@ -464,6 +465,7 @@ pub fn build(p: &Page, d: &[Fetched], now: &str) -> Doc {
         Partidos => at(1).map(|v| partidos(p, v)),
         Comissoes => at(1).map(|v| comissoes(p, v)),
         OrcamentoSecreto => at(1).map(|v| orcamento_secreto(p, v, meta)),
+        QuemRecebe => at(1).map(|v| quem_recebe(p, v, meta)),
         _ => None,
     };
     let live = matches!(
@@ -554,6 +556,7 @@ fn generic(p: &Page, meta: Option<&Value>) -> Doc {
         Estaduais => ("Deputados estaduais e assembleias legislativas".into(), "Deputados estaduais".into(), "Links e dados das assembleias legislativas estaduais.".into()),
         Sobre => ("Sobre o emenda.online: fontes, método e autora".into(), "Sobre".into(), "Como o emenda.online coleta e cruza dados públicos de emendas, votações e gastos; fontes, licença e autoria.".into()),
         OrcamentoSecreto => ("Orçamento secreto: bilhões distribuídos sem mostrar quem pediu".into(), "Orçamento secreto".into(), "Entre 2020 e 2022, o relator do Orçamento distribuiu bilhões sem mostrar quem pediu. Veja para onde foi o dinheiro.".into()),
+        QuemRecebe => ("Quem mais recebe dinheiro de emendas: empresas, entidades e fundos".into(), "Quem mais recebe".into(), "As empresas privadas, entidades e fundos públicos que mais receberam dinheiro mandado por deputados e senadores.".into()),
         Api => ("API aberta de emendas parlamentares e votações".into(), "API aberta".into(), "API JSON gratuita, sem chave: emendas por município, estado e autor, deputados, senadores, proposições e votações.".into()),
     };
     let mut d = doc(p, &title, &h1, &desc);
@@ -1832,6 +1835,77 @@ fn emendas(p: &Page, b: &Value, meta: Option<&Value>) -> Doc {
 }
 
 /// Orçamento secreto (emendas de relator-geral, RP9).
+fn beneficiado_items(v: &[Value], n: usize) -> Vec<Item> {
+    v.iter()
+        .take(n)
+        .filter_map(|x| {
+            let nome = s(x, "/nome")?;
+            let onde = [s(x, "/municipio"), s(x, "/uf")]
+                .into_iter()
+                .flatten()
+                .filter(|t| !t.is_empty())
+                .collect::<Vec<_>>()
+                .join(" - ");
+            Some(Item::text(
+                nome,
+                Some(format!("{} · {onde}", brl(i(x, "/valor").unwrap_or(0)))),
+            ))
+        })
+        .collect()
+}
+
+fn quem_recebe(p: &Page, v: &Value, meta: Option<&Value>) -> Doc {
+    let t = &v["totais"];
+    let privados = brl(i(t, "/empresas").unwrap_or(0) + i(t, "/entidades").unwrap_or(0));
+    let topo = arr(v, "/empresas")
+        .first()
+        .and_then(|x| s(x, "/nome"))
+        .map(|n| format!(" A que mais recebeu: {n}."))
+        .unwrap_or_default();
+    let desc = format!(
+        "{privados} de emendas foram para empresas e entidades privadas.{topo} Veja também os fundos públicos que mais receberam."
+    );
+    let mut d = doc(
+        p,
+        &format!("Quem mais recebe dinheiro de emendas: {privados} para empresas e entidades"),
+        "Quem mais recebe",
+        &desc,
+    );
+    here(&mut d, "Quem mais recebe");
+    fact(
+        &mut d,
+        "Empresas privadas",
+        brl(i(t, "/empresas").unwrap_or(0)),
+    );
+    fact(
+        &mut d,
+        "Entidades sem fins lucrativos",
+        brl(i(t, "/entidades").unwrap_or(0)),
+    );
+    fact(&mut d, "Fundos públicos", brl(i(t, "/fundos").unwrap_or(0)));
+    for (titulo, k) in [
+        ("Empresas privadas que mais receberam", "/empresas"),
+        (
+            "Entidades sem fins lucrativos que mais receberam",
+            "/entidades",
+        ),
+        ("Fundos públicos que mais receberam", "/fundos"),
+    ] {
+        d.sections
+            .push(section(titulo, beneficiado_items(arr(v, k), 100)));
+    }
+    portal(&mut d);
+    dataset(
+        &mut d,
+        "Quem mais recebe dinheiro de emendas",
+        "/data/v1/beneficiados.json",
+        "v1/beneficiados.json",
+        meta,
+        Some("Brasil".into()),
+    );
+    d
+}
+
 fn orcamento_secreto(p: &Page, b: &Value, meta: Option<&Value>) -> Doc {
     let total: i64 = arr(b, "/porTipo")
         .iter()

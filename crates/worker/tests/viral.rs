@@ -406,3 +406,37 @@ fn orcamento_secreto_has_seo_page_and_og_card() {
         doc.description
     );
 }
+
+#[test]
+fn quem_recebe_has_seo_page_and_og_card() {
+    let Some(seo::SeoRoute::Page { page: p, .. }) = seo::route("GET", "/quem-recebe", None) else {
+        panic!("rota SEO")
+    };
+    assert_eq!(p.kind, PageKind::QuemRecebe);
+    assert_eq!(viral::og_path(&p), "/og/pagina/quem-recebe.png");
+    assert_eq!(
+        seo::pages::sources(&p, "2026-10-28")[1],
+        seo::Source::Data("v1/beneficiados.json".into())
+    );
+    let b = json!({
+        "totais": { "empresas": 30_000_000_000_i64, "entidades": 10_000_000_000_i64, "fundos": 5_000_000_000_i64 },
+        "empresas": [{ "documento": "1", "nome": "CONSTRUTORA Y LTDA", "tipo": "Pessoa Jurídica", "valor": 20_000_000_000_i64, "uf": "MG", "municipio": "BETIM" }],
+        "entidades": [{ "documento": "2", "nome": "HOSPITAL X", "tipo": "Pessoa Jurídica", "valor": 10_000_000_000_i64, "uf": "SP", "municipio": "CAMPINAS" }],
+        "fundos": [{ "documento": "3", "nome": "FUNDO ESTADUAL DE SAUDE", "tipo": "Pessoa Jurídica", "valor": 5_000_000_000_i64, "uf": "SP", "municipio": "SAO PAULO" }]
+    });
+    let s = spec(&p, vec![ok(json!({})), ok(b.clone())], vec![]);
+    assert_eq!(s.numero, "R$ 400 mi");
+    assert_eq!(s.frase, "foram para empresas e entidades privadas");
+    let doc = seo::pages::build(&p, &[ok(json!({})), ok(b)], "2026-10-28T12:00-03:00");
+    assert!(doc.title.contains("Quem mais recebe"), "{}", doc.title);
+    assert!(
+        doc.description.contains("CONSTRUTORA Y LTDA"),
+        "{}",
+        doc.description
+    );
+    let labels: Vec<&str> = doc.sections.iter().map(|s| s.heading.as_str()).collect();
+    assert!(
+        labels.contains(&"Fundos públicos que mais receberam"),
+        "{labels:?}"
+    );
+}

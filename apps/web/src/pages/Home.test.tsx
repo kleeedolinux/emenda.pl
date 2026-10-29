@@ -12,7 +12,13 @@ const brasil = {
 };
 const meta = { anos: [2014, 2026], generatedAt: "2026-10-27T00:00:00Z", fonte: "https://portaldatransparencia.gov.br" };
 const rankings = { janelas: [{ janela: "1m", ate: "2026-10", valor: 5_000_000_00, tipos: [{ tipo: "pix", valor: 1_000_000_00 }], autores: [{ codigo: "1", nome: "FULANO DE TAL", valor: 1_000_000_00 }], ufs: [], municipios: [] }] };
-const dados: Record<string, unknown> = { "brasil.json": brasil, "meta.json": meta, "rankings.json": rankings, "autores.json": [] };
+const beneficiados = {
+  totais: { empresas: 30_000_000_000, entidades: 10_000_000_000, fundos: 5_000_000_000 },
+  empresas: [{ documento: "1", nome: "CONSTRUTORA Y LTDA", tipo: "Pessoa Jurídica", valor: 20_000_000_000, uf: "MG", municipio: "BETIM" }],
+  entidades: [],
+  fundos: [{ documento: "3", nome: "FUNDO ESTADUAL DE SAUDE", tipo: "Pessoa Jurídica", valor: 5_000_000_000, uf: "SP", municipio: "SAO PAULO" }],
+};
+const dados: Record<string, unknown> = { "brasil.json": brasil, "meta.json": meta, "rankings.json": rankings, "autores.json": [], "beneficiados.json": beneficiados };
 const realFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = realFetch; (window as { fetch: typeof fetch }).fetch = realFetch; localStorage.clear(); });
 
@@ -36,7 +42,17 @@ describe("Home", () => {
   test("seções em ordem, um trabalho cada", async () => {
     montar();
     const h2 = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    expect(h2).toEqual(["Perto de você", "Por onde começar", "Novidades", "Como funciona"]);
+    expect(h2).toEqual(["Perto de você", "Por onde começar", "Quem mais recebe", "Novidades", "Como funciona"]);
+  });
+
+  test("quem mais recebe: empresas e entidades privadas separadas dos fundos públicos", async () => {
+    montar();
+    const sec = screen.getByRole("region", { name: "Quem mais recebe" });
+    expect(await within(sec).findByText(/Construtora Y/i)).toBeTruthy();
+    expect(within(sec).getByText(/Fundo Estadual de Sa/i)).toBeTruthy();
+    expect(within(sec).getByRole("heading", { name: /Empresas e entidades privadas/ })).toBeTruthy();
+    expect(within(sec).getByRole("heading", { name: /Fundos públicos/ })).toBeTruthy();
+    expect(within(sec).getAllByRole("link").some((a) => a.getAttribute("href") === "/quem-recebe")).toBe(true);
   });
 
   test("hero na língua do dia a dia: rótulo, número grande que é link e frase", async () => {

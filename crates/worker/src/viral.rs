@@ -346,6 +346,7 @@ pub fn spec(p: &Page, d: &[Fetched], extra: &[Fetched], doc: &Doc) -> ViralSpec 
         Uf => at(1).and_then(|v| uf(v, meta)),
         Pix => at(1).map(|v| pix(v, meta)),
         OrcamentoSecreto => at(1).map(|v| orcamento_secreto(v, meta)),
+        QuemRecebe => at(1).map(|v| quem_recebe(v, meta)),
         Home | Emendas | Dinheiro => {
             at(1).map(|v| brasil(v, extra.first().and_then(Fetched::ok), meta))
         }
@@ -456,6 +457,20 @@ fn pix(v: &Value, meta: Option<&Value>) -> ViralSpec {
         frase: "caíram direto no caixa das prefeituras".into(),
         gancho: "Tudo sem dizer para quê. Quem mais mandou?".into(),
         faces: top_faces(arr(v, "/autores"), 3),
+        ..dinheiro(meta)
+    }
+}
+
+fn quem_recebe(v: &Value, meta: Option<&Value>) -> ViralSpec {
+    let t = &v["totais"];
+    let privados = i(t, "/empresas").unwrap_or(0) + i(t, "/entidades").unwrap_or(0);
+    ViralSpec {
+        rotulo: "Quem mais recebe".into(),
+        secundario: "dinheiro mandado por deputados e senadores".into(),
+        numero: compact_brl(privados),
+        frase: "foram para empresas e entidades privadas".into(),
+        gancho: "Veja quem mais recebeu 👇".into(),
+        faces: vec![],
         ..dinheiro(meta)
     }
 }

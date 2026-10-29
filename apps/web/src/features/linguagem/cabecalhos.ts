@@ -99,6 +99,11 @@ export const CABECALHOS = {
     subtitulo: "Entre 2020 e 2022, bilhões de reais foram distribuídos pelo relator do Orçamento sem mostrar qual político pediu. O STF mandou acabar com isso em dezembro de 2022. Veja para onde foi o dinheiro.",
     oficial: "Oficialmente: emendas de relator-geral (RP9)",
   },
+  quemRecebe: {
+    titulo: "Quem mais recebe o dinheiro que os políticos mandam",
+    subtitulo: "Nem todo dinheiro vai para a prefeitura: parte vai direto para empresas, associações e fundações. Veja quem mais recebeu e de onde são.",
+    oficial: "Oficialmente: favorecidos de emendas parlamentares",
+  },
 } satisfies Record<string, Cabecalho>;
 
 export type PaginaCabecalho = keyof typeof CABECALHOS;

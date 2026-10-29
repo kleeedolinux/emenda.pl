@@ -94,6 +94,15 @@ fn pipeline_completo() {
     assert_eq!(a["porUf"][0]["uf"], "SP");
     assert_eq!(a["favorecidos"][0]["valor"], 50000);
 
+    // ranking nacional: Associação Privada entra em entidades; Município fica de fora
+    let b = read(v1.join("beneficiados.json"));
+    assert_eq!(b["entidades"][0]["nome"], "HOSPITAL X");
+    assert_eq!(b["entidades"][0]["municipio"], "CAMPINAS");
+    assert_eq!(
+        b["totais"],
+        json!({"empresas":0,"entidades":2000,"fundos":0})
+    );
+
     let autores = read(v1.join("autores.json"));
     assert_eq!(autores[0]["codigo"], "1234");
     assert_eq!(autores[0]["pago"], 50050);

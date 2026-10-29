@@ -18,6 +18,7 @@ export const dataPath = {
   feedMes: (mes: number) => `/data/${DATA_VERSION}/feed/${mes}.json`,
   abertas: () => `/data/${DATA_VERSION}/abertas.json`,
   rankings: () => `/data/${DATA_VERSION}/rankings.json`,
+  beneficiados: () => `/data/${DATA_VERSION}/beneficiados.json`,
 } as const;
 
 /** Tipos de emenda normalizados a partir de "Tipo de Emenda" do Portal da Transparência. */
@@ -111,6 +112,24 @@ export interface Favorecido {
   /** natureza jurídica (Portal), quando informada */
   naturezaJuridica?: string;
   valor: number; // centavos
+}
+
+/** Favorecido no ranking nacional, com o lugar do primeiro pagamento. */
+export interface Beneficiado extends Favorecido {
+  uf: string;
+  municipio: string;
+}
+
+/** v1/beneficiados.json: top 100 de cada grupo. Estatais (Caixa, BB), governos e órgãos ficam de fora. */
+export interface Beneficiados {
+  /** centavos por grupo */
+  totais: { empresas: number; entidades: number; fundos: number };
+  /** empresas privadas (Ltda, S.A., empresário individual, cooperativa...) */
+  empresas: Beneficiado[];
+  /** sem fins lucrativos: associações, fundações privadas, OS, organizações religiosas */
+  entidades: Beneficiado[];
+  /** fundos públicos municipais e estaduais (ex.: fundo de saúde) */
+  fundos: Beneficiado[];
 }
 
 /** Convênio vinculado a emenda, por município do gasto. */

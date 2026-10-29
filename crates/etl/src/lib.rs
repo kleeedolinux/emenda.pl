@@ -2,6 +2,7 @@
 
 pub mod abertas;
 pub mod assets;
+pub mod beneficiados;
 pub mod feed;
 pub mod gastos;
 pub mod model;
@@ -254,6 +255,7 @@ pub fn run(o: &Opts) -> Result<Relatorio> {
     // favorecidos
     type FavMap = HashMap<String, HashMap<(String, String), FavAcc>>;
     let (mut fav_mun, mut fav_aut): (FavMap, FavMap) = Default::default();
+    let mut ranking = beneficiados::Ranking::default();
     let mut pagamentos: Vec<feed::Pagamento> = Vec::new();
     let fp = o.input.join("EmendasParlamentares_PorFavorecido.csv");
     if fp.exists() {
@@ -271,6 +273,7 @@ pub fn run(o: &Opts) -> Result<Relatorio> {
                 a.valor += valor;
             };
             let (mun_nome, mun_uf) = (r.get("Município Favorecido"), r.get("UF Favorecido"));
+            ranking.somar(&k.0, &k.1, &tipo, &natureza, &mun_uf, &mun_nome, valor);
             let ibge = chave_mun.get(&chave_municipio(&mun_nome, &mun_uf)).cloned();
             match &ibge {
                 Some(i) => acc(&mut fav_mun, i.clone()),
@@ -393,6 +396,7 @@ pub fn run(o: &Opts) -> Result<Relatorio> {
         },
     )?;
     write(&v1.join("autores.json"), &autores(&emendas))?;
+    ranking.escrever(&v1)?;
     pix::escrever(&v1, &emendas, |i| muns.get(i).map(|m| m.nome.clone()))?;
     abertas::escrever(&v1, &emendas)?;
     feed::escrever(&v1, pagamentos)?;

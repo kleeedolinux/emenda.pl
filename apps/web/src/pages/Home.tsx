@@ -1,12 +1,13 @@
 // Home: (1) hero que já entrega um fato + busca da cidade + mapa clicável; (2) perto de você; (3) 4 portas de entrada;
-// (4) novidades; (5) como funciona. Detalhe fica nas páginas próprias.
-import { dataPath, UFS, type AutorResumo, type Brasil, type Meta, type Municipio, type Rankings, type SiglaUf } from "@emenda/contracts";
+// (4) quem mais recebe; (5) novidades; (6) como funciona. Detalhe fica nas páginas próprias.
+import { dataPath, UFS, type AutorResumo, type Beneficiados, type Brasil, type Meta, type Municipio, type Rankings, type SiglaUf } from "@emenda/contracts";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Database, EyeOff, MapPin, Scale, Search, ShieldCheck, Trophy, Vote, Zap, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { HeroBrasil, preloadHeroScene } from "@/features/geo/HeroBrasil";
 import { BuscaUniversal, abrirBusca } from "@/features/busca";
+import { LinhaBeneficiado, privados } from "@/features/beneficiados";
 import { fatosDoDia, lerLocal, type Fato, type LocalVisitante } from "@/features/home/home";
 import { HERO, QuemMandou, QuemMandouSkeleton, TIPO_DINHEIRO } from "@/features/linguagem";
 import { PAUTAS } from "@/features/legislativo/pautas";
@@ -86,6 +87,7 @@ export default function Home() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-12 pt-10">
         <PertoDeVoce local={local} b={brasil.data} />
         <PortasDeEntrada b={brasil.data} rankings={rankings.data} />
+        <QuemMaisRecebe />
         <NovidadesStrip limit={5} />
         <ComoFunciona />
         {meta.data && <p className="text-xs text-muted">Atualizado em {formatDate(meta.data.generatedAt)} · dados de {anos} · fonte: <a className="link" href={meta.data.fonte} target="_blank" rel="noopener noreferrer">Portal da Transparência</a>.</p>}
@@ -228,6 +230,33 @@ function PortasDeEntrada({ b, rankings }: { b?: Brasil; rankings?: Rankings }) {
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/** Para onde o dinheiro vai de fato: empresas e entidades privadas de um lado, fundos públicos do outro. */
+function QuemMaisRecebe() {
+  const q = useApi<Beneficiados>(dataPath.beneficiados());
+  const b = q.data;
+  if (q.isError) return null;
+  const blocos = [
+    { titulo: "Empresas e entidades privadas", total: b ? b.totais.empresas + b.totais.entidades : undefined, itens: b ? privados(b).slice(0, 5) : undefined, to: "/quem-recebe" },
+    { titulo: "Fundos públicos", total: b?.totais.fundos, itens: b?.fundos.slice(0, 5), to: "/quem-recebe#fundos" },
+  ];
+  return (
+    <section aria-labelledby="recebe-t">
+      <h2 id="recebe-t" className="mb-1 text-xl font-bold sm:text-2xl">Quem mais recebe</h2>
+      <p className="mb-3 text-sm text-muted">Nem todo dinheiro vai para a prefeitura. Estas são as empresas, entidades e fundos que mais receberam.</p>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        {blocos.map((k) => (
+          <div key={k.titulo} className="card p-4">
+            <h3 className="font-semibold">{k.titulo}</h3>
+            <p className="font-display text-2xl font-bold tabular">{k.total != null ? brl(k.total) : <Skeleton className="h-7 w-28" />}</p>
+            {k.itens ? <div className="divide-y divide-line">{k.itens.map((x, i) => <LinhaBeneficiado key={x.documento} x={x} i={i} />)}</div> : <Skeleton className="mt-2 h-40 rounded-xl" />}
+            <Link to={k.to} className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent">Ver os 100 maiores <ArrowRight className="size-4" aria-hidden /></Link>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
