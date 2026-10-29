@@ -6,7 +6,6 @@ use crate::route::{self, CacheClass, DataSource, Disposition, Route, Target, Ups
 use crate::seo::Fetched;
 use crate::{foto, ogcache, viral};
 use serde_json::{json, Value};
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 use worker::*;
 
@@ -699,7 +698,14 @@ async fn hit(env: &Env, req: &Request) -> Result<Response> {
         .var("ANALYTICS_SALT")
         .map(|v| v.to_string())
         .unwrap_or_else(|_| "emenda.pl".into());
-    let body = json!({ "hash": analytics::visitor_hash(&vid, &day, &secret), "day": day, "new": is_new, "now": now });
+    let ping = req
+        .clone()?
+        .json::<Value>()
+        .await
+        .ok()
+        .and_then(|v| v["ping"].as_bool())
+        .unwrap_or(false);
+    let body = json!({ "hash": analytics::visitor_hash(&vid, &day, &secret), "day": day, "new": is_new && !ping, "now": now, "ping": ping });
     let mut init = RequestInit::new();
     init.with_method(Method::Post)
         .with_body(Some(body.to_string().into()));
@@ -735,15 +741,11 @@ async fn stats(env: &Env) -> Out {
 #[durable_object]
 pub struct Analytics {
     state: State,
-    recent: RefCell<Recent>,
 }
 
 impl DurableObject for Analytics {
     fn new(state: State, _env: Env) -> Self {
-        Self {
-            state,
-            recent: RefCell::new(Recent::default()),
-        }
+        Self { state }
     }
 
     async fn fetch(&self, mut req: Request) -> Result<Response> {
@@ -755,6 +757,13 @@ impl DurableObject for Analytics {
             let (Some(hash), Some(day)) = (b["hash"].as_str(), b["day"].as_str()) else {
                 return Response::error("bad hit", 400);
             };
+            // Presença persiste no storage: o DO é despejado quando ocioso e a memória se perde.
+            let mut recent = Recent::from_map(s.get("recent").await?.unwrap_or_default());
+            recent.touch(hash, now);
+            s.put("recent", recent.to_map()).await?;
+            if b["ping"].as_bool() == Some(true) {
+                return Response::empty();
+            }
             let key = format!("v:{day}:{hash}");
             if s.get::<u8>(&key).await?.is_none() {
                 s.put(&key, 1u8).await?;
@@ -782,13 +791,12 @@ impl DurableObject for Analytics {
                 }
             }
             s.put("last_day", day).await?;
-            self.recent.borrow_mut().touch(hash, now);
             return Response::empty();
         }
         let counts: BTreeMap<String, u64> = s.get("counts").await?.unwrap_or_default();
         let total: u64 = s.get("total").await?.unwrap_or(0);
         let online = {
-            let mut r = self.recent.borrow_mut();
+            let mut r = Recent::from_map(s.get("recent").await?.unwrap_or_default());
             r.prune(now);
             r.online() as u64
         };

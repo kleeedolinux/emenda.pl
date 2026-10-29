@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { ShieldCheck } from "lucide-react";
 import { useEffect, useSyncExternalStore } from "react";
 import { Link, useLocation } from "react-router";
-import { dntAtivo, sendHit, setAviso, shouldTrack, useAviso, useStats } from "@/lib/analytics";
+import { dntAtivo, sendHit, sendPing, setAviso, shouldTrack, useAviso, useStats } from "@/lib/analytics";
 import { formatNumber } from "@/lib/format";
 
 /** Envia hit anônimo a cada mudança de rota (para com opt-out ou DNT/GPC). */
@@ -10,6 +10,11 @@ export function usePageHits() {
   const { pathname } = useLocation();
   const aviso = useAviso();
   useEffect(() => { if (aviso !== "desativado") sendHit(pathname); }, [pathname, aviso]);
+  useEffect(() => {
+    if (aviso === "desativado") return;
+    const id = setInterval(() => { if (document.visibilityState === "visible") sendPing(pathname); }, 60_000);
+    return () => clearInterval(id);
+  }, [pathname, aviso]);
 }
 
 const noop = () => () => {};

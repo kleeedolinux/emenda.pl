@@ -99,3 +99,14 @@ fn aggregates() {
     assert_eq!(j["serie"][29]["dia"], "2026-10-28");
     assert_eq!(j["serie"][29]["visitantes"], 2);
 }
+
+#[test]
+fn recent_survives_storage_roundtrip() {
+    // O Durable Object é despejado quando fica ocioso; a presença precisa ir para o storage.
+    let mut r = Recent::default();
+    r.touch("a", 1_000);
+    r.touch("b", 2_000);
+    let mut back = Recent::from_map(r.to_map());
+    back.prune(200_000);
+    assert_eq!(back.online(), 2);
+}

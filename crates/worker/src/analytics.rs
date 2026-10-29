@@ -118,6 +118,12 @@ impl Recent {
     pub fn online(&self) -> usize {
         self.0.len()
     }
+    pub fn from_map(m: BTreeMap<String, u64>) -> Self {
+        Self(m)
+    }
+    pub fn to_map(&self) -> BTreeMap<String, u64> {
+        self.0.clone()
+    }
 }
 
 /// Count one new distinct visitor for `day`.

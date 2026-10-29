@@ -24,6 +24,11 @@ export function hitPayload(path: string): string {
   return JSON.stringify({ path: path.split(/[?#]/)[0] || "/" });
 }
 
+/** Batida de presença (só mantém o contador "online"; não conta visita). */
+export function pingPayload(path: string): string {
+  return JSON.stringify({ path: path.split(/[?#]/)[0] || "/", ping: true });
+}
+
 export const dntAtivo = () =>
   typeof navigator !== "undefined" &&
   (navigator.doNotTrack === "1" || (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl === true);
@@ -55,6 +60,14 @@ export function sendHit(path: string) {
   try {
     const blob = new Blob([body], { type: "application/json" });
     if (!navigator.sendBeacon?.("/api/hit", blob)) void fetch("/api/hit", { method: "POST", body, keepalive: true, headers: { "content-type": "application/json" } }).catch(() => {});
+  } catch { /* nunca quebra a navegação */ }
+}
+
+/** Mantém a presença enquanto a aba está visível (a janela "online" é de 5 min). */
+export function sendPing(path: string) {
+  if (!shouldTrack({ aviso: getAviso(), dnt: dntAtivo() })) return;
+  try {
+    void fetch("/api/hit", { method: "POST", body: pingPayload(path), keepalive: true, headers: { "content-type": "application/json" } }).catch(() => {});
   } catch { /* nunca quebra a navegação */ }
 }
 

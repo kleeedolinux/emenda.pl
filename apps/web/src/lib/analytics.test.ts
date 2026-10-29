@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { shouldTrack, hitPayload, parseAviso } from "./analytics";
+import { shouldTrack, hitPayload, pingPayload, parseAviso } from "./analytics";
 
 // Base legal: legítimo interesse (LGPD art. 7º, IX). Liga por padrão; só desliga com opt-out ou DNT/GPC.
 describe("shouldTrack", () => {
@@ -27,4 +27,8 @@ describe("parseAviso", () => {
 describe("hitPayload", () => {
   test("só o caminho, sem query nem hash", () => expect(hitPayload("/uf/SP?tab=autores#x")).toBe('{"path":"/uf/SP"}'));
   test("caminho vazio vira /", () => expect(hitPayload("")).toBe('{"path":"/"}'));
+});
+
+describe("pingPayload", () => {
+  test("marca ping e mantém só o caminho", () => expect(pingPayload("/uf/SP?x=1")).toBe('{"path":"/uf/SP","ping":true}'));
 });
