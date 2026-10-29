@@ -58,7 +58,7 @@ export default function FederacaoPage() {
                 <span className="absolute inset-y-0 left-0 w-1.5 rounded-l-2xl" style={{ background: partyColor(p) }} aria-hidden />
                 <p className="flex items-center justify-between gap-2"><PartyBadge sigla={p} /><Link className="link text-sm" to={`/partido/${encodeURIComponent(p)}`}>Página do partido →</Link></p>
                 {x ? (
-                  <p className="mt-3 text-sm"><b className="tabular">{x.deputados}</b> deputados · <b className="tabular">{x.senadores}</b> senadores{b?.pago != null && <> · <Money centavos={x.pago} compact /> em emendas pagas</>}</p>
+                  <p className="mt-3 text-sm"><b className="tabular">{x.deputados}</b> deputados · <b className="tabular">{x.senadores}</b> senadores{b?.pago != null && <> · <Money centavos={x.pago} compact /> em dinheiro mandado</>}</p>
                 ) : <Skeleton className="mt-3 h-5 w-48" />}
               </li>
             );
@@ -132,7 +132,7 @@ function Coesao({ fId }: { fId: string }) {
                   <span className="block text-xs text-muted">{l.pauta.sigla} {l.pauta.numero}/{l.pauta.ano}{l.votacao ? <> · <Link className="link" to={`/votacao/${l.votacao.id}`}>votação de {formatDate(l.votacao.data)}</Link></> : null}</span>
                 </td>
                 {l.carregando ? <td colSpan={3} className="py-2.5"><Skeleton className="h-5 w-56" /></td> : !l.votacao ? (
-                  <td colSpan={3} className="py-2.5 text-xs text-muted">Sem votação nominal no Plenário da Câmara.</td>
+                  <td colSpan={3} className="py-2.5 text-xs text-muted">Sem votação com voto de cada deputado no Plenário da Câmara.</td>
                 ) : (
                   <>
                     <td className="py-2.5 pr-3"><PosBadge p={l.coesao?.posicao ?? null} />{l.coesao?.unida && <Badge tone="azul" className="ml-1">unida</Badge>}</td>

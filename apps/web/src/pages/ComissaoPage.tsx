@@ -88,11 +88,11 @@ function Pagina({ casa, tipo, sigla, nome, cat, url, site, local, instalacao, ag
         <div className="card mb-6 flex gap-3 border-l-4 border-l-amarelo p-4 text-sm">
           <Landmark className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden />
           <div>
-            <p><b>Por que importa para as emendas:</b> <AutoLink text={cat.destaque} /></p>
+            <p><b>Por que importa para o seu bolso:</b> <AutoLink text={cat.destaque} /></p>
             <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-semibold">
-              <Link className="link" to="/entenda/o-que-e-emenda">Entenda o que é uma emenda</Link>
+              <Link className="link" to="/entenda/o-que-e-emenda">Entenda como o dinheiro é mandado</Link>
               <Link className="link" to="/entenda/ciclo-do-dinheiro">Do Orçamento ao pagamento</Link>
-              <Link className="link" to="/emendas">Explorar as emendas</Link>
+              <Link className="link" to="/emendas">Ver o dinheiro que a comissão mandou</Link>
             </p>
           </div>
         </div>

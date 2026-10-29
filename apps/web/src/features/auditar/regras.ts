@@ -10,7 +10,7 @@ export const DESFECHO_LABEL: Record<Desfecho, string> = {
   lei: "Virou lei ou norma",
   avancou: "Aprovada numa etapa (enviada à outra Casa, à sanção ou vetada)",
   arquivada: "Arquivada, retirada, rejeitada ou prejudicada",
-  tramitando: "Em tramitação",
+  tramitando: "Ainda em discussão",
 };
 /** Tipos que mudam leis (os demais são requerimentos, indicações etc.). */
 export const TIPOS_CAMARA = ["PL", "PLP", "PEC", "PDL"] as const;
@@ -134,13 +134,13 @@ export function pontosDeAtencao(i: Indicadores): Ponto[] {
 
   const g = i.gastos;
   out.push({
-    id: "gastos", titulo: "Gastos da cota parlamentar",
+    id: "gastos", titulo: "Gastos do gabinete",
     status: !g || g.valor <= 0 ? "sem-dados" : g.valor > g.media ? "atencao" : "ok",
-    texto: !g ? "Sem dados de cota parlamentar para esta legislatura."
-      : g.valor <= 0 ? "Nenhum gasto da cota registrado no mandato atual."
-      : g.valor > g.media ? `Gastou ${pct(g.valor / g.media - 1)} acima da média da ${casa} na cota parlamentar (${g.posicao}º de ${g.n}).`
-      : `Gastou ${g.media ? pct(1 - g.valor / g.media) : "0%"} abaixo da média da ${casa} na cota parlamentar (${g.posicao}º de ${g.n}).`,
-    formula: `Total da cota (CEAP) na legislatura atual comparado à média de todos os parlamentares em exercício na ${casa}. Atenção se for maior que a média.`,
+    texto: !g ? "Sem dados de gastos do gabinete neste mandato."
+      : g.valor <= 0 ? "Nenhum gasto do gabinete registrado no mandato atual."
+      : g.valor > g.media ? `Gastou ${pct(g.valor / g.media - 1)} acima da média da ${casa} com o gabinete (${g.posicao}º de ${g.n}).`
+      : `Gastou ${g.media ? pct(1 - g.valor / g.media) : "0%"} abaixo da média da ${casa} com o gabinete (${g.posicao}º de ${g.n}).`,
+    formula: `Oficialmente: cota parlamentar (CEAP). Total na legislatura atual comparado à média de todos os parlamentares em exercício na ${casa}. Atenção se for maior que a média.`,
   });
 
   const a = i.alinhamento;
@@ -164,26 +164,26 @@ export function pontosDeAtencao(i: Indicadores): Ponto[] {
 
   const e = i.emendas;
   out.push({
-    id: "pix", titulo: "Emendas via “Emenda Pix”",
+    id: "pix", titulo: "Dinheiro mandado sem dizer para quê",
     status: !e || e.pago <= 0 ? "sem-dados" : e.pctPix >= LIMITES.pix ? "atencao" : "ok",
-    texto: !e || e.pago <= 0 ? "Sem emendas pagas encontradas no Portal da Transparência."
-      : `${pct(e.pctPix)} do valor pago das emendas foi por transferência especial (Emenda Pix).`,
-    formula: `Valor pago via transferência especial ÷ valor pago total (inclui restos a pagar). A Emenda Pix cai direto no caixa do ente, sem convênio prévio. Atenção a partir de ${pct(LIMITES.pix)}.`,
+    texto: !e || e.pago <= 0 ? "Nenhum dinheiro mandado por este político foi pago, segundo o Portal da Transparência."
+      : `${pct(e.pctPix)} do dinheiro que mandou foi sem dizer para quê.`,
+    formula: `Oficialmente: emenda Pix (transferência especial). Valor pago via transferência especial ÷ valor pago total (inclui restos a pagar). A Emenda Pix cai direto no caixa do ente, sem convênio prévio. Atenção a partir de ${pct(LIMITES.pix)}.`,
   });
 
   const p = i.presenca;
   out.push({
-    id: "presenca", titulo: "Presença em votações nominais",
+    id: "presenca", titulo: "Presença nas votações",
     status: !p || p.pct == null ? "sem-dados" : p.pct < LIMITES.presenca ? "atencao" : "ok",
-    texto: !p || p.pct == null ? "Sem votações nominais na amostra." : `Registrou presença em ${pct(p.pct)} das ${p.total} votações nominais analisadas.`,
+    texto: !p || p.pct == null ? "Sem votações com voto registrado de cada um na amostra." : `Registrou presença em ${pct(p.pct)} das ${p.total} votações analisadas.`,
     formula: `Votações com voto registrado ÷ votações nominais do plenário no período em exercício. Licenças e missões contam como ausência. Atenção abaixo de ${pct(LIMITES.presenca)}.`,
   });
 
   out.push({
-    id: "fora-uf", titulo: "Emendas para fora do estado que representa",
+    id: "fora-uf", titulo: "Dinheiro mandado para outros estados",
     status: !e || e.pctForaUf == null ? "sem-dados" : e.pctForaUf >= LIMITES.foraUf ? "atencao" : "ok",
-    texto: !e || e.pctForaUf == null ? "Sem emendas pagas com UF de destino identificada."
-      : `${pct(e.pctForaUf)} do valor pago (com UF identificada) foi para outro estado.`,
+    texto: !e || e.pctForaUf == null ? "Sem dinheiro pago com estado de destino conhecido."
+      : `${pct(e.pctForaUf)} do dinheiro (com estado conhecido) foi para outro estado.`,
     formula: `Valor pago com destino em outra UF ÷ valor pago com UF de destino identificada. Emendas nacionais (sem UF) ficam fora. Atenção a partir de ${pct(LIMITES.foraUf)}.`,
   });
   return out;

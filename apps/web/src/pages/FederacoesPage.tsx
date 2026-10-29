@@ -69,7 +69,7 @@ export default function FederacoesPage() {
                 <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
                   <div className="rounded-xl bg-surface-2 p-2"><dt className="text-[11px] text-muted">Deputados</dt><dd className="font-display text-xl font-bold tabular">{b ? b.deputados.length : <Skeleton className="mx-auto h-6 w-8" />}</dd></div>
                   <div className="rounded-xl bg-surface-2 p-2"><dt className="text-[11px] text-muted">Senadores</dt><dd className="font-display text-xl font-bold tabular">{b ? b.senadores.length : <Skeleton className="mx-auto h-6 w-8" />}</dd></div>
-                  <div className="rounded-xl bg-surface-2 p-2"><dt className="text-[11px] text-muted">Emendas pagas</dt><dd className="font-display text-base font-bold tabular leading-7">{b?.pago != null ? <Money centavos={b.pago} compact /> : autores.isError ? "—" : <Skeleton className="mx-auto h-6 w-12" />}</dd></div>
+                  <div className="rounded-xl bg-surface-2 p-2"><dt className="text-[11px] text-muted">Dinheiro mandado</dt><dd className="font-display text-base font-bold tabular leading-7">{b?.pago != null ? <Money centavos={b.pago} compact /> : autores.isError ? "—" : <Skeleton className="mx-auto h-6 w-12" />}</dd></div>
                 </dl>
                 <p className="mt-3 text-xs text-muted">
                   Prazo mínimo: até {formatDate(v.minimoAte)} {v.cumpriuMinimo ? <Badge tone="neutro">cumprido; segue registrada</Badge> : <Badge tone="verde">em curso</Badge>}
@@ -78,7 +78,7 @@ export default function FederacoesPage() {
             );
           })}
         </ul>
-        <p className="mt-3 text-xs text-muted">Emendas pagas: soma dos valores pagos (Portal da Transparência) das emendas de autoria dos parlamentares hoje filiados, ao longo de toda a carreira.<Tip content="Cruzamento por nome entre a lista de parlamentares e os autores de emendas; pode haver parlamentar sem correspondência." /></p>
+        <p className="mt-3 text-xs text-muted">Dinheiro mandado: soma dos valores pagos (Portal da Transparência) das emendas de autoria dos parlamentares hoje filiados, ao longo de toda a carreira.<Tip content="Cruzamento por nome entre a lista de parlamentares e os autores de emendas; pode haver parlamentar sem correspondência." /></p>
       </Section>
 
       <Section title="Peso no Congresso">

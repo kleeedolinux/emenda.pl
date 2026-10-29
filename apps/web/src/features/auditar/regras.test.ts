@@ -135,13 +135,20 @@ describe("pontosDeAtencao (regras neutras)", () => {
     const p = pontosDeAtencao({ ...vazio, trocas: 2 }).find((x) => x.id === "trocas")!;
     expect(p.texto).toBe("Trocou de partido 2 vezes no período registrado.");
     const g = pontosDeAtencao({ ...vazio, gastos: { valor: 300, media: 200, n: 500, posicao: 12 } }).find((x) => x.id === "gastos")!;
-    expect(g.texto).toBe("Gastou 50% acima da média da Câmara na cota parlamentar (12º de 500).");
+    expect(g.texto).toBe("Gastou 50% acima da média da Câmara com o gabinete (12º de 500).");
   });
   test("cota zerada (fora do mandato) não vira 100% abaixo da média; título neutro", () => {
     const g = pontosDeAtencao({ ...vazio, gastos: { valor: 0, media: 200, n: 514, posicao: 514 } }).find((x) => x.id === "gastos")!;
     expect(g.status).toBe("sem-dados");
-    expect(g.texto).toBe("Nenhum gasto da cota registrado no mandato atual.");
-    expect(g.titulo).toBe("Gastos da cota parlamentar");
+    expect(g.texto).toBe("Nenhum gasto do gabinete registrado no mandato atual.");
+    expect(g.titulo).toBe("Gastos do gabinete");
+  });
+  test("títulos e textos sem jargão (o termo oficial fica só na fórmula)", () => {
+    const cheio = { ...vazio, gastos: { valor: 300, media: 200, n: 500, posicao: 12 }, emendas: { pago: 10, pctPix: 0.5, pctForaUf: 0.5 }, trocas: 1 } as Indicadores;
+    for (const p of [...pontosDeAtencao(cheio), ...pontosDeAtencao(vazio)]) {
+      expect(`${p.titulo} ${p.texto}`).not.toMatch(/emenda|cota|transferência especial|nomina|UF\b|CEAP/i);
+    }
+    expect(pontosDeAtencao(cheio).find((x) => x.id === "pix")!.titulo).toBe("Dinheiro mandado sem dizer para quê");
   });
 });
 

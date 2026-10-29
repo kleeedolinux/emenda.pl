@@ -94,7 +94,7 @@ export default function SenadoresPage() {
         </Campo>
         <Campo label="Ordenar por" tip="Tempo de casa soma os períodos de exercício efetivo desde 1975, sem licenças.">
           <select className={selectCls} value={ordem} onChange={(e) => set("ordem", e.target.value === "nome" ? "" : e.target.value)}>
-            <option value="nome">Nome</option><option value="tempo">Tempo de casa</option><option value="emendas">Emendas pagas</option>
+            <option value="nome">Nome</option><option value="tempo">Tempo de casa</option><option value="emendas">Dinheiro mandado</option>
           </select>
         </Campo>
       </div>
@@ -123,7 +123,7 @@ export default function SenadoresPage() {
                         <span className="block truncate font-semibold">{s.nome}</span>
                         <span className="flex items-center gap-1.5 text-xs text-muted"><PartyBadge sigla={s.partido} link={false} />{s.uf}</span>
                         {s.nMandatos != null && <ChipsMandato n={s.nMandatos} tempo={formatDuracao(s.dias ?? 0)} atual />}
-                        {s.pago != null && <span className="block text-xs text-muted">Emendas pagas: <b className="text-fg"><Money centavos={s.pago} compact /></b></span>}
+                        {s.pago != null && <span className="block text-xs text-muted">Dinheiro mandado: <b className="text-fg"><Money centavos={s.pago} compact /></b></span>}
                       </span>
                     </Link>
                   </li>

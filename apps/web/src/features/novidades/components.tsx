@@ -7,7 +7,7 @@ import { Link } from "react-router";
 import { ALTA_RELEVANCIA, TIPOS_NOVIDADE, novidadesPath, type Novidade, type NovidadeEntidade, type NovidadesRecentes, type TipoNovidade } from "@emenda/contracts";
 import { PartyBadge, Skeleton, toast, useApi } from "@/ui";
 import { ShareButton } from "@/features/share";
-import { corpo, dataCompleta, formatarNumero, linkInterno, shareDe, tempoRelativo, textoParaCopiar } from "./novidades";
+import { leigo, ROTULO_NOVIDADE, corpo, dataCompleta, formatarNumero, linkInterno, shareDe, tempoRelativo, textoParaCopiar } from "./novidades";
 
 /** Ícone e cor por tipo (cores da marca). */
 export const META_TIPO: Record<TipoNovidade, { icon: LucideIcon; cls: string }> = {
@@ -60,7 +60,7 @@ async function copiar(n: Novidade) {
 
 export function NovidadeCard({ n, agora, novo, destaque, i = 0 }: { n: Novidade; agora: number; novo?: boolean; destaque?: boolean; i?: number }) {
   const reduce = useReducedMotion();
-  const texto = corpo(n);
+  const texto = leigo(corpo(n));
   return (
     <motion.article
       id={n.id}
@@ -74,13 +74,13 @@ export function NovidadeCard({ n, agora, novo, destaque, i = 0 }: { n: Novidade;
       <TipoIcone tipo={n.tipo} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
-          <span className="font-semibold text-fg/80">{TIPOS_NOVIDADE[n.tipo]}</span>
+          <span className="font-semibold text-fg/80">{ROTULO_NOVIDADE[n.tipo]}</span>
           <span aria-hidden>·</span>
           <time dateTime={n.data} title={dataCompleta(n.data)}>{tempoRelativo(n.data, agora)}</time>
           {novo && <span className="inline-flex items-center gap-1 font-semibold text-verde-700 dark:text-verde"><span className="size-1.5 rounded-full bg-verde" aria-hidden />novo</span>}
           {n.relevancia >= ALTA_RELEVANCIA && <span className="rounded-full bg-amarelo/25 px-1.5 font-semibold text-amarelo-700 dark:bg-amarelo/15 dark:text-amarelo" title={`Relevância ${n.relevancia}/100 (regra pública)`}>alta relevância</span>}
         </div>
-        <h3 id={`${n.id}-t`} className="mt-1 text-[15px] font-bold leading-snug text-fg text-balance">{n.titulo}</h3>
+        <h3 id={`${n.id}-t`} className="mt-1 text-[15px] font-bold leading-snug text-fg text-balance">{leigo(n.titulo)}</h3>
         {texto && <p className="mt-1 text-sm leading-relaxed text-fg/85 [overflow-wrap:anywhere]">{texto}</p>}
 
         {!!n.numeros?.length && (
@@ -151,7 +151,7 @@ export function FiltroTipos({ ativos, onToggle, onLimpar, contagem }: {
         const I = META_TIPO[t].icon;
         return (
           <button key={t} type="button" aria-pressed={ativos.has(t)} onClick={() => onToggle(t)} className={chip(ativos.has(t))}>
-            <I className="size-3.5" aria-hidden />{TIPOS_NOVIDADE[t]}
+            <I className="size-3.5" aria-hidden />{ROTULO_NOVIDADE[t]}
             <span className="tabular opacity-60">{contagem[t]}</span>
           </button>
         );
@@ -180,8 +180,8 @@ export function NovidadesStrip({ limit = 5, alta = false, className }: { limit?:
               <Link to={`/novidades#${n.id}`} className="group flex items-start gap-2.5 py-2.5">
                 <TipoIcone tipo={n.tipo} size="sm" />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold leading-snug text-fg group-hover:underline">{n.titulo}</span>
-                  <span className="text-xs text-muted">{TIPOS_NOVIDADE[n.tipo]} · <time dateTime={n.data}>{tempoRelativo(n.data, agora)}</time></span>
+                  <span className="block text-sm font-semibold leading-snug text-fg group-hover:underline">{leigo(n.titulo)}</span>
+                  <span className="text-xs text-muted">{ROTULO_NOVIDADE[n.tipo]} · <time dateTime={n.data}>{tempoRelativo(n.data, agora)}</time></span>
                 </span>
               </Link>
             </li>

@@ -31,3 +31,9 @@ describe("cabeçalhos em linguagem comum", () => {
       expect(Object.keys(CABECALHOS)).toContain(k);
   });
 });
+
+describe("cabecalhoUf com preposição certa", () => {
+  test.each([["BA", "Bahia", "cidades da Bahia"], ["SP", "São Paulo", "cidades de São Paulo"], ["RJ", "Rio de Janeiro", "cidades do Rio de Janeiro"]])("%s", (uf, nome, esperado) => {
+    expect(cabecalhoUf(nome, uf).subtitulo).toContain(esperado);
+  });
+});

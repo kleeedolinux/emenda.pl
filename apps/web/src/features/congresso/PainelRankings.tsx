@@ -159,7 +159,7 @@ export function Rankings({ membros, d, f, url }: { membros: Membro[]; d: DadosRa
 }
 
 function CarregandoVotos() {
-  return <div className="space-y-2"><Skeleton className="h-60" /><p className="text-xs text-muted">Somando votos das últimas votações nominais (Câmara e Senado)…</p></div>;
+  return <div className="space-y-2"><Skeleton className="h-60" /><p className="text-xs text-muted">Somando os votos das últimas votações (Câmara e Senado)…</p></div>;
 }
 
 /** Proposições apresentadas por deputado: uma contagem por pessoa, só quando pedido. */

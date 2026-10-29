@@ -88,7 +88,7 @@ export default function MunicipioPage() {
               <h2 id="recebeu" className="mb-1 font-display text-lg font-bold">Quem recebeu o dinheiro</h2>
               <p className="mb-3 text-sm text-muted">Prefeitura, fundos, empresas e entidades que receberam na ponta. <Tip content="Soma de todos os pagamentos a cada recebedor registrados no Portal da Transparência, de todos os anos e origens. Por isso pode passar do total acima." /></p>
               <ListaVerMais itens={d.favorecidos} inicial={5} chave={(f) => f.documento + f.nome} className="divide-y divide-line"
-                vazio={<p className="text-sm text-muted">Sem favorecidos publicados.</p>}
+                vazio={<p className="text-sm text-muted">Ninguém aparece como recebedor nos dados publicados.</p>}
                 render={(f) => (
                   <details className="group py-2">
                     <summary className="flex cursor-pointer list-none items-center gap-3">

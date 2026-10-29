@@ -174,7 +174,7 @@ function Emendas({ b }: { b: Boletim }) {
               ))}
             </ol>
           )}
-          <p className="mt-2 text-xs print:hidden"><Link className="link" to={`/autor/${v.autor.codigo}`}>Ver cada emenda →</Link></p>
+          <p className="mt-2 text-xs print:hidden"><Link className="link" to={`/autor/${v.autor.codigo}`}>Ver cada pagamento →</Link></p>
         </>
       )}
     </Ficha>
@@ -279,7 +279,7 @@ export function BoletimView({ b, acoes, compacto }: { b: Boletim; acoes?: ReactN
       {!compacto && <CardPautas itens={b.pautas.itens} carregando={b.pautas.carregando} />}
       {compacto && (
         <Card title="Pautas polêmicas">
-          {b.pautas.carregando ? <Spinner /> : b.pautas.itens.length === 0 ? <p className="text-sm text-muted">Sem votos nominais dessas pautas.</p> : (
+          {b.pautas.carregando ? <Spinner /> : b.pautas.itens.length === 0 ? <p className="text-sm text-muted">Nenhum voto registrado nessas leis.</p> : (
             <ul className="space-y-1 text-sm">{b.pautas.itens.map((x) => <li key={x.pauta.apelido} className="flex justify-between gap-2"><span className="truncate">{x.pauta.apelido}</span>{x.voto ? <VoteBadge voto={x.voto} /> : <Spinner label="" />}</li>)}</ul>
           )}
         </Card>

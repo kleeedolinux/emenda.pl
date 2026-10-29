@@ -94,7 +94,7 @@ export function Contadores() {
           valor={<span className="tabular">{formatBRL(emendasAno.pago, true)}</span>}
           sub={<>{emendasAno.n.toLocaleString("pt-BR")} emendas com movimento no ano. Empenhado: {formatBRL(emendasAno.empenhado, true)}.</>}
           tip="Valor pago no ano das emendas indicadas por deputados, senadores, bancadas e comissões, segundo o Portal da Transparência. É dinheiro do orçamento destinado por decisão do Congresso, não custo de funcionamento."
-          fonte={<>Fonte: <ExternalLink href="https://portaldatransparencia.gov.br/emendas">Portal da Transparência</ExternalLink> · <Link className="link" to="/emendas">explorar emendas</Link></>}
+          fonte={<>Fonte: <ExternalLink href="https://portaldatransparencia.gov.br/emendas">Portal da Transparência</ExternalLink> · <Link className="link" to="/emendas">ver o dinheiro</Link></>}
         />
       ) : null}
     </div>

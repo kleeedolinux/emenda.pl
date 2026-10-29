@@ -217,7 +217,7 @@ function Resumo({ id, janela, autorCodigo, pagoTotal }: { id: number; janela: Pe
   return (
     <StatGrid>
       <Stat label="Emendas pagas no período" tip="pago" value={pago != null ? <Money centavos={pago} compact /> : autorCodigo === undefined ? "—" : "…"}
-        hint={autorCodigo ? <Link className="link" to={`/autor/${autorCodigo}`}>ver todas as emendas</Link> : "Sem correspondência no Portal da Transparência"} />
+        hint={autorCodigo ? <Link className="link" to={`/autor/${autorCodigo}`}>ver todo o dinheiro que mandou</Link> : "Sem correspondência no Portal da Transparência"} />
       <Stat label="Proposições apresentadas" value={nProps != null ? formatNumber(nProps) : "…"} hint={`apresentadas de ${janela.inicio.slice(0, 4)} a ${Math.min(Number(janela.fim.slice(0, 4)), new Date().getFullYear())}`} tip="Projetos, requerimentos e outros documentos em que aparece como autor(a). A API da Câmara filtra por ano de apresentação." />
       <Stat label={`Cota parlamentar em ${ano}`} tip="CEAP" value={desp.data ? <Money centavos={totalDespesas(desp.data)} compact /> : desp.isError ? "—" : "…"} hint={desp.data ? `${formatNumber(desp.data.length)} despesas` : undefined} />
       <Stat label="Emendas (quantidade)" tip="emenda" value={autor.data ? formatNumber(emendasPorAno(autor.data.emendas, janela).reduce((s, x) => s + x.n, 0)) : "—"} />
@@ -272,7 +272,7 @@ function Despesas({ id, janela }: { id: number; janela: Periodo }) {
         <Campo label="Ano" tip="A cota é contada por ano. Só aparecem os anos do mandato selecionado.">
           <select className={selectCls} value={anoEf} onChange={(e) => setAno(Number(e.target.value))}>{anos.map((a) => <option key={a}>{a}</option>)}</select>
         </Campo>
-        <p className="max-w-xl text-sm text-muted"><Term k="CEAP">Cota parlamentar (CEAP)</Term>: reembolso de gastos do mandato. Cada linha traz o fornecedor e, quando disponível, a nota fiscal digitalizada.</p>
+        <p className="max-w-xl text-sm text-muted"><Term k="CEAP">Gastos do gabinete (cota parlamentar)</Term>: reembolso de gastos do mandato. Cada linha traz o fornecedor e, quando disponível, a nota fiscal digitalizada.</p>
       </div>
       {q.isError ? <ErrorState error={q.error} retry={() => q.refetch()} /> : q.isPending ? <Skeleton className="h-60" /> : q.data!.length === 0 ? (
         <EmptyState title={`Nenhuma despesa publicada para ${anoEf}.`} hint="A API da Câmara às vezes fica sem dados de cota temporariamente; confira também o site oficial." />

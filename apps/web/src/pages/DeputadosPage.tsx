@@ -123,7 +123,7 @@ export default function DeputadosPage() {
         </Campo>
         <Campo label="Ordenar por" tip="“Tempo de casa” soma as legislaturas em que a pessoa aparece desde 1983 (estimativa; a página de cada deputado mostra as datas exatas).">
           <select className={selectCls} value={ordem} onChange={(e) => { set("ordem", e.target.value === "nome" ? "" : e.target.value); if (e.target.value === "tempo") setComTempo(true); }}>
-            <option value="nome">Nome</option><option value="tempo">Tempo de casa</option><option value="emendas">Emendas pagas</option>
+            <option value="nome">Nome</option><option value="tempo">Tempo de casa</option><option value="emendas">Dinheiro mandado</option>
           </select>
         </Campo>
       </div>
@@ -159,7 +159,7 @@ export default function DeputadosPage() {
                         <span className="block truncate font-semibold">{d.nome}</span>
                         <span className="flex items-center gap-1.5 text-xs text-muted"><PartyBadge sigla={d.siglaPartido} link={false} />{d.siglaUf}</span>
                         {d.nLeg != null && d.dias != null && <ChipsMandato n={d.nLeg} tempo={formatDuracao(d.dias)} atual={leg === "atual"} estimado />}
-                        {d.pago != null && <span className="block text-xs text-muted">Emendas pagas: <b className="text-fg"><Money centavos={d.pago} compact /></b></span>}
+                        {d.pago != null && <span className="block text-xs text-muted">Dinheiro mandado: <b className="text-fg"><Money centavos={d.pago} compact /></b></span>}
                       </span>
                     </Link>
                   </li>

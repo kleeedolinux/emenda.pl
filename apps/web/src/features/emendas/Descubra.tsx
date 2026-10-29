@@ -181,7 +181,7 @@ function MunicipioTop({ f, rankings, uf }: Omit<CardProps, "q"> & { rankings: Ra
   const m = r?.lista[0];
   return (
     <Story id="municipio" icon={<MapPin />} eyebrow="Município que mais recebeu" cor="#2f80ed"
-      title={r?.fonte === "historico" ? <>A cidade {noEstado(f.uf!)} com mais emendas pagas desde 2014.</> : <>A cidade que mais recebeu pagamentos de emendas nos últimos 12 meses.</>}
+      title={r?.fonte === "historico" ? <>A cidade {noEstado(f.uf!)} com mais emendas pagas desde 2014.</> : <>A cidade que mais recebeu dinheiro de deputados e senadores nos últimos 12 meses.</>}
       ignorados={r?.ignorados}
       share={m ? {
         kind: "municipio", title: `${m.nome} (${m.uf})`, url: `/municipio/${m.ibge}`, ogId: m.ibge,
@@ -208,14 +208,14 @@ function PartePix({ f, q, brasil, uf }: CardProps & { brasil: Brasil | undefined
   const ign = [f.tipo && "tipo", f.ano && "ano"].filter(Boolean) as Array<"tipo" | "ano">;
   return (
     <Story id="pix" icon={<Zap />} eyebrow="Via Emenda Pix" cor="#e0b800"
-      title={<>Parte do dinheiro pago {f.uf ? onde : ""} que caiu direto no caixa das prefeituras, sem projeto prévio — a <Term k="emenda pix">Emenda Pix</Term>.</>}
+      title={<>Parte do dinheiro pago {f.uf ? onde : ""} que caiu direto no caixa das prefeituras, sem projeto prévio — a <Term k="emenda pix">Sem dizer para quê</Term>.</>}
       ignorados={ign}
       share={r ? {
         kind: "pix", title: f.uf ? `Emenda Pix ${onde}` : "Emenda Pix", url: `/emendas${q}#pix`,
         text: `⚡ ${formatPct(r.pix)} das emendas pagas ${onde} foram via Emenda Pix — dinheiro direto na conta, sem convênio. Entenda:`,
         bars: r.tipos.slice(0, 5).map((t) => ({ label: nomeTipoCurto(t.tipo), value: t.pago })),
       } : undefined}
-      footer={<Ver to="/pix">Explorar Emenda Pix</Ver>}
+      footer={<Ver to="/pix">Ver dinheiro sem dizer para quê</Ver>}
     >
       {!r ? <><Skeleton className="h-10 w-28" /><Skeleton className="mt-4 h-24" /></> : (
         <>

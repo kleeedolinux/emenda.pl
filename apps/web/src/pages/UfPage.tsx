@@ -47,7 +47,7 @@ function UfView({ uf }: { uf: SiglaUf }) {
       <PageHeader
         eyebrow="Estado"
         title={nome}
-        subtitle={cabecalhoUf(nome).subtitulo}
+        subtitle={cabecalhoUf(nome, uf).subtitulo}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: nome }]}
         actions={<ShareButton fab kind="uf" title={nome} url={`/uf/${uf}`} ogId={uf} text={frase ? `${frase} Veja sua cidade:` : undefined} metric={d ? { value: d.totais.pago, format: "brl", label: "mandados por políticos" } : undefined} bars={d && cidades.slice(0, 5).map((m) => ({ label: nomeMun.get(m.ibge) ?? m.nome, value: m.pago }))} />}
         media={<img src={bandeiraUf(uf)} alt={`Bandeira de ${nome}`} className="h-12 w-auto rounded-md shadow ring-1 ring-line" onError={(e) => { e.currentTarget.style.display = "none"; }} />}

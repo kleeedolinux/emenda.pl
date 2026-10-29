@@ -143,3 +143,43 @@ export function corpo(n: Pick<Novidade, "titulo" | "texto">): string {
   const r = t.slice(titulo.length).replace(/^[\s:.,;—-]+/, "");
   return r ? r[0]!.toLocaleUpperCase("pt-BR") + r.slice(1) : "";
 }
+
+/** Categorias em palavras do dia a dia (o contrato guarda os nomes oficiais). */
+export const ROTULO_NOVIDADE: Record<TipoNovidade, string> = {
+  votacao: "Votações",
+  lei: "Novas leis",
+  urgencia: "Votação acelerada",
+  proposicao: "Novas propostas",
+  agenda: "Agenda",
+  pagamentos: "Dinheiro pago",
+  pix: "Sem dizer para quê",
+  gastos: "Gastos do gabinete",
+  partido: "Troca de partido",
+};
+
+const MESES_NOV = "janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro";
+const TROCAS_NOV: Array<[RegExp, string]> = [
+  [/pagos em emendas parlamentares/g, "mandados por deputados e senadores"],
+  [/pagos em Emendas Pix \(transferências especiais\)/gi, "mandados sem dizer para quê"],
+  [/Emendas? Pix(?: \(transferências? especia(?:l|is)\))?/gi, "dinheiro sem dizer para quê"],
+  [/gasto da cota parlamentar(?: \(CEAPS?\))?/g, "gasto do gabinete"],
+  [/cota parlamentar(?: \(CEAPS?\))?/g, "gastos do gabinete"],
+  [/\bCEAPS?\b/g, "gastos do gabinete"],
+  [/emendas parlamentares/g, "dinheiro mandado por políticos"],
+  [/\bSen\. /g, "Senador "],
+  [/\bDep\. /g, "Deputado "],
+  [new RegExp(`\\b(${MESES_NOV})/(\\d{4})`, "g"), "$1 de $2"],
+  [/ em votação simbólica/g, " sem registrar o voto de cada um"],
+  [/aprovou urgência para o /g, "acelerou a votação do "],
+  [/aprovou urgência para a /g, "acelerou a votação da "],
+  [/ sancionada em /g, " assinada pelo presidente em "],
+  [/ sancionado em /g, " assinado pelo presidente em "],
+  [/^Nova PEC (\d+\/\d{4})/, "Nova proposta de mudar a Constituição (PEC $1)"],
+];
+
+/** Texto gerado pelo ETL -> palavras do dia a dia (só exibição). */
+export function leigo(texto: string): string {
+  let t = texto;
+  for (const [re, por] of TROCAS_NOV) t = t.replace(re, por);
+  return t;
+}

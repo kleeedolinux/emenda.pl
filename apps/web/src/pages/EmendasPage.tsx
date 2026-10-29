@@ -6,7 +6,7 @@ import { Comparar } from "@/features/emendas/Comparar";
 import { CarrosselRankings, Descubra } from "@/features/emendas/Descubra";
 import { useFiltros, useNaVista } from "@/features/emendas/explorador";
 import { FiltrosBar } from "@/features/emendas/Filtros";
-import { HeroEmendas } from "@/features/emendas/Hero";
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import { Repositorio } from "@/features/emendas/Repositorio";
 import { useApi } from "@/lib/data";
 import { ErrorState, liftable, Reveal, Section, Skeleton, TransitionLink } from "@/ui";
@@ -33,11 +33,7 @@ export default function EmendasPage() {
 
   return (
     <>
-      <nav aria-label="Trilha de navegação" className="mb-4 text-sm text-muted">
-        <Link className="hover:text-fg hover:underline" to="/">Início</Link> <span aria-hidden>›</span> <span aria-current="page" className="text-fg">Emendas</span>
-      </nav>
-
-      <HeroEmendas meta={meta.data} />
+      <CabecalhoPagina c={CABECALHOS.emendas} breadcrumbs={[{ label: "Início", to: "/" }, { label: "Pagamentos" }]} />
       <FiltrosBar f={f} set={set} anos={anos} brasil={brasil.data} uf={uf} />
       {(brasil.isError || ufQ.isError) && <div className="mt-4"><ErrorState error={brasil.error ?? ufQ.error} retry={() => { void brasil.refetch(); void ufQ.refetch(); }} /></div>}
 

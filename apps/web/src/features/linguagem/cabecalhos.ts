@@ -1,5 +1,6 @@
 // Cabeçalho de cada página em linguagem comum. Ordem: (1) o que é, (2) por que importa, (3) o que fazer aqui.
 // Jargão só no rótulo pequeno "Oficialmente: ...". Testado em cabecalhos.test.ts. Puro.
+import { naUf } from "@/features/share/viral";
 
 export interface Cabecalho { titulo: string; subtitulo: string; oficial?: string }
 
@@ -108,9 +109,11 @@ export const cabecalhoMunicipio = (nome: string): Cabecalho => ({
   subtitulo: `Quanto dinheiro deputados e senadores mandaram para ${nome}, quem mandou e no que foi gasto.`,
   oficial: "Oficialmente: emendas parlamentares pagas ao município",
 });
-export const cabecalhoUf = (nome: string): Cabecalho => ({
+/** "da Bahia", "de São Paulo", "do Rio de Janeiro". */
+const daUf = (nome: string, uf?: string) => (uf ? naUf(uf).replace(/^na /, "da ").replace(/^no /, "do ").replace(/^em /, "de ") : `de ${nome}`);
+export const cabecalhoUf = (nome: string, uf?: string): Cabecalho => ({
   titulo: nome,
-  subtitulo: `Quanto dinheiro deputados e senadores mandaram para cidades de ${nome}, quem mandou e quais cidades mais receberam.`,
+  subtitulo: `Quanto dinheiro deputados e senadores mandaram para cidades ${daUf(nome, uf)}, quem mandou e quais cidades mais receberam.`,
   oficial: "Oficialmente: emendas parlamentares pagas na UF",
 });
 export const cabecalhoPolitico = (nome: string, cargo: "deputado" | "senador"): Cabecalho => ({

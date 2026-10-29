@@ -64,7 +64,7 @@ export default function ComissoesPage() {
           <p className="mt-2 text-muted">A composição segue o tamanho das bancadas: partidos e blocos maiores indicam mais membros.</p>
         </div>
         <Link to={hrefComissao(CMO)} className="card group block border-l-4 border-l-amarelo p-5 text-sm transition hover:shadow-[0_0_0_1px_var(--color-accent)]">
-          <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-accent"><Landmark className="size-4" aria-hidden />Emendas parlamentares</p>
+          <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-accent"><Landmark className="size-4" aria-hidden />Dinheiro mandado pelas comissões</p>
           <p className="text-base font-semibold group-hover:underline">CMO — Comissão Mista de Orçamento</p>
           <p className="mt-1 text-muted">{CMO.oQueFaz}</p>
           <p className="mt-2 text-xs font-semibold text-link">Ver composição e reuniões →</p>

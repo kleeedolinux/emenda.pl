@@ -24,16 +24,16 @@ export default function AutorPage() {
   // Só o mesmo nome (antes caía no 1º resultado da busca, às vezes outra pessoa).
   const match = useMemo(() => dep.data?.find((x) => chaveNome(x.nome) === d?.chave), [dep.data, d]);
 
-  if (q.isError) return <><PageHeader title={`Autor ${codigo}`} breadcrumbs={[{ label: "Início", to: "/" }, { label: "Emendas", to: "/emendas" }, { label: codigo }]} /><ErrorState error={q.error} retry={() => q.refetch()} /></>;
+  if (q.isError) return <><PageHeader title={`Autor ${codigo}`} breadcrumbs={[{ label: "Início", to: "/" }, { label: "Pagamentos", to: "/emendas" }, { label: codigo }]} /><ErrorState error={q.error} retry={() => q.refetch()} /></>;
   if (!d) return <Skeleton className="h-96" />;
 
   return (
     <>
       <PageHeader
         eyebrow={kind === "bancada" ? <Term k="bancada">Grupo de políticos do estado</Term> : kind === "comissao" ? <Term k="comissão">Comissão do Congresso</Term> : kind === "relator" ? <Term k="RP9">Orçamento secreto</Term> : <Term k="emenda">Político que manda dinheiro</Term>}
-        title={kind === "pessoa" ? nomeProprio(d.nome) : d.nome}
+        title={nomeProprio(d.nome)}
         subtitle={<>Mandou <b>{formatBRL(d.totais.pago, true)}</b> já pagos para {d.porUf.length} {d.porUf.length === 1 ? "estado" : "estados"}.</>}
-        breadcrumbs={[{ label: "Início", to: "/" }, { label: "Emendas", to: "/emendas" }, { label: d.nome }]}
+        breadcrumbs={[{ label: "Início", to: "/" }, { label: "Pagamentos", to: "/emendas" }, { label: nomeProprio(d.nome) }]}
         media={<Avatar src={match?.urlFoto ?? (kind === "pessoa" ? fotoPorNome(d.nome) : undefined)} name={d.nome} size="lg" />}
         actions={match ? (
           <>
@@ -48,7 +48,7 @@ export default function AutorPage() {
           <Info className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
           {kind === "bancada" && "Este autor é uma bancada: o conjunto de deputados e senadores de um estado que indica emendas em grupo, geralmente para obras de maior porte. Não há um único responsável."}
           {kind === "comissao" && "Este autor é uma comissão do Congresso (ex.: Saúde, Educação). A emenda é decidida pelo colegiado, não por um parlamentar individual."}
-          {kind === "relator" && "Emendas de relator (RP9) foram usadas no chamado “orçamento secreto”, em que o parlamentar que pediu o recurso não era identificado. O STF declarou a prática inconstitucional em 2022."}
+          {kind === "relator" && <>Este é o “orçamento secreto”: o dinheiro saiu em nome do relator do Orçamento, sem mostrar qual político pediu. O STF proibiu isso em 2022. <Link className="link" to="/orcamento-secreto">Veja a história completa</Link>.</>}
         </p>
       )}
 

@@ -28,7 +28,7 @@ function Item({ it }: { it: TickerItem }) {
       <span>{it.local}</span>
       <span className="text-muted">· {it.funcao}</span>
       <span className="font-display font-bold tabular text-accent">{formatBRL(it.valor, true)}</span>
-      {it.medida === "empenhado" && <span className="text-xs text-muted">empenhado</span>}
+      {it.medida === "empenhado" && <span className="text-xs text-muted">reservado</span>}
       <span className="ml-1 text-amarelo-700 dark:text-amarelo" aria-hidden>◆</span>
     </Link>
   );
@@ -47,7 +47,7 @@ export function Ticker({ autores }: { autores?: AutorResumo[] }) {
     <div className="ticker relative mx-auto flex h-11 max-w-7xl items-center gap-2 rounded-2xl border border-white/50 bg-white/55 px-2 shadow-[0_10px_30px_-18px_rgb(0_39_118/0.5)] backdrop-blur-md dark:border-white/10 dark:bg-[#0b1512]/60" data-paused={paused ? "" : undefined}>
       <span className="flex shrink-0 items-center gap-1.5 rounded-xl bg-azul px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-white dark:bg-amarelo dark:text-azul">
         <span className="relative flex size-1.5" aria-hidden><span className="absolute inline-flex size-full animate-ping rounded-full bg-amarelo opacity-75 dark:bg-verde" /><span className="relative inline-flex size-1.5 rounded-full bg-amarelo dark:bg-verde" /></span>
-        <span className="max-sm:sr-only">Emendas</span> {items[0]?.ano ?? ""}
+        <span className="max-sm:sr-only">Dinheiro</span> {items[0]?.ano ?? ""}
       </span>
       <div className="relative min-w-0 flex-1 overflow-x-auto [mask-image:linear-gradient(90deg,transparent,#000_4%,#000_96%,transparent)] [scrollbar-width:none] motion-safe:overflow-hidden">
         {items.length ? (

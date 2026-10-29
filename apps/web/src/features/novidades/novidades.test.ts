@@ -3,6 +3,7 @@ import type { Novidade } from "@emenda/contracts";
 import {
   tempoRelativo, agruparPorDia, corpo, filtrar, mesclar, proximoArquivo, formatarNumero, novosDesde, textoParaCopiar, linkInterno, parseTipos, serializeTipos, shareDe,
 } from "./novidades";
+import { leigo, ROTULO_NOVIDADE } from "./novidades";
 
 const n = (id: string, data: string, tipo: Novidade["tipo"] = "lei", relevancia = 50): Novidade => ({
   id, tipo, data, titulo: id, texto: `texto ${id}`, entidades: [], fonte: ["https://x"], relevancia,
@@ -96,4 +97,23 @@ describe("novidades", () => {
     ["Título diferente", "📜 Outro texto qualquer.", "Outro texto qualquer."],
   ] as const)("corpo sem repetir o título (%p)", (titulo, texto, esperado) =>
     expect(corpo({ ...n("x", "2026-10-28"), titulo, texto })).toBe(esperado));
+});
+
+describe("leigo: texto das novidades sem jargão", () => {
+  const casos: Array<[string, string]> = [
+    ["R$ 337,8 mi pagos em emendas parlamentares em outubro/2026 até agora", "R$ 337,8 mi mandados por deputados e senadores em outubro de 2026 até agora"],
+    ["R$ 2,1 mi pagos em Emendas Pix (transferências especiais) em outubro/2026 até agora", "R$ 2,1 mi mandados sem dizer para quê em outubro de 2026 até agora"],
+    ["Sen. Hamilton Mourão (REPUBLICANOS-RS) teve o maior gasto da cota parlamentar (CEAPS) em setembro/2026: R$ 64,6 mil", "Senador Hamilton Mourão (REPUBLICANOS-RS) teve o maior gasto do gabinete em setembro de 2026: R$ 64,6 mil"],
+    ["Dep. Gabriel Mota (UNIÃO-RR) teve o maior gasto da cota parlamentar em setembro/2026: R$ 87,5 mil", "Deputado Gabriel Mota (UNIÃO-RR) teve o maior gasto do gabinete em setembro de 2026: R$ 87,5 mil"],
+    ["Câmara aprovou PL 5239/2025 em votação simbólica", "Câmara aprovou PL 5239/2025 sem registrar o voto de cada um"],
+    ["Câmara aprovou urgência para o PL 5902/2023", "Câmara acelerou a votação do PL 5902/2023"],
+    ["Lei Complementar nº 238/2026 sancionada em 21/10", "Lei Complementar nº 238/2026 assinada pelo presidente em 21/10"],
+    ["Nova PEC 18/2026", "Nova proposta de mudar a Constituição (PEC 18/2026)"],
+  ];
+  for (const [ent, sai] of casos) test(ent, () => expect(leigo(ent)).toBe(sai));
+  test("rótulos das categorias em palavras do dia a dia", () => {
+    expect(ROTULO_NOVIDADE.pix).toBe("Sem dizer para quê");
+    expect(ROTULO_NOVIDADE.gastos).toBe("Gastos do gabinete");
+    expect(Object.values(ROTULO_NOVIDADE).join(" ")).not.toMatch(/emenda|cota|urgência/i);
+  });
 });

@@ -124,7 +124,7 @@ export default function VotacaoPage() {
       )}
       {d && (
         <details className="mt-6 rounded-2xl border border-line bg-surface p-4">
-          <summary className="cursor-pointer font-semibold">Sobre esta votação (data, órgão, proposições, parecer)</summary>
+          <summary className="cursor-pointer font-semibold">Detalhes desta votação (data, onde foi, projetos, parecer)</summary>
           <div className="mt-3">
           <KeyValue items={[
             ["Data e hora", d.dataHoraRegistro ? new Date(d.dataHoraRegistro).toLocaleString("pt-BR") : formatDate(d.data)],
