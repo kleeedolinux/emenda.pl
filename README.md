@@ -39,6 +39,8 @@ Dados ficam na branch órfã `data` (`v1/…`), atualizada diariamente pelo work
 O Worker serve `/data/*` a partir dela com cache na edge — o site não depende das APIs externas em tempo real.
 Imagens (fotos, bandeiras, logos) são espelhadas em `cdn.emenda.online`, com atualização incremental por SHA.
 
+Detalhes: [`archicture/README.md`](archicture/README.md) (fluxo, módulos, invariantes) e [`archicture/adr/`](archicture/adr/).
+
 ## API aberta
 
 | Endpoint | Uso |
