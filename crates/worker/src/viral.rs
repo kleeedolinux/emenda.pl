@@ -348,6 +348,7 @@ pub fn spec(p: &Page, d: &[Fetched], extra: &[Fetched], doc: &Doc) -> ViralSpec 
         OrcamentoSecreto => at(1).map(|v| orcamento_secreto(v, meta)),
         QuemRecebe => at(1).map(|v| quem_recebe(v, meta)),
         EmpresasContratadas => at(1).map(|v| empresas_contratadas(v, meta)),
+        Empresa => crate::empresa::monta(&p.id, at(1), at(2), at(3)).map(|e| empresa(&e, meta)),
         Home | Emendas | Dinheiro => {
             at(1).map(|v| brasil(v, extra.first().and_then(Fetched::ok), meta))
         }
@@ -462,6 +463,59 @@ fn pix(v: &Value, meta: Option<&Value>) -> ViralSpec {
     }
 }
 
+fn empresa(e: &crate::empresa::Empresa, meta: Option<&Value>) -> ViralSpec {
+    let faces = e
+        .contratantes
+        .iter()
+        .take(3)
+        .filter_map(|c| {
+            let id: u64 = c.id.parse().ok()?;
+            Some(FaceSpec {
+                nome: title_case(c.nome.as_deref()?),
+                detalhe: match &c.sigla {
+                    Some(sg) => format!("{sg} · {}", compact_brl(c.valor)),
+                    None => compact_brl(c.valor),
+                },
+                foto: Some(if c.casa == "senado" {
+                    Foto::Senador(id)
+                } else {
+                    Foto::Deputado(id)
+                }),
+            })
+        })
+        .collect();
+    let (numero, frase) = if e.cota > 0 {
+        (
+            compact_brl(e.cota),
+            format!(
+                "pagos por {} deputados e senadores com dinheiro público",
+                e.parlamentares
+            ),
+        )
+    } else {
+        (
+            compact_brl(e.emendas),
+            "recebidos de dinheiro mandado por políticos".into(),
+        )
+    };
+    ViralSpec {
+        rotulo: title_case(&e.nome),
+        secundario: format!(
+            "CNPJ {} · {}",
+            e.cnpj,
+            e.grupos.first().map_or("emendas parlamentares", |(g, _)| {
+                crate::empresa::grupo_rotulo(g)
+            })
+        ),
+        numero,
+        frase,
+        gancho: "Quem contratou? Veja 👇".into(),
+        faces,
+        faces_titulo: "Quem mais contratou".into(),
+        ..dinheiro(meta)
+    }
+}
+
 fn empresas_contratadas(v: &Value, meta: Option<&Value>) -> ViralSpec {
     let total: i64 = arr(v, "/grupos")
         .iter()
@@ -473,7 +527,23 @@ fn empresas_contratadas(v: &Value, meta: Option<&Value>) -> ViralSpec {
         numero: compact_brl(total),
         frase: "pagos pelos políticos a empresas com a cota".into(),
         gancho: "Quem mais recebeu? Veja 👇".into(),
-        faces: vec![],
+        faces: arr(v, "/grupos")
+            .iter()
+            .filter_map(|g| {
+                let f = arr(g, "/fornecedores").first()?;
+                Some(FaceSpec {
+                    nome: title_case(&s(f, "/nome")?),
+                    detalhe: format!(
+                        "{} · {}",
+                        crate::empresa::grupo_rotulo(&s(g, "/grupo").unwrap_or_default()),
+                        compact_brl(i(f, "/valor").unwrap_or(0))
+                    ),
+                    foto: None,
+                })
+            })
+            .take(3)
+            .collect(),
+        faces_titulo: "Quem mais recebeu".into(),
         ..dinheiro(meta)
     }
 }
@@ -487,7 +557,28 @@ fn quem_recebe(v: &Value, meta: Option<&Value>) -> ViralSpec {
         numero: compact_brl(privados),
         frase: "foram para empresas e entidades privadas".into(),
         gancho: "Veja quem mais recebeu 👇".into(),
-        faces: vec![],
+        faces: {
+            let mut v: Vec<&Value> = arr(v, "/empresas")
+                .iter()
+                .chain(arr(v, "/entidades"))
+                .collect();
+            v.sort_by_key(|x| std::cmp::Reverse(i(x, "/valor").unwrap_or(0)));
+            v.into_iter()
+                .take(3)
+                .filter_map(|x| {
+                    Some(FaceSpec {
+                        nome: title_case(&s(x, "/nome")?),
+                        detalhe: format!(
+                            "{} · {}",
+                            s(x, "/uf").unwrap_or_default(),
+                            compact_brl(i(x, "/valor").unwrap_or(0))
+                        ),
+                        foto: None,
+                    })
+                })
+                .collect()
+        },
+        faces_titulo: "Quem mais recebeu".into(),
         ..dinheiro(meta)
     }
 }

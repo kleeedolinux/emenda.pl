@@ -180,6 +180,11 @@ const OG_KINDS: Partial<Record<ShareKind, string>> = {
 
 export function ogImagePath(d: ShareData): string {
   if (d.image) return d.image;
+  if (d.kind === "pagina" && !d.ogId) {
+    const path = d.url.replace(/^https?:\/\/[^/]+/, "").split(/[?#]/)[0]!.replace(/\/$/, "");
+    if (!path) return "/og/pagina/home.png";
+    return /^(\/[A-Za-z0-9-]+)+$/.test(path) ? `/og/pagina${path}.png` : "/og/default.png";
+  }
   const k = OG_KINDS[d.kind];
   const segs = d.ogId?.split("/") ?? [];
   const ok = segs.length > 0 && segs.every((x) => /^[A-Za-z0-9-]+$/.test(x));

@@ -471,3 +471,80 @@ fn empresas_contratadas_has_seo_page_and_og_card() {
     let h: Vec<&str> = doc.sections.iter().map(|s| s.heading.as_str()).collect();
     assert!(h.contains(&"Passagens e voos"), "{h:?}");
 }
+
+fn empresa_dados() -> (Value, Value, Value) {
+    let forn = json!({ "grupos": [
+        { "grupo": "divulgacao", "valor": 60_000_000_000_i64, "fornecedores": [
+            { "cnpjCpf": "13347016000117", "nome": "FACEBOOK SERVIÇOS ONLINE DO BRASIL LTDA", "valor": 1_300_000_000_i64, "n": 900, "parlamentares": 326,
+              "contratantes": [
+                { "casa": "camara", "id": "204379", "valor": 50_000_000_i64 },
+                { "casa": "senado", "id": "5672", "valor": 20_000_000_i64 }
+              ] }
+        ] },
+        { "grupo": "escritorio", "valor": 1_i64, "fornecedores": [
+            { "cnpjCpf": "13347016000117", "nome": "FACEBOOK SERVIÇOS ONLINE DO BRASIL LTDA", "valor": 100_000_000_i64, "n": 5, "parlamentares": 2,
+              "contratantes": [{ "casa": "camara", "id": "204379", "valor": 1_000_000_i64 }] }
+        ] }
+    ] });
+    let ben = json!({ "totais": { "empresas": 0, "entidades": 0, "fundos": 0 }, "empresas": [], "entidades": [], "fundos": [] });
+    let rk = json!({ "parlamentares": [
+        { "casa": "camara", "id": "204379", "nome": "Acácio Favacho", "partido": "MDB", "uf": "AP" },
+        { "casa": "senado", "id": "5672", "nome": "Otto Alencar", "partido": "PSD", "uf": "BA" }
+    ] });
+    (forn, ben, rk)
+}
+
+#[test]
+fn empresa_page_card_shows_total_and_who_hired() {
+    let Some(seo::SeoRoute::Page { page: p, .. }) =
+        seo::route("GET", "/empresa/13347016000117", None)
+    else {
+        panic!("rota SEO")
+    };
+    assert_eq!(p.kind, PageKind::Empresa);
+    assert!(seo::route("GET", "/empresa/abc", None).is_none());
+    assert_eq!(viral::og_path(&p), "/og/pagina/empresa/13347016000117.png");
+    assert!(matches!(
+        route("GET", "/og/pagina/empresa/13347016000117.png", None),
+        Route::Og(_)
+    ));
+    let (forn, ben, rk) = empresa_dados();
+    let d = vec![ok(json!({})), ok(forn), ok(ben), ok(rk)];
+    let s = spec(&p, d.clone(), vec![]);
+    assert_eq!(s.rotulo, "Facebook Serviços Online do Brasil Ltda");
+    assert_eq!(s.numero, "R$ 14 mi");
+    assert_eq!(
+        s.frase,
+        "pagos por 326 deputados e senadores com dinheiro público"
+    );
+    assert_eq!(s.faces_titulo, "Quem mais contratou");
+    assert_eq!(s.faces[0].nome, "Acácio Favacho");
+    assert_eq!(s.faces[0].foto, Some(Foto::Deputado(204379)));
+    assert_eq!(s.faces[1].foto, Some(Foto::Senador(5672)));
+    assert!(
+        s.faces[0].detalhe.contains("MDB-AP"),
+        "{}",
+        s.faces[0].detalhe
+    );
+    let doc = seo::pages::build(&p, &d, "2026-10-28T12:00-03:00");
+    assert!(doc.title.contains("Facebook"), "{}", doc.title);
+    assert!(doc.description.contains("326"), "{}", doc.description);
+}
+
+#[test]
+fn ranking_cards_lead_with_top_companies() {
+    let (forn, ..) = empresa_dados();
+    let Some(seo::SeoRoute::Page { page: p, .. }) =
+        seo::route("GET", "/empresas-contratadas", None)
+    else {
+        panic!()
+    };
+    let s = spec(&p, vec![ok(json!({})), ok(forn)], vec![]);
+    assert_eq!(s.faces_titulo, "Quem mais recebeu");
+    assert_eq!(s.faces[0].nome, "Facebook Serviços Online do Brasil Ltda");
+    assert!(
+        s.faces[0].detalhe.contains("Propaganda"),
+        "{}",
+        s.faces[0].detalhe
+    );
+}

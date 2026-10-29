@@ -26,6 +26,11 @@ pub fn sources(p: &Page, today: &str) -> Vec<Source> {
         Home | Emendas | Dinheiro | OrcamentoSecreto => v.push(data("v1/brasil.json".into())),
         QuemRecebe => v.push(data("v1/beneficiados.json".into())),
         EmpresasContratadas => v.push(data("v1/gastos/fornecedores.json".into())),
+        Empresa => v.extend([
+            data("v1/gastos/fornecedores.json".into()),
+            data("v1/beneficiados.json".into()),
+            data("v1/gastos/ranking.json".into()),
+        ]),
         Uf => v.push(data(format!("v1/uf/{id}.json"))),
         Municipio => v.push(data(format!("v1/municipio/{id}.json"))),
         Autor => v.push(data(format!("v1/autor/{id}.json"))),
@@ -468,6 +473,7 @@ pub fn build(p: &Page, d: &[Fetched], now: &str) -> Doc {
         OrcamentoSecreto => at(1).map(|v| orcamento_secreto(p, v, meta)),
         QuemRecebe => at(1).map(|v| quem_recebe(p, v, meta)),
         EmpresasContratadas => at(1).map(|v| empresas_contratadas(p, v)),
+        Empresa => crate::empresa::monta(&p.id, at(1), at(2), at(3)).map(|e| empresa(p, &e)),
         _ => None,
     };
     let live = matches!(
@@ -560,6 +566,7 @@ fn generic(p: &Page, meta: Option<&Value>) -> Doc {
         OrcamentoSecreto => ("Orçamento secreto: bilhões distribuídos sem mostrar quem pediu".into(), "Orçamento secreto".into(), "Entre 2020 e 2022, o relator do Orçamento distribuiu bilhões sem mostrar quem pediu. Veja para onde foi o dinheiro.".into()),
         QuemRecebe => ("Quem mais recebe dinheiro de emendas: empresas, entidades e fundos".into(), "Quem mais recebe".into(), "As empresas privadas, entidades e fundos públicos que mais receberam dinheiro mandado por deputados e senadores.".into()),
         EmpresasContratadas => ("Empresas que deputados e senadores mais contratam com a cota".into(), "Empresas contratadas".into(), "Passagens, propaganda, carros e escritório: as empresas que mais receberam da cota parlamentar e quem as contratou.".into()),
+        Empresa => (format!("Empresa {id}: dinheiro público recebido de políticos"), "Empresa".into(), "Quanto esta empresa recebeu de deputados e senadores e quem a contratou.".into()),
         Api => ("API aberta de emendas parlamentares e votações".into(), "API aberta".into(), "API JSON gratuita, sem chave: emendas por município, estado e autor, deputados, senadores, proposições e votações.".into()),
     };
     let mut d = doc(p, &title, &h1, &desc);
@@ -1857,18 +1864,75 @@ fn beneficiado_items(v: &[Value], n: usize) -> Vec<Item> {
         .collect()
 }
 
-/// Rótulo do dia a dia de `v1/gastos/fornecedores.json#grupo` (igual ao site).
-fn grupo_gasto(g: &str) -> &'static str {
-    match g {
-        "passagens" => "Passagens e voos",
-        "divulgacao" => "Propaganda e marketing",
-        "carros" => "Carros e combustível",
-        "consultorias" => "Consultorias",
-        "escritorio" => "Escritório",
-        "hospedagem" => "Hotel e comida",
-        "seguranca" => "Segurança",
-        _ => "Outros",
+use crate::empresa::grupo_rotulo as grupo_gasto;
+
+fn empresa(p: &Page, e: &crate::empresa::Empresa) -> Doc {
+    let nome = title_case(&e.nome);
+    let mut partes = Vec::new();
+    if e.cota > 0 {
+        partes.push(format!(
+            "recebeu {} de {} deputados e senadores com a cota parlamentar",
+            brl(e.cota),
+            fmt_int(e.parlamentares)
+        ));
     }
+    if e.emendas > 0 {
+        partes.push(format!("{} de emendas", brl(e.emendas)));
+    }
+    let desc = format!(
+        "{nome} (CNPJ {}) {}. Veja quem contratou.",
+        e.cnpj,
+        partes.join(" e ")
+    );
+    let mut d = doc(
+        p,
+        &format!("{nome}: quem contratou e quanto recebeu"),
+        &nome,
+        &desc,
+    );
+    here(&mut d, &nome);
+    fact(&mut d, "CNPJ", e.cnpj.clone());
+    if e.cota > 0 {
+        fact(&mut d, "Recebido da cota parlamentar", brl(e.cota));
+    }
+    if e.emendas > 0 {
+        fact(&mut d, "Recebido de emendas", brl(e.emendas));
+    }
+    d.sections.push(section(
+        "No que foi contratada",
+        e.grupos
+            .iter()
+            .map(|(g, v)| Item::text(crate::empresa::grupo_rotulo(g), Some(brl(*v))))
+            .collect(),
+    ));
+    d.sections.push(section(
+        "Quem mais contratou",
+        e.contratantes
+            .iter()
+            .map(|c| {
+                let rota = if c.casa == "senado" {
+                    "senador"
+                } else {
+                    "deputado"
+                };
+                let nome = c.nome.clone().unwrap_or_else(|| format!("{rota} {}", c.id));
+                let nota = match &c.sigla {
+                    Some(sg) => format!("{sg} · {}", brl(c.valor)),
+                    None => brl(c.valor),
+                };
+                Item::link(nome, format!("/{rota}/{}", c.id), Some(nota))
+            })
+            .collect(),
+    ));
+    src(
+        &mut d,
+        "Portal da Transparência — ficha da empresa",
+        &format!(
+            "https://portaldatransparencia.gov.br/pessoa-juridica/{}",
+            e.cnpj
+        ),
+    );
+    d
 }
 
 fn empresas_contratadas(p: &Page, v: &Value) -> Doc {

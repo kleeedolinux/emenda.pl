@@ -31,6 +31,7 @@ export const router = createBrowserRouter([
       { path: "partidos", lazy: page(() => import("@/pages/PartidosPage")) },
       { path: "partido/:sigla", lazy: page(() => import("@/pages/PartidoPage")) },
       { path: "pix", lazy: page(() => import("@/pages/PixPage")) },
+      { path: "empresa/:cnpj", lazy: page(() => import("@/pages/EmpresaPage")) },
       { path: "empresas-contratadas", lazy: page(() => import("@/pages/ContratadasPage")) },
       { path: "quem-recebe", lazy: page(() => import("@/pages/QuemRecebePage")) },
       { path: "orcamento-secreto", lazy: page(() => import("@/pages/OrcamentoSecretoPage")) },

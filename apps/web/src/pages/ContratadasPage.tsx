@@ -49,7 +49,11 @@ export default function ContratadasPage() {
                   <div className="flex items-start gap-2 sm:gap-3">
                     <span className="w-6 shrink-0 pt-0.5 text-right text-xs text-muted tabular">{i + 1}</span>
                     <span className="min-w-0 flex-1">
-                      <b className="block break-words">{nomeLeigo(f.nome)}</b>
+                      <span className="flex items-start gap-1">
+                        {/^\d{14}$/.test(f.cnpjCpf) ? <Link to={`/empresa/${f.cnpjCpf}`} className="min-w-0 flex-1 break-words font-bold hover:text-accent">{nomeLeigo(f.nome)}</Link> : <b className="min-w-0 flex-1 break-words">{nomeLeigo(f.nome)}</b>}
+                        <ShareButton compact kind="pagina" title={nomeLeigo(f.nome)} url={/^\d{14}$/.test(f.cnpjCpf) ? `/empresa/${f.cnpjCpf}` : `/empresas-contratadas?tipo=${atual!.grupo}`}
+                          text={`${nomeLeigo(f.nome)} recebeu ${brl(f.valor)} de ${formatNumber(f.parlamentares)} deputados e senadores em ${rotulo.toLowerCase()}, com dinheiro público.${comNomes(f, rk.data)[0] ? ` Quem mais contratou: ${comNomes(f, rk.data)[0]!.nome}.` : ""} Veja:`} />
+                      </span>
                       <span className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs text-muted">
                         <span>contratada por {formatNumber(f.parlamentares)} {f.parlamentares === 1 ? "político" : "políticos"} · {formatNumber(f.n)} notas{f.cnpjCpf && <> · <Documento d={f.cnpjCpf} /></>}</span>
                         <b className="text-sm text-fg tabular">{brl(f.valor)}</b>
@@ -65,7 +69,7 @@ export default function ContratadasPage() {
                             <Avatar src={c.casa === "camara" ? fotoDeputado(c.id) : fotoSenador(c.id)} name={c.nome} size="sm" />
                             <span className="min-w-0 flex-1">
                               <span className="block break-words">{c.nome}</span>
-                              <span className="flex flex-wrap items-center gap-1 text-xs text-muted">{c.partido && <PartyBadge sigla={c.partido} />}{c.uf}<b className="ml-auto text-sm text-fg tabular">{brl(c.valor)}</b></span>
+                              <span className="flex flex-wrap items-center gap-1 text-xs text-muted">{c.partido && <PartyBadge sigla={c.partido} link={false} />}{c.uf}<b className="ml-auto text-sm text-fg tabular">{brl(c.valor)}</b></span>
                             </span>
                           </Link>
                         </li>

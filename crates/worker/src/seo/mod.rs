@@ -57,6 +57,7 @@ pub enum PageKind {
     OrcamentoSecreto,
     QuemRecebe,
     EmpresasContratadas,
+    Empresa,
     Api,
 }
 
@@ -82,7 +83,7 @@ pub const STATIC_PAGES: [(&str, PageKind); 18] = [
     ("empresas-contratadas", PageKind::EmpresasContratadas),
 ];
 
-const ID_PAGES: [(&str, PageKind); 12] = [
+const ID_PAGES: [(&str, PageKind); 13] = [
     ("uf", PageKind::Uf),
     ("municipio", PageKind::Municipio),
     ("autor", PageKind::Autor),
@@ -95,6 +96,7 @@ const ID_PAGES: [(&str, PageKind); 12] = [
     ("bancada", PageKind::Bancada),
     ("federacao", PageKind::Federacao),
     ("entenda", PageKind::EntendaTema),
+    ("empresa", PageKind::Empresa),
 ];
 
 /// A page route. `id` is normalized (UF/partido uppercase; auditar `casa/id`; agenda `YYYY-MM-DD` or empty).
@@ -220,6 +222,7 @@ fn valid_id(kind: PageKind, id: &str) -> Option<String> {
     let ok = match kind {
         PageKind::Uf => id.len() == 2 && id.bytes().all(|b| b.is_ascii_alphabetic()),
         PageKind::Municipio => id.len() == 7 && is_digits(id, 7),
+        PageKind::Empresa => id.len() == 14 && is_digits(id, 14),
         PageKind::Autor | PageKind::Partido => alnum(20),
         PageKind::Votacao => {
             !id.is_empty() && id.len() <= 24 && id.bytes().all(|b| b.is_ascii_digit() || b == b'-')

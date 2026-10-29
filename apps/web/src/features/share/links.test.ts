@@ -97,6 +97,11 @@ describe("ogImagePath", () => {
     [{ kind: "pix", title: "x", url: "/pix" }, "/og/default.png"],
     [{ kind: "deputado", title: "x", url: "/deputado/1" }, "/og/default.png"], // sem ogId
     [{ kind: "uf", title: "x", url: "/uf/SP", ogId: "SP", image: "/custom.png" }, "/custom.png"],
+    // página: o card viral da própria rota
+    [{ kind: "pagina", title: "x", url: "/empresa/13347016000117" }, "/og/pagina/empresa/13347016000117.png"],
+    [{ kind: "pagina", title: "x", url: "/empresas-contratadas?tipo=carros" }, "/og/pagina/empresas-contratadas.png"],
+    [{ kind: "pagina", title: "x", url: "/" }, "/og/pagina/home.png"],
+    [{ kind: "pagina", title: "x", url: "/../x" }, "/og/default.png"],
   ])("%#", (d, out) => expect(ogImagePath(d)).toBe(out));
 });
 

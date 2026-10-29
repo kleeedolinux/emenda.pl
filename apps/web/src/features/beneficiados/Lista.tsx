@@ -2,7 +2,9 @@ import { Building2, HeartHandshake, Landmark } from "lucide-react";
 import type { Beneficiado } from "@emenda/contracts";
 import { formatBRL } from "@/lib/format";
 import { nomeLeigo } from "@/lib/nomes";
+import { Link } from "react-router";
 import { ListaVerMais } from "@/features/linguagem";
+import { ShareButton } from "@/features/share";
 import { formatCnpjCpf, linkFornecedor } from "@/features/gastos/gastos";
 import { ROTULO_GRUPO, type Privado } from "./beneficiados";
 
@@ -13,16 +15,23 @@ const ICONE = { empresa: Building2, entidade: HeartHandshake, fundo: Landmark } 
 export function LinhaBeneficiado({ x, i }: { x: Beneficiado | Privado; i: number }) {
   const grupo = "grupo" in x ? x.grupo : "fundo";
   const Icone = ICONE[grupo];
+  const nome = nomeLeigo(x.nome).replace(/,(?=\S)/g, ", ");
   const onde = [x.municipio && nomeLeigo(x.municipio), x.uf].filter(Boolean).join(" - ");
   return (
     <div className="flex items-start gap-2 py-2 sm:gap-3">
       <span className="w-6 shrink-0 pt-0.5 text-right text-xs text-muted tabular">{i + 1}</span>
       <span className="hidden size-8 shrink-0 place-items-center rounded-full bg-surface-2 text-accent sm:grid" aria-hidden><Icone className="size-4" /></span>
       <span className="min-w-0 flex-1">
-        <span className="block font-medium break-words">{nomeLeigo(x.nome).replace(/,(?=\S)/g, ", ")}</span>
+        <span className="flex items-start gap-1">
+          {/^\d{14}$/.test(x.documento)
+            ? <Link to={`/empresa/${x.documento}`} className="min-w-0 flex-1 break-words font-medium hover:text-accent">{nome}</Link>
+            : <span className="min-w-0 flex-1 break-words font-medium">{nome}</span>}
+        </span>
         <span className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs text-muted">
           <span>{grupo === "fundo" ? "Fundo público" : ROTULO_GRUPO[grupo]}{onde ? ` · ${onde}` : ""} · <Documento d={x.documento} /></span>
-          <b className="text-sm text-fg tabular">{brl(x.valor)}</b>
+          <span className="ml-auto flex items-center gap-1"><b className="text-sm text-fg tabular">{brl(x.valor)}</b>
+            {/^\d{14}$/.test(x.documento) && <ShareButton compact kind="pagina" title={nome} url={`/empresa/${x.documento}`} text={`${nome} recebeu ${brl(x.valor)} de dinheiro público mandado por deputados e senadores. Veja:`} />}
+          </span>
         </span>
       </span>
     </div>

@@ -3,6 +3,7 @@ pub mod analytics;
 pub mod api;
 pub mod cards;
 pub mod cdn;
+pub mod empresa;
 pub mod espelho;
 pub mod feeds;
 pub mod foto;
