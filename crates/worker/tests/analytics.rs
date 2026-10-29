@@ -110,3 +110,29 @@ fn recent_survives_storage_roundtrip() {
     back.prune(200_000);
     assert_eq!(back.online(), 2);
 }
+
+#[test]
+fn only_counts_hits_from_the_site_itself() {
+    use emenda_worker::analytics::origem_do_site;
+    // dev local, previews e testes automatizados repassam /api para produção: não contam
+    for (origin, referer, ok) in [
+        (Some("https://emenda.online"), None, true),
+        (None, Some("https://emenda.online/uf/PE"), true),
+        (None, Some("https://www.emenda.online/"), true),
+        (None, Some("http://localhost:5197/comissao/x"), false),
+        (Some("http://127.0.0.1:8787"), None, false),
+        (
+            None,
+            Some("https://emenda-pl.kleejulia.workers.dev/"),
+            false,
+        ),
+        (None, Some("https://emenda.online.evil.com/"), false),
+        (None, None, false),
+    ] {
+        assert_eq!(
+            origem_do_site(origin, referer),
+            ok,
+            "{origin:?} {referer:?}"
+        );
+    }
+}

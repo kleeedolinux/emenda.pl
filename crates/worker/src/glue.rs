@@ -679,7 +679,9 @@ async fn hit(env: &Env, req: &Request) -> Result<Response> {
     let h = req.headers();
     let mut resp = Response::empty()?.with_status(204);
     resp.headers_mut().set("Cache-Control", "no-store")?;
-    if !analytics::should_track(h.get("DNT")?.as_deref(), h.get("User-Agent")?.as_deref()) {
+    if !analytics::should_track(h.get("DNT")?.as_deref(), h.get("User-Agent")?.as_deref())
+        || !analytics::origem_do_site(h.get("Origin")?.as_deref(), h.get("Referer")?.as_deref())
+    {
         return Ok(resp);
     }
     let existing = analytics::cookie_vid(h.get("Cookie")?.as_deref());

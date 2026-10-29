@@ -31,6 +31,19 @@ pub fn should_track(dnt: Option<&str>, ua: Option<&str>) -> bool {
     !ua.is_empty() && !BOT_MARKERS.iter().any(|m| ua.contains(m))
 }
 
+/// Só conta hits vindos do próprio site (Origin, ou Referer quando o beacon não manda Origin).
+/// Dev local, previews e testes automatizados repassam `/api` para produção e não devem contar.
+pub fn origem_do_site(origin: Option<&str>, referer: Option<&str>) -> bool {
+    let Some(u) = origin.or(referer) else {
+        return false;
+    };
+    let host = u
+        .strip_prefix("https://")
+        .and_then(|r| r.split(['/', ':', '?', '#']).next())
+        .unwrap_or("");
+    host == "emenda.online" || host.ends_with(".emenda.online")
+}
+
 pub fn vid_hex(bytes: [u8; 16]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
