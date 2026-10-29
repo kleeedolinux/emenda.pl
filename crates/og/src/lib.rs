@@ -8,8 +8,10 @@ mod card;
 mod fonts;
 mod share;
 mod text;
+mod viral;
 
 pub use share::{agenda_png, agenda_svg, voto_png, voto_svg, OgAgenda, OgAgendaItem, OgVoto};
+pub use viral::{viral_png, viral_svg, OgFace, OgViral};
 
 use std::sync::{Arc, OnceLock};
 

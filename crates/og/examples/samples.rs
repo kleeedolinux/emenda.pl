@@ -143,4 +143,64 @@ fn main() {
         std::fs::write(&path, bytes.expect("png")).expect("write");
         println!("{path}");
     }
+
+    // Viral cards. `OG_PHOTOS=dir` -> uses dir/{1,2,3}.{webp,jpg,png} and dir/flag.svg when present.
+    let local = |name: &str| -> Option<Vec<u8>> {
+        let dir = std::env::var("OG_PHOTOS").ok()?;
+        ["webp", "jpg", "png", "svg"]
+            .iter()
+            .find_map(|e| std::fs::read(format!("{dir}/{name}.{e}")).ok())
+    };
+    let face = |i: &str, nome: &str, detalhe: &str| og::OgFace {
+        nome: nome.into(),
+        detalhe: detalhe.into(),
+        photo: local(i).or_else(|| Some(photo.clone())),
+    };
+    let municipio = og::OgViral {
+        rotulo: "Dinheiro mandado por políticos".into(),
+        secundario: "emendas parlamentares · 2015–2026".into(),
+        numero: "R$ 2,6 mi".into(),
+        frase: "chegaram em Iraquara (BA)".into(),
+        gancho: "40% sem dizer para quê. Quem mandou?".into(),
+        faces: vec![
+            face("1", "Paulo Magalhães", "PSD-BA · R$ 1,2 mi"),
+            face("2", "Otto Alencar", "PSD-BA · R$ 800 mil"),
+            og::OgFace {
+                nome: "Bancada da Bahia".into(),
+                detalhe: "R$ 300 mil".into(),
+                photo: None,
+            },
+        ],
+        bandeira: local("flag"),
+        ..Default::default()
+    };
+    let deputado = og::OgViral {
+        rotulo: "Dinheiro mandado por políticos".into(),
+        secundario: "deputado federal · emendas parlamentares".into(),
+        numero: "R$ 98,8 mi".into(),
+        frase: "mandados por Arthur Lira para 214 cidades".into(),
+        gancho: "R$ 21 mi sem dizer para quê. Veja onde caiu".into(),
+        retrato: local("1").or_else(|| Some(photo.clone())),
+        selo: Some("PP".into()),
+        bandeira: local("flag"),
+        ..Default::default()
+    };
+    let votacao = og::OgViral {
+        rotulo: "Como a Câmara votou".into(),
+        secundario: "Plenário · 07/07/2023".into(),
+        numero: "382 x 118".into(),
+        frase: "PEC 45/2019 · Reforma tributária".into(),
+        gancho: "Aprovada. Veja como votou cada deputado".into(),
+        placar: Some((382, 118, 13)),
+        ..Default::default()
+    };
+    for (name, v) in [
+        ("viral-municipio", municipio),
+        ("viral-deputado", deputado),
+        ("viral-votacao", votacao),
+    ] {
+        let path = format!("{out}/{name}.png");
+        std::fs::write(&path, og::viral_png(&v).expect("png")).expect("write");
+        println!("{path}");
+    }
 }
