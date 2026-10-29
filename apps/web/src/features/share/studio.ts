@@ -24,9 +24,28 @@ async function loadFonts() {
   await Promise.race([Promise.allSettled(specs.map((f) => document.fonts.load(f))), new Promise((r) => setTimeout(r, 2500))]);
 }
 
+/** Foto same-origin (/og-img); falha ou demora > 4 s -> sem foto (a arte usa iniciais). */
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const done = (v: HTMLImageElement | null) => { clearTimeout(timer); resolve(v); };
+    const timer = setTimeout(() => done(null), 4000);
+    img.onload = () => done(img);
+    img.onerror = () => done(null);
+    img.decoding = "async";
+    img.src = src;
+  });
+}
+
+/** URLs de foto usadas pela arte (retrato + rostos). */
+export const fotosDe = (d: ShareData) => [d.retrato, ...(d.rostos ?? []).map((r) => r.foto)].filter((u): u is string => !!u);
+
 export async function loadAssets(d: ShareData): Promise<Assets> {
-  const [logo] = await Promise.all([loadLogo(), loadFonts()]);
-  return { logo, qr: qrMatrix(absoluteUrl(d.url)) };
+  const urls = fotosDe(d);
+  const [logo, , imgs] = await Promise.all([loadLogo(), loadFonts(), Promise.all(urls.map(loadImage))]);
+  const fotos = new Map<string, CanvasImageSource>();
+  urls.forEach((u, i) => { const im = imgs[i]; if (im) fotos.set(u, im); });
+  return { logo, qr: qrMatrix(absoluteUrl(d.url)), fotos };
 }
 
 export function sizeFor(format: Format, width?: number): [number, number] {

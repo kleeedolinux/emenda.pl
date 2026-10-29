@@ -45,6 +45,12 @@ export interface ShareData {
   destaque?: string;
   /** resultado de votação. */
   resultado?: "aprovada" | "rejeitada";
+  /** Rostos de quem mandou (até 3; fotos same-origin). */
+  rostos?: Array<{ nome: string; detalhe?: string; foto?: string }>;
+  /** Foto grande same-origin (deputado, senador, autor). */
+  retrato?: string;
+  /** Gancho curto em destaque na arte ("40% sem dizer para quê. Quem mandou?"). */
+  gancho?: string;
 }
 
 export const SITE_NAME = "emenda.online";
@@ -66,7 +72,7 @@ export function formatMetric(m: ShareMetric): string {
 
 const n = (x: number) => new Intl.NumberFormat("pt-BR").format(x);
 
-/** Mensagem curta em pt-BR, sem URL. */
+/** Mensagem curta em pt-BR, sem URL: número primeiro, emoji, gancho, termina em 👇 (o link vem depois). */
 export function buildMessage(d: ShareData): string {
   if (d.text) return d.text;
   const v = d.metric ? formatMetric(d.metric) : "";
@@ -74,41 +80,45 @@ export function buildMessage(d: ShareData): string {
   switch (d.kind) {
     case "votacao":
       return d.votes
-        ? `🗳️ ${t}: ${n(d.votes.sim)} Sim × ${n(d.votes.nao)} Não. Veja como cada deputado votou:`
-        : `🗳️ ${t}. Veja como cada deputado votou:`;
-    case "voto":
-      return `🗳️ ${d.pessoa ?? "Este deputado"} votou ${d.voto ?? "—"} em “${t}”.${d.votes ? ` Placar: ${n(d.votes.sim)} Sim × ${n(d.votes.nao)} Não.` : ""} Veja como o seu votou:`;
+        ? `🗳️ ${n(d.votes.sim)} x ${n(d.votes.nao)}: ${t}. Veja como votou cada deputado 👇`
+        : `🗳️ ${t}. Veja como votou cada deputado 👇`;
+    case "voto": {
+      const voto = (d.voto ?? "—").toUpperCase();
+      const art = artigo(t);
+      const alvo = art ? `${art === "a " ? "na" : "no"} ${t}` : `em “${t}”`;
+      return `🗳️ ${d.pessoa ?? "Seu deputado"} votou ${voto} ${alvo}. Veja como votou cada um 👇`;
+    }
     case "proposicao":
-      return `📜 ${t}${d.subtitle ? ` — ${truncate(d.subtitle, 140)}` : ""}. Acompanhe a tramitação e as votações:`;
+      return `📜 ${t}${d.subtitle ? `: ${truncate(d.subtitle, 140)}` : ""}. Quem votou a favor? 👇`;
     case "municipio":
-      return v ? `💰 ${t} recebeu ${v} em emendas parlamentares. Veja quem mandou e para onde foi:` : `💰 Emendas parlamentares para ${t}. Veja quem mandou e para onde foi:`;
+      return v ? `💸 ${v} chegaram em ${t}, mandados por políticos. Quem mandou? 👇` : `💸 Quanto dinheiro de político chegou em ${t}? Quem mandou? 👇`;
     case "uf":
-      return v ? `💰 ${t}: ${v} em emendas parlamentares pagas. Veja cada município:` : `💰 Emendas parlamentares em ${t}. Veja cada município:`;
+      return v ? `💸 ${v} chegaram em ${t}, mandados por políticos. Quem mandou? 👇` : `💸 Quanto dinheiro de político chegou em ${t}? Quem mandou? 👇`;
     case "deputado": case "senador": case "autor":
-      return v ? `🔎 ${t} indicou ${v} em emendas ${d.metric!.label || "pagas"}. Para onde foi o dinheiro?` : `🔎 ${t}: emendas, votos e gastos públicos. Confira:`;
+      return v ? `💸 ${t} mandou ${v} de dinheiro público. Para onde foi? 👇` : `🔎 ${t}: o dinheiro que mandou, os gastos e os votos 👇`;
     case "partido":
-      return v ? `🏛️ ${t}: ${v} em emendas pagas pelos parlamentares do partido. Confira:` : `🏛️ ${t}: bancada, votos e emendas. Confira:`;
+      return v ? `🏛️ ${v} mandados pelos políticos do ${t}. Quem mandou mais? 👇` : `🏛️ ${t}: quem são e quanto mandaram 👇`;
     case "agenda": {
       const quem = `${d.quando ?? "Nesta semana"} o ${d.casa ?? "Congresso"}`;
       const its = d.items ?? [];
       if (its.length > 1) {
         const head = its.slice(0, 3).map((i) => i.sigla).join(", ");
-        return `🗳️ ${quem} vota: ${head}${its.length > 3 ? ` e mais ${its.length - 3}` : ""}. Acompanhe:`;
+        return `🗳️ ${quem} vota: ${head}${its.length > 3 ? ` e mais ${its.length - 3}` : ""}. Acompanhe 👇`;
       }
       const alvo = its[0]?.sigla && !d.title.startsWith(its[0].sigla) ? `${its[0].sigla} — ${t}` : t;
-      return `🗳️ ${quem} vota ${artigo(alvo)}${alvo}. Acompanhe:`;
+      return `🗳️ ${quem} vota ${artigo(alvo)}${alvo}. Acompanhe 👇`;
     }
     case "resultado": {
       const placar = d.votes ? ` ${d.votes.sim}×${d.votes.nao}` : "";
       const st = d.resultado ?? "votada";
-      return `${d.resultado === "rejeitada" ? "❌" : "✅"} Resultado: ${t} ${st}${placar}. Veja como cada deputado votou:`;
+      return `${d.resultado === "rejeitada" ? "❌" : "✅"} Resultado: ${t} ${st}${placar}. Veja como votou cada deputado 👇`;
     }
     case "pix":
-      return v ? `⚡ Emenda Pix: ${t} — ${v} transferidos direto, sem convênio. Confira:` : `⚡ Emenda Pix: ${t}. Confira para onde foi o dinheiro:`;
+      return v ? `⚡ ${v} mandados sem dizer para quê: ${t}. Sua cidade recebeu? 👇` : `⚡ Dinheiro mandado sem dizer para quê: ${t}. Sua cidade recebeu? 👇`;
     case "emenda":
-      return v ? `💸 ${t}: ${v}. Veja quem indicou e quem recebeu:` : `💸 ${t}. Veja quem indicou e quem recebeu:`;
+      return v ? `💸 ${v}: ${t}. Quem mandou e quem recebeu? 👇` : `💸 ${t}. Quem mandou e quem recebeu? 👇`;
     default:
-      return `${t}${v ? ` — ${v}` : ""}. Dados públicos no ${SITE_NAME}:`;
+      return `${t}${v ? ` — ${v}` : ""}. Veja no ${SITE_NAME} 👇`;
   }
 }
 

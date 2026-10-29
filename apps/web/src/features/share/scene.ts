@@ -11,7 +11,12 @@ export const SIZES: Record<Format, readonly [number, number]> = { square: [1080,
 /** Instante "pronto" usado nas imagens estáticas. */
 export const STILL_T = REEL_PHASES.hold[0] + 0.02;
 
-export interface Assets { logo: CanvasImageSource | null; qr: QrMatrix }
+export interface Assets {
+  logo: CanvasImageSource | null;
+  qr: QrMatrix;
+  /** Fotos carregadas por URL (retrato e rostos). */
+  fotos?: ReadonlyMap<string, CanvasImageSource>;
+}
 
 const C = {
   verde: "#009c3b", verdeClaro: "#1fc35f", amarelo: "#ffdf00", azul: "#002776",
@@ -23,8 +28,9 @@ const SANS = (w: number, s: number) => `${w} ${s}px Inter, ui-sans-serif, system
 
 export const KIND_LABEL: Record<ShareKind, string> = {
   proposicao: "Proposição", votacao: "Votação na Câmara", voto: "Como votou", emenda: "Emenda parlamentar",
-  municipio: "Município", uf: "Estado", deputado: "Deputado(a) federal", senador: "Senador(a)", autor: "Autor de emendas",
-  partido: "Partido", pix: "Emenda Pix", pagina: "emenda.online",
+  municipio: "Dinheiro mandado por políticos", uf: "Dinheiro mandado por políticos", deputado: "Dinheiro mandado por políticos",
+  senador: "Dinheiro mandado por políticos", autor: "Dinheiro mandado por políticos",
+  partido: "Quem manda no Congresso", pix: "Dinheiro sem dizer para quê", pagina: "emenda.online",
   agenda: "Agenda do Congresso", resultado: "Resultado da votação",
 };
 
@@ -83,6 +89,21 @@ export function drawScene(ctx: Ctx, W: number, H: number, d: ShareData, t: numbe
     spacing(ctx, 0);
   });
 
+  // Retrato: foto grande no canto, entra com "pop".
+  const foto = d.retrato ? a.fotos?.get(d.retrato) : undefined;
+  const rs = story ? 300 : 230;
+  if (foto) {
+    const p = easeOutCubic(phase(t, REEL_PHASES.intro[0] + 0.04, REEL_PHASES.intro[1] + 0.12));
+    if (p > 0) {
+      const cx = DW - pad - rs / 2, cy = top + (story ? 210 : 150) + rs / 2;
+      ctx.save(); ctx.globalAlpha = p; ctx.translate(cx, cy); ctx.scale(0.6 + 0.4 * p, 0.6 + 0.4 * p);
+      ctx.fillStyle = C.amarelo; ctx.beginPath(); ctx.arc(0, 0, rs / 2 + 10, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, rs / 2, 0, Math.PI * 2); ctx.clip();
+      drawCover(ctx, foto, -rs / 2, -rs / 2, rs, rs);
+      ctx.restore();
+    }
+  }
+
   // Eyebrow + título + subtítulo
   let y = top + (story ? 230 : 170);
   enter(1, () => {
@@ -92,7 +113,8 @@ export function drawScene(ctx: Ctx, W: number, H: number, d: ShareData, t: numbe
   });
   y += 30;
   const measureAt = (font: (s: number) => string) => (size: number) => (txt: string) => { ctx.font = font(size); return ctx.measureText(txt).width; };
-  const titleFit = fitFont(d.title, { maxWidth: maxW, maxLines: story ? 4 : 3, sizes: story ? [96, 84, 72, 60, 52] : [76, 66, 56, 48, 42], measureAt: measureAt((z) => DISPLAY(700, z)) });
+  const titleW = foto && !story ? maxW - rs - 30 : maxW;
+  const titleFit = fitFont(d.title, { maxWidth: titleW, maxLines: story ? 4 : 3, sizes: story ? [96, 84, 72, 60, 52] : [76, 66, 56, 48, 42], measureAt: measureAt((z) => DISPLAY(700, z)) });
   const lh = titleFit.size * 1.1;
   const titleY = y;
   enter(2, () => {
@@ -101,13 +123,16 @@ export function drawScene(ctx: Ctx, W: number, H: number, d: ShareData, t: numbe
     spacing(ctx, 0);
   });
   y += lh * titleFit.lines.length + 16;
+  if (foto && story) y = Math.max(y, top + 210 + rs + 30);
   if (d.subtitle) {
     ctx.font = SANS(400, 32);
-    const sub = wrapText(d.subtitle, maxW, (x) => ctx.measureText(x).width, story ? 3 : 2);
+    const sub = wrapText(d.subtitle, titleW, (x) => ctx.measureText(x).width, story ? 3 : 2);
     const subY = y;
     enter(3, () => { ctx.font = SANS(400, 32); ctx.fillStyle = C.muted; sub.forEach((l, i) => ctx.fillText(l, pad, subY + 40 * (i + 1))); });
     y += 40 * sub.length + 8;
   }
+
+  if (foto && !story) y = Math.max(y, top + 150 + rs + 10);
 
   // Número principal
   const pc = phase(t, ...REEL_PHASES.count);
@@ -184,15 +209,37 @@ export function drawScene(ctx: Ctx, W: number, H: number, d: ShareData, t: numbe
     }
   }
 
+  // Gancho em destaque (amarelo), aparece quando o número termina de contar.
+  if (d.gancho) {
+    const p = easeOutCubic(phase(t, REEL_PHASES.count[1] - 0.12, REEL_PHASES.count[1] + 0.05));
+    const gs = story ? 40 : 34;
+    ctx.font = SANS(700, gs);
+    const gl = wrapText(d.gancho, maxW - 48, (x) => ctx.measureText(x).width, 2);
+    const gw = Math.max(...gl.map((l) => ctx.measureText(l).width)) + 48;
+    const gh = gl.length * gs * 1.3 + 28;
+    if (p > 0) {
+      ctx.save(); ctx.globalAlpha = p; ctx.translate((1 - p) * -40, y + 14);
+      ctx.fillStyle = C.amarelo; rrect(ctx, pad, 0, gw, gh, 18); ctx.fill();
+      ctx.fillStyle = C.bg1; ctx.font = SANS(700, gs);
+      gl.forEach((l, i) => ctx.fillText(l, pad + 24, 14 + gs * 1.3 * (i + 0.8)));
+      ctx.restore();
+    }
+    y += gh + 28;
+  }
+
   // Rodapé
   const qrSize = story ? 240 : 176;
   const footTop = DH - pad - qrSize;
-  enter(4, () => drawFooter(ctx, d, a, pad, footTop, DW, qrSize));
+  // Quadrado com rostos: não sobra área de gráfico, então os rostos vão no rodapé, ao lado do QR.
+  const rostosNoRodape = !story && !!d.rostos?.length;
+  enter(4, () => drawFooter(ctx, d, a, pad, footTop, DW, qrSize, rostosNoRodape));
+  if (rostosNoRodape) drawRostosLinha(ctx, d.rostos!, phase(t, ...REEL_PHASES.chart), pad, footTop, DW - pad - qrSize - 32 - pad, a);
 
   // Gráfico
   const pChart = phase(t, ...REEL_PHASES.chart);
   const region = { top: y + 30, bottom: footTop - (story ? 80 : 40) };
   if (d.kind === "agenda" && d.items?.length) drawItems(ctx, d.items, pChart, { top: listTop, bottom: footTop - 40 }, pad, maxW);
+  else if (!rostosNoRodape && d.rostos?.length && region.bottom - region.top > 150) drawRostos(ctx, d.rostos, pChart, region, pad, maxW, a);
   else if (d.votes && region.bottom - region.top > 150) drawHemicycle(ctx, d.votes, pChart, region, DW);
   else if (d.bars?.length && region.bottom - region.top > 150) drawBars(ctx, d, pChart, region, pad, maxW);
 
@@ -206,7 +253,7 @@ export function drawScene(ctx: Ctx, W: number, H: number, d: ShareData, t: numbe
   ctx.restore();
 }
 
-function drawFooter(ctx: Ctx, d: ShareData, a: Assets, pad: number, y: number, DW: number, size: number) {
+function drawFooter(ctx: Ctx, d: ShareData, a: Assets, pad: number, y: number, DW: number, size: number, compact = false) {
   const x = DW - pad - size;
   ctx.fillStyle = C.branco; rrect(ctx, x, y, size, size, 20); ctx.fill();
   const q = a.qr, m = 10, cell = (size - m * 2) / q.size;
@@ -215,6 +262,12 @@ function drawFooter(ctx: Ctx, d: ShareData, a: Assets, pad: number, y: number, D
     if (q.dark[r * q.size + c]) ctx.fillRect(x + m + c * cell, y + m + r * cell, Math.ceil(cell), Math.ceil(cell));
   }
   const tw = x - pad - 32;
+  if (compact) {
+    const u = new URL(absoluteUrl(d.url));
+    ctx.font = SANS(700, 24); ctx.fillStyle = C.verdeClaro;
+    ctx.fillText(wrapText(`${u.host}${u.pathname === "/" ? "" : u.pathname}`, tw, (s) => ctx.measureText(s).width, 1)[0] ?? "", pad, y + size - 4);
+    return;
+  }
   ctx.font = SANS(600, 32); ctx.fillStyle = C.branco;
   ctx.fillText("Veja os dados completos em", pad, y + size * 0.42);
   const u = new URL(absoluteUrl(d.url));
@@ -316,4 +369,82 @@ function drawItems(ctx: Ctx, items: NonNullable<ShareData["items"]>, p: number, 
     ctx.fillText(`+${rest} ${rest === 1 ? "item" : "itens"} na pauta`, pad, r.top + shown.length * rowH + 30);
     ctx.globalAlpha = 1;
   }
+}
+
+/** Desenha `img` cobrindo o retângulo (como object-fit: cover, alinhado ao topo). */
+function drawCover(ctx: Ctx, img: CanvasImageSource, x: number, y: number, w: number, h: number) {
+  const iw = Number((img as { width?: number }).width) || w, ih = Number((img as { height?: number }).height) || h;
+  const sc = Math.max(w / iw, h / ih);
+  const dw = iw * sc, dh = ih * sc;
+  ctx.drawImage(img, x + (w - dw) / 2, y, dw, dh);
+}
+
+const iniciais = (nome: string) => nome.split(/\s+/).map((w) => w[0] ?? "").filter((c) => /\p{L}/u.test(c)).slice(0, 2).join("").toUpperCase();
+
+/** "Quem mandou": até 3 rostos que deslizam da direita, um após o outro. */
+function drawRostos(ctx: Ctx, rostos: NonNullable<ShareData["rostos"]>, p: number, r: { top: number; bottom: number }, pad: number, maxW: number, a: Assets) {
+  const list = rostos.slice(0, 3);
+  const head = 46;
+  const rowH = Math.min(150, (r.bottom - r.top - head) / list.length);
+  if (rowH < 70) return;
+  const rad = Math.min(56, rowH * 0.4);
+  ctx.globalAlpha = easeOutCubic(phase(p, 0, 0.2));
+  ctx.font = SANS(600, 26); spacing(ctx, 3); ctx.fillStyle = C.muted;
+  ctx.fillText("QUEM MANDOU", pad, r.top + 28); spacing(ctx, 0);
+  ctx.globalAlpha = 1;
+  list.forEach((f, i) => {
+    const q = easeOutCubic(phase(p, 0.1 + i * 0.15, 0.55 + i * 0.15));
+    if (q <= 0) return;
+    const cy = r.top + head + i * rowH + rowH / 2;
+    const cx = pad + rad;
+    ctx.save(); ctx.globalAlpha = q; ctx.translate((1 - q) * 160, 0);
+    ctx.fillStyle = i === 0 ? C.amarelo : C.branco;
+    ctx.beginPath(); ctx.arc(cx, cy, rad + 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#0b2a63"; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.fill();
+    const img = f.foto ? a.fotos?.get(f.foto) : undefined;
+    if (img) {
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.clip();
+      drawCover(ctx, img, cx - rad, cy - rad, rad * 2, rad * 2); ctx.restore();
+    } else {
+      ctx.font = SANS(700, rad * 0.8); ctx.fillStyle = C.muted; ctx.textAlign = "center";
+      ctx.fillText(iniciais(f.nome), cx, cy + rad * 0.28); ctx.textAlign = "left";
+    }
+    const tx = cx + rad + 28, tw = maxW - (tx - pad);
+    ctx.font = DISPLAY(700, 40); ctx.fillStyle = C.branco;
+    ctx.fillText(truncate(f.nome, 30), tx, cy - 4, tw);
+    if (f.detalhe) { ctx.font = SANS(700, 30); ctx.fillStyle = C.verdeClaro; ctx.fillText(f.detalhe, tx, cy + 36, tw); }
+    ctx.restore();
+  });
+}
+
+/** Variante compacta (quadrado): "QUEM MANDOU" + até 3 rostos lado a lado, acima do link. */
+function drawRostosLinha(ctx: Ctx, rostos: NonNullable<ShareData["rostos"]>, p: number, x0: number, y0: number, w: number, a: Assets) {
+  const list = rostos.slice(0, 3);
+  const slot = w / 3;
+  const rad = Math.min(34, slot / 2 - 8);
+  ctx.globalAlpha = easeOutCubic(phase(p, 0, 0.2));
+  ctx.font = SANS(600, 20); spacing(ctx, 3); ctx.fillStyle = C.muted;
+  ctx.fillText("QUEM MANDOU", x0, y0 + 16); spacing(ctx, 0);
+  ctx.globalAlpha = 1;
+  list.forEach((f, i) => {
+    const q = easeOutCubic(phase(p, 0.1 + i * 0.15, 0.55 + i * 0.15));
+    if (q <= 0) return;
+    const cx = x0 + i * slot + rad + 4, cy = y0 + 26 + rad;
+    ctx.save(); ctx.globalAlpha = q; ctx.translate((1 - q) * 120, 0);
+    ctx.fillStyle = i === 0 ? C.amarelo : C.branco;
+    ctx.beginPath(); ctx.arc(cx, cy, rad + 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#0b2a63"; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.fill();
+    const img = f.foto ? a.fotos?.get(f.foto) : undefined;
+    if (img) {
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.clip();
+      drawCover(ctx, img, cx - rad, cy - rad, rad * 2, rad * 2); ctx.restore();
+    } else {
+      ctx.font = SANS(700, rad * 0.8); ctx.fillStyle = C.muted; ctx.textAlign = "center";
+      ctx.fillText(iniciais(f.nome), cx, cy + rad * 0.28); ctx.textAlign = "left";
+    }
+    ctx.font = SANS(700, 20); ctx.fillStyle = C.branco;
+    ctx.fillText(truncate(f.nome, 18), x0 + i * slot, cy + rad + 26, slot - 8);
+    if (f.detalhe) { ctx.font = SANS(700, 18); ctx.fillStyle = C.verdeClaro; ctx.fillText(f.detalhe, x0 + i * slot, cy + rad + 48, slot - 8); }
+    ctx.restore();
+  });
 }

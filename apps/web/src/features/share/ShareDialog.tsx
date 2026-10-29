@@ -7,6 +7,7 @@ import { Download, Film, Image as ImageIcon, Link2, Loader2, Share2, Smartphone,
 import { toast } from "@/ui";
 import { buildMessage, fileSlug, ogImagePath, type ShareData } from "./links";
 import { ShareBar } from "./ShareBar";
+import { basico, enriquecer, fonteDe } from "./viral";
 import type { Format } from "./scene";
 
 type Studio = typeof import("./studio");
@@ -18,7 +19,26 @@ const primary = `${btn} sheen bg-verde text-white hover:bg-verde-700`;
 const ghost = `${btn} border border-line bg-surface hover:bg-surface-2`;
 const tab = "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold text-muted transition data-[state=active]:bg-surface data-[state=active]:text-fg data-[state=active]:shadow-sm sm:text-sm";
 
-export default function ShareDialog({ data, open, onOpenChange }: { data: ShareData; open: boolean; onOpenChange: (o: boolean) => void }) {
+/** Junta rostos, número e gancho a partir do JSON da página (já em cache no navegador). */
+function useViral(raw: ShareData): ShareData {
+  const [data, setData] = useState<ShareData>(() => basico(raw));
+  useEffect(() => {
+    const base = basico(raw);
+    setData(base);
+    const src = fonteDe(raw);
+    if (!src) return;
+    let live = true;
+    fetch(src, { headers: { accept: "application/json" } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (live) setData(enriquecer(base, j)); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [raw]);
+  return data;
+}
+
+export default function ShareDialog({ data: raw, open, onOpenChange }: { data: ShareData; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const data = useViral(raw);
   const [msg, setMsg] = useState(() => buildMessage(data));
   useEffect(() => setMsg(buildMessage(data)), [data]);
   const d = useMemo<ShareData>(() => ({ ...data, text: msg }), [data, msg]);
@@ -71,7 +91,7 @@ function useStudio(d: ShareData) {
     loadStudio().then(async (studio) => { const assets = await studio.loadAssets(d); if (live) setS({ studio, assets }); })
       .catch(() => toast("Não foi possível preparar a imagem"));
     return () => { live = false; };
-  }, [d.url]);
+  }, [d.url, d.retrato, (d.rostos ?? []).map((r) => r.foto).join("|")]);
   return s;
 }
 

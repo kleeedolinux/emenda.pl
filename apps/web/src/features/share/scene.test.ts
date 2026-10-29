@@ -28,6 +28,9 @@ const cases: ShareData[] = [
   { ...base, kind: "agenda", title: "Pauta da semana", casa: "Plenário da Câmara", destaque: "HOJE · 13:55",
     items: Array.from({ length: 7 }, (_, i) => ({ hora: "13:55", sigla: `PL ${i}/2026`, titulo: "Institui ".repeat(20) })) },
   { ...base, kind: "resultado", resultado: "aprovada", votes: { sim: 375, nao: 113, outros: 4 } },
+  { ...base, kind: "municipio", metric: { value: 260_000_000, format: "brl", label: "chegaram em Irará (BA)" }, gancho: "40% sem dizer para quê. Quem mandou?",
+    rostos: [{ nome: "Paulo Magalhães", detalhe: "R$ 1,2 mi", foto: "/f/1" }, { nome: "Otto Alencar", foto: "/f/2" }, { nome: "Bia Lima" }] },
+  { ...base, kind: "deputado", retrato: "/f/r", metric: { value: 9_880_000_000, format: "brl", label: "mandados por Arthur Lira" } },
 ];
 
 describe("drawScene", () => {
@@ -55,7 +58,7 @@ describe("drawScene", () => {
     expect(all).toContain("emenda");
     expect(all).toContain(".online");
     expect(all).toMatch(/R\$\s?98,8\smi/);
-    expect(all).toContain("MUNICÍPIO");
+    expect(all).toContain("DINHEIRO MANDADO POR POLÍTICOS");
   });
 
   test("agenda: destaque, até 5 itens e '+N'", () => {
@@ -65,6 +68,32 @@ describe("drawScene", () => {
     expect(all).toContain("HOJE · 13:55");
     expect(all.filter((x) => /^PL \d\/2026$/.test(x)).length).toBe(5);
     expect(all).toContain("+2 itens na pauta");
+  });
+
+  test("rostos: fotos carregadas, iniciais sem foto, gancho", () => {
+    const drawn: unknown[] = [];
+    const { ctx, texts } = fakeCtx();
+    (ctx as unknown as Record<string, unknown>).drawImage = (img: unknown) => drawn.push(img);
+    const fotos = new Map<string, CanvasImageSource>([["/f/1", { width: 160, height: 160 } as unknown as CanvasImageSource], ["/f/2", { width: 160, height: 200 } as unknown as CanvasImageSource]]);
+    for (const [W, H] of [SIZES.square, SIZES.story]) {
+      drawn.length = 0; texts.length = 0;
+      drawScene(ctx, W, H, cases[6]!, 0.74, { logo: null, qr: qrMatrix("x"), fotos });
+      const all = texts.map((x) => x.s);
+      expect(all).toContain("QUEM MANDOU");
+      expect(all).toContain("Paulo Magalhães");
+      expect(all).toContain("BL");
+      expect(all.some((x) => x.includes("sem dizer para quê"))).toBe(true);
+      expect(drawn.length).toBe(2);
+    }
+  });
+
+  test("retrato aparece quando a foto carregou", () => {
+    const drawn: unknown[] = [];
+    const { ctx } = fakeCtx();
+    (ctx as unknown as Record<string, unknown>).drawImage = (img: unknown) => drawn.push(img);
+    const img = { width: 512, height: 640 } as unknown as CanvasImageSource;
+    drawScene(ctx, 1080, 1080, cases[7]!, 0.74, { logo: null, qr: qrMatrix("x"), fotos: new Map([["/f/r", img]]) });
+    expect(drawn).toContain(img);
   });
 
   test("resultado: selo APROVADA e placar", () => {

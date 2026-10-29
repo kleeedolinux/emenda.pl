@@ -32,12 +32,13 @@ describe("formatMetric", () => {
 
 describe("buildMessage", () => {
   test.each<[string, ShareData, RegExp[]]>([
-    ["município", mun, [/Campinas/, /R\$\s?123,5\smi/, /emendas/]],
-    ["votação", vot, [/382 Sim/, /118 Não/, /Reforma Tributária/]],
-    ["voto", voto, [/Tabata Amaral votou Sim/, /Reforma Tributária/]],
-    ["deputado", { kind: "deputado", title: "Fulano", url: "/deputado/1", metric: { value: 5_000_000_00, format: "brl", label: "pagos" } }, [/Fulano/, /R\$/]],
-    ["proposição", { kind: "proposicao", title: "PL 1/2024", subtitle: "Altera a lei", url: "/proposicao/1" }, [/PL 1\/2024/, /Altera a lei/]],
-    ["pix", { kind: "pix", title: "Emenda Pix 123", url: "/pix", metric: { value: 100_00, format: "brl", label: "" } }, [/Pix/, /R\$/]],
+    ["município", mun, [/^💸 R\$\s?123,5\smi chegaram em Campinas/, /Quem mandou\? 👇$/]],
+    ["votação", vot, [/^🗳️ 382 x 118: /, /Reforma Tributária/, /Veja como votou cada deputado 👇$/]],
+    ["voto", voto, [/Tabata Amaral votou SIM/, /Reforma Tributária/, /Veja como votou cada um 👇$/]],
+    ["deputado", { kind: "deputado", title: "Fulano", url: "/deputado/1", metric: { value: 5_000_000_00, format: "brl", label: "pagos" } }, [/^💸 Fulano mandou R\$/, /Para onde foi\? 👇$/]],
+    ["proposição", { kind: "proposicao", title: "PL 1/2024", subtitle: "Altera a lei", url: "/proposicao/1" }, [/PL 1\/2024/, /Altera a lei/, /👇$/]],
+    ["pix", { kind: "pix", title: "Emenda Pix 123", url: "/pix", metric: { value: 100_00, format: "brl", label: "" } }, [/^⚡ R\$/, /sem dizer para quê/, /👇$/]],
+    ["uf sem métrica", { kind: "uf", title: "Bahia", url: "/uf/BA" }, [/Bahia/, /Quem mandou\? 👇$/]],
   ])("%s", (_n, d, res) => {
     const m = buildMessage(d);
     for (const r of res) expect(m).toMatch(r);
@@ -103,7 +104,7 @@ describe("votoShare", () => {
   test("monta link ?dep e rótulo do deputado", () => {
     const d = votoShare({ votacaoId: "2196833-395", titulo: "PEC 45/2019", deputado: { id: 204554, nome: "Tabata Amaral", siglaPartido: "PSB", siglaUf: "SP" }, voto: "Sim", placar: { sim: 382, nao: 118, outros: 3 } });
     expect(d).toMatchObject({ kind: "voto", url: "/votacao/2196833-395?dep=204554", ogId: "2196833-395/204554", pessoa: "Tabata Amaral (PSB-SP)", voto: "Sim" });
-    expect(buildMessage(d)).toMatch(/Tabata Amaral \(PSB-SP\) votou Sim em “PEC 45\/2019”/);
+    expect(buildMessage(d)).toBe("🗳️ Tabata Amaral (PSB-SP) votou SIM na PEC 45/2019. Veja como votou cada um 👇");
   });
 });
 
@@ -118,20 +119,20 @@ describe("agenda e resultado", () => {
 
   test("um item: artigo certo e apelido", () => {
     expect(buildMessage({ kind: "agenda", title: "PL 2630/2020 (Fake News)", url: "/agenda", quando: "Hoje", casa: "Plenário da Câmara" }))
-      .toBe("🗳️ Hoje o Plenário da Câmara vota o PL 2630/2020 (Fake News). Acompanhe:");
+      .toBe("🗳️ Hoje o Plenário da Câmara vota o PL 2630/2020 (Fake News). Acompanhe 👇");
     expect(buildMessage({ kind: "agenda", title: "PEC 45/2019", url: "/agenda", quando: "Amanhã", casa: "Plenário do Senado" }))
-      .toBe("🗳️ Amanhã o Plenário do Senado vota a PEC 45/2019. Acompanhe:");
+      .toBe("🗳️ Amanhã o Plenário do Senado vota a PEC 45/2019. Acompanhe 👇");
   });
   test("vários itens", () => {
     const m = buildMessage({ kind: "agenda", title: "Pauta da semana", url: "/agenda", quando: "Nesta semana", casa: "Congresso",
       items: [{ hora: "13:55", sigla: "PL 1/2026", titulo: "" }, { hora: "", sigla: "PEC 2/2026", titulo: "" }, { hora: "", sigla: "MPV 3/2026", titulo: "" }, { hora: "", sigla: "PLP 4/2026", titulo: "" }] });
-    expect(m).toBe("🗳️ Nesta semana o Congresso vota: PL 1/2026, PEC 2/2026, MPV 3/2026 e mais 1. Acompanhe:");
+    expect(m).toBe("🗳️ Nesta semana o Congresso vota: PL 1/2026, PEC 2/2026, MPV 3/2026 e mais 1. Acompanhe 👇");
   });
   test("resultado", () => {
     expect(buildMessage({ kind: "resultado", title: "PEC 45/2019", url: "/votacao/1-2", resultado: "aprovada", votes: { sim: 375, nao: 113, outros: 4 } }))
-      .toBe("✅ Resultado: PEC 45/2019 aprovada 375×113. Veja como cada deputado votou:");
+      .toBe("✅ Resultado: PEC 45/2019 aprovada 375×113. Veja como votou cada deputado 👇");
     expect(buildMessage({ kind: "resultado", title: "PL 1/2026", url: "/votacao/1-2", resultado: "rejeitada" }))
-      .toBe("❌ Resultado: PL 1/2026 rejeitada. Veja como cada deputado votou:");
+      .toBe("❌ Resultado: PL 1/2026 rejeitada. Veja como votou cada deputado 👇");
   });
   test("agendaEventoUrl", () => expect(agendaEventoUrl("2026-10-28", "camara-123")).toBe("/agenda?dia=2026-10-28&evento=camara-123"));
 });
