@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="media/emenda-online-reel-16x9.mp4"><img src="media/reel-poster.png" alt="Demo (vídeo)" width="720"></a>
+  <a href="https://emenda.online"><img src="media/reel-poster.png" alt="emenda.online" width="720"></a>
 </p>
 
 ## Visão técnica
