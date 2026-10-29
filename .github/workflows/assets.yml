@@ -43,7 +43,9 @@ jobs:
         run: |
           mkdir -p cache
           curl -fsSL --retry 3 -o cache/consulta_cand_2024.zip https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2024.zip
-          curl -fsSL --retry 3 -o cache/ibge.json https://servicodados.ibge.gov.br/api/v1/localidades/municipios
+          # IBGE recusa conexões de fora do Brasil; o proxy do próprio site (edge Cloudflare) é a reserva.
+          curl -fsSL --retry 3 --connect-timeout 20 -o cache/ibge.json https://servicodados.ibge.gov.br/api/v1/localidades/municipios \
+            || curl -fsSL --retry 3 -o cache/ibge.json https://emenda.online/api/ibge/v1/localidades/municipios
           curl -fsSL --retry 3 -o cache/consulta_cand_2022.zip https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2022.zip
       - name: Espelhar
         id: run

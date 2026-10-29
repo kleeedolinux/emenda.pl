@@ -16,7 +16,8 @@ mkdir -p "$cache/emendas"
 get() { if [ ! -s "$2" ]; then curl -fL --retry 3 -o "$2.tmp" "$1" && mv "$2.tmp" "$2"; fi; }
 get https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares/UNICO "$cache/emendas.zip"
 get https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2024.zip "$cache/consulta_cand_2024.zip"
-get https://servicodados.ibge.gov.br/api/v1/localidades/municipios "$cache/ibge_municipios.json"
+get https://servicodados.ibge.gov.br/api/v1/localidades/municipios "$cache/ibge_municipios.json" \
+  || get https://emenda.online/api/ibge/v1/localidades/municipios "$cache/ibge_municipios.json" # IBGE recusa IPs de fora do Brasil
 unzip -oq "$cache/emendas.zip" -d "$cache/emendas"
 cargo run -q -p etl --release --manifest-path "$root/Cargo.toml" -- \
   --input "$cache/emendas" --out "$out" \
