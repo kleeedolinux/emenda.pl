@@ -1,6 +1,6 @@
 // Home: (1) hero que já entrega um fato + busca da cidade + mapa clicável; (2) perto de você; (3) 4 portas de entrada;
-// (4) quem mais recebe; (5) novidades; (6) como funciona. Detalhe fica nas páginas próprias.
-import { dataPath, UFS, type AutorResumo, type Beneficiados, type Brasil, type Meta, type Municipio, type Rankings, type SiglaUf } from "@emenda/contracts";
+// (4) quem mais recebe; (5) empresas contratadas; (6) novidades; (7) como funciona. Detalhe fica nas páginas próprias.
+import { dataPath, gastosPath, UFS, type GastosFornecedores, type AutorResumo, type Beneficiados, type Brasil, type Meta, type Municipio, type Rankings, type SiglaUf } from "@emenda/contracts";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Database, EyeOff, MapPin, Scale, Search, ShieldCheck, Trophy, Vote, Zap, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -8,6 +8,7 @@ import { Link, useNavigate } from "react-router";
 import { HeroBrasil, preloadHeroScene } from "@/features/geo/HeroBrasil";
 import { BuscaUniversal, abrirBusca } from "@/features/busca";
 import { LinhaBeneficiado, privados } from "@/features/beneficiados";
+import { GRUPOS } from "@/features/contratadas/contratadas";
 import { fatosDoDia, lerLocal, type Fato, type LocalVisitante } from "@/features/home/home";
 import { HERO, QuemMandou, QuemMandouSkeleton, TIPO_DINHEIRO } from "@/features/linguagem";
 import { PAUTAS } from "@/features/legislativo/pautas";
@@ -88,6 +89,7 @@ export default function Home() {
         <PertoDeVoce local={local} b={brasil.data} />
         <PortasDeEntrada b={brasil.data} rankings={rankings.data} />
         <QuemMaisRecebe />
+        <EmpresasContratadas />
         <NovidadesStrip limit={5} />
         <ComoFunciona />
         {meta.data && <p className="text-xs text-muted">Atualizado em {formatDate(meta.data.generatedAt)} · dados de {anos} · fonte: <a className="link" href={meta.data.fonte} target="_blank" rel="noopener noreferrer">Portal da Transparência</a>.</p>}
@@ -257,6 +259,35 @@ function QuemMaisRecebe() {
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+/** A empresa que mais recebeu em cada tipo de gasto da cota; cada cartão abre o tipo. */
+function EmpresasContratadas() {
+  const q = useApi<GastosFornecedores>(gastosPath.fornecedores());
+  if (q.isError) return null;
+  const grupos = q.data?.grupos.filter((g) => g.grupo !== "outros" && g.fornecedores.length).slice(0, 4);
+  return (
+    <section aria-labelledby="contratadas-t">
+      <h2 id="contratadas-t" className="mb-1 text-xl font-bold sm:text-2xl">Empresas que os políticos contratam</h2>
+      <p className="mb-3 text-sm text-muted">Passagens, propaganda, carro e escritório são pagos com dinheiro público. Quem mais recebeu em cada um:</p>
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {grupos ? grupos.map((g) => {
+          const f = g.fornecedores[0]!;
+          return (
+            <li key={g.grupo}>
+              <Link to={`/empresas-contratadas?tipo=${g.grupo}`} className="card group flex h-full flex-col gap-1 p-4 hover:border-accent">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted">{GRUPOS[g.grupo].rotulo}</span>
+                <b className="leading-tight [overflow-wrap:anywhere]">{nomeLeigo(f.nome)}</b>
+                <span className="font-display text-2xl font-bold tabular">{brl(f.valor)}</span>
+                <span className="mt-auto flex items-center justify-between text-sm text-muted">contratada por {f.parlamentares} políticos<ArrowRight className="size-4 text-accent transition group-hover:translate-x-0.5" aria-hidden /></span>
+              </Link>
+            </li>
+          );
+        }) : [0, 1, 2, 3].map((i) => <li key={i}><Skeleton className="h-36 rounded-2xl" /></li>)}
+      </ul>
+      <Link to="/empresas-contratadas" className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent">Ver todas as empresas e quem contratou <ArrowRight className="size-4" aria-hidden /></Link>
     </section>
   );
 }

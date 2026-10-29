@@ -18,7 +18,11 @@ const beneficiados = {
   entidades: [],
   fundos: [{ documento: "3", nome: "FUNDO ESTADUAL DE SAUDE", tipo: "Pessoa Jurídica", valor: 5_000_000_000, uf: "SP", municipio: "SAO PAULO" }],
 };
-const dados: Record<string, unknown> = { "brasil.json": brasil, "meta.json": meta, "rankings.json": rankings, "autores.json": [], "beneficiados.json": beneficiados };
+const fornecedores = { grupos: [
+  { grupo: "passagens", valor: 300_000_000_00, fornecedores: [{ cnpjCpf: "1", nome: "Cia Aérea - TAM", valor: 165_000_000_00, n: 9, parlamentares: 1037, contratantes: [] }] },
+  { grupo: "divulgacao", valor: 100_000_000_00, fornecedores: [{ cnpjCpf: "2", nome: "GRAFICA X LTDA", valor: 5_000_000_00, n: 3, parlamentares: 12, contratantes: [] }] },
+] };
+const dados: Record<string, unknown> = { "fornecedores.json": fornecedores, "brasil.json": brasil, "meta.json": meta, "rankings.json": rankings, "autores.json": [], "beneficiados.json": beneficiados };
 const realFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = realFetch; (window as { fetch: typeof fetch }).fetch = realFetch; localStorage.clear(); });
 
@@ -42,7 +46,7 @@ describe("Home", () => {
   test("seções em ordem, um trabalho cada", async () => {
     montar();
     const h2 = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    expect(h2).toEqual(["Perto de você", "Por onde começar", "Quem mais recebe", "Novidades", "Como funciona"]);
+    expect(h2).toEqual(["Perto de você", "Por onde começar", "Quem mais recebe", "Empresas que os políticos contratam", "Novidades", "Como funciona"]);
   });
 
   test("quem mais recebe: empresas e entidades privadas separadas dos fundos públicos", async () => {
@@ -53,6 +57,14 @@ describe("Home", () => {
     expect(within(sec).getByRole("heading", { name: /Empresas e entidades privadas/ })).toBeTruthy();
     expect(within(sec).getByRole("heading", { name: /Fundos públicos/ })).toBeTruthy();
     expect(within(sec).getAllByRole("link").some((a) => a.getAttribute("href") === "/quem-recebe")).toBe(true);
+  });
+
+  test("empresas contratadas: a maior de cada tipo de gasto, com link para o tipo", async () => {
+    montar();
+    const sec = screen.getByRole("region", { name: "Empresas que os políticos contratam" });
+    const tam = await within(sec).findByRole("link", { name: /Cia Aérea - TAM/ });
+    expect(tam.getAttribute("href")).toBe("/empresas-contratadas?tipo=passagens");
+    expect(within(sec).getByText(/Propaganda e marketing/)).toBeTruthy();
   });
 
   test("hero na língua do dia a dia: rótulo, número grande que é link e frase", async () => {
