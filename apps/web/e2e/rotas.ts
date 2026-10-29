@@ -31,6 +31,7 @@ export const ROTAS: Rota[] = [
   { padrao: "pix", path: "/pix", nota: "" },
   { padrao: "orcamento-secreto", path: "/orcamento-secreto", nota: "" },
   { padrao: "quem-recebe", path: "/quem-recebe", nota: "" },
+  { padrao: "empresas-contratadas", path: "/empresas-contratadas", nota: "" },
   { padrao: "ultimas", path: "/ultimas", nota: "cartões de pagamento" },
   { padrao: "entenda", path: "/entenda", nota: "" },
   { padrao: "entenda/:tema", path: "/entenda/o-que-e-emenda", nota: "" },

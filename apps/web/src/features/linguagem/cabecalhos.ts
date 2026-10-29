@@ -104,6 +104,11 @@ export const CABECALHOS = {
     subtitulo: "Nem todo dinheiro vai para a prefeitura: parte vai direto para empresas, associações e fundações. Veja quem mais recebeu e de onde são.",
     oficial: "Oficialmente: favorecidos de emendas parlamentares",
   },
+  contratadas: {
+    titulo: "As empresas que os políticos mais contratam",
+    subtitulo: "Deputados e senadores pagam passagens, propaganda, carro e escritório com dinheiro público. Veja quais empresas mais receberam e quem as contratou.",
+    oficial: "Oficialmente: fornecedores da cota parlamentar (CEAP)",
+  },
 } satisfies Record<string, Cabecalho>;
 
 export type PaginaCabecalho = keyof typeof CABECALHOS;

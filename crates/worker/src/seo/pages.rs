@@ -25,6 +25,7 @@ pub fn sources(p: &Page, today: &str) -> Vec<Source> {
     match p.kind {
         Home | Emendas | Dinheiro | OrcamentoSecreto => v.push(data("v1/brasil.json".into())),
         QuemRecebe => v.push(data("v1/beneficiados.json".into())),
+        EmpresasContratadas => v.push(data("v1/gastos/fornecedores.json".into())),
         Uf => v.push(data(format!("v1/uf/{id}.json"))),
         Municipio => v.push(data(format!("v1/municipio/{id}.json"))),
         Autor => v.push(data(format!("v1/autor/{id}.json"))),
@@ -466,6 +467,7 @@ pub fn build(p: &Page, d: &[Fetched], now: &str) -> Doc {
         Comissoes => at(1).map(|v| comissoes(p, v)),
         OrcamentoSecreto => at(1).map(|v| orcamento_secreto(p, v, meta)),
         QuemRecebe => at(1).map(|v| quem_recebe(p, v, meta)),
+        EmpresasContratadas => at(1).map(|v| empresas_contratadas(p, v)),
         _ => None,
     };
     let live = matches!(
@@ -557,6 +559,7 @@ fn generic(p: &Page, meta: Option<&Value>) -> Doc {
         Sobre => ("Sobre o emenda.online: fontes, método e autora".into(), "Sobre".into(), "Como o emenda.online coleta e cruza dados públicos de emendas, votações e gastos; fontes, licença e autoria.".into()),
         OrcamentoSecreto => ("Orçamento secreto: bilhões distribuídos sem mostrar quem pediu".into(), "Orçamento secreto".into(), "Entre 2020 e 2022, o relator do Orçamento distribuiu bilhões sem mostrar quem pediu. Veja para onde foi o dinheiro.".into()),
         QuemRecebe => ("Quem mais recebe dinheiro de emendas: empresas, entidades e fundos".into(), "Quem mais recebe".into(), "As empresas privadas, entidades e fundos públicos que mais receberam dinheiro mandado por deputados e senadores.".into()),
+        EmpresasContratadas => ("Empresas que deputados e senadores mais contratam com a cota".into(), "Empresas contratadas".into(), "Passagens, propaganda, carros e escritório: as empresas que mais receberam da cota parlamentar e quem as contratou.".into()),
         Api => ("API aberta de emendas parlamentares e votações".into(), "API aberta".into(), "API JSON gratuita, sem chave: emendas por município, estado e autor, deputados, senadores, proposições e votações.".into()),
     };
     let mut d = doc(p, &title, &h1, &desc);
@@ -1852,6 +1855,70 @@ fn beneficiado_items(v: &[Value], n: usize) -> Vec<Item> {
             ))
         })
         .collect()
+}
+
+/// Rótulo do dia a dia de `v1/gastos/fornecedores.json#grupo` (igual ao site).
+fn grupo_gasto(g: &str) -> &'static str {
+    match g {
+        "passagens" => "Passagens e voos",
+        "divulgacao" => "Propaganda e marketing",
+        "carros" => "Carros e combustível",
+        "consultorias" => "Consultorias",
+        "escritorio" => "Escritório",
+        "hospedagem" => "Hotel e comida",
+        "seguranca" => "Segurança",
+        _ => "Outros",
+    }
+}
+
+fn empresas_contratadas(p: &Page, v: &Value) -> Doc {
+    let grupos = arr(v, "/grupos");
+    let topo = grupos
+        .first()
+        .and_then(|g| arr(g, "/fornecedores").first().and_then(|f| s(f, "/nome")))
+        .map(|n| format!(" A que mais recebeu: {n}."))
+        .unwrap_or_default();
+    let desc = format!(
+        "Passagens, propaganda, carros e escritório: as empresas que deputados e senadores mais contratam com a cota.{topo}"
+    );
+    let mut d = doc(
+        p,
+        "Empresas que deputados e senadores mais contratam",
+        "Empresas contratadas",
+        &desc,
+    );
+    here(&mut d, "Empresas contratadas");
+    for g in grupos {
+        let rotulo = grupo_gasto(&s(g, "/grupo").unwrap_or_default());
+        fact(&mut d, rotulo, brl(i(g, "/valor").unwrap_or(0)));
+        let itens = arr(g, "/fornecedores")
+            .iter()
+            .take(50)
+            .filter_map(|f| {
+                let n = i(f, "/parlamentares").unwrap_or(0);
+                Some(Item::text(
+                    s(f, "/nome")?,
+                    Some(format!(
+                        "{} · {} parlamentares",
+                        brl(i(f, "/valor").unwrap_or(0)),
+                        fmt_int(n)
+                    )),
+                ))
+            })
+            .collect();
+        d.sections.push(section(rotulo, itens));
+    }
+    src(
+        &mut d,
+        "Câmara — cota parlamentar (CEAP)",
+        "https://dadosabertos.camara.leg.br",
+    );
+    src(
+        &mut d,
+        "Senado — cota (CEAPS)",
+        "https://www12.senado.leg.br/transparencia",
+    );
+    d
 }
 
 fn quem_recebe(p: &Page, v: &Value, meta: Option<&Value>) -> Doc {

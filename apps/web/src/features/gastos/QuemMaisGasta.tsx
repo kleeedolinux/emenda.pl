@@ -96,6 +96,7 @@ export function QuemMaisGasta({ casa = "camara" }: { casa?: CasaGastos }) {
       )}
 
       <Card title="Fornecedores que mais receberam (Câmara e Senado, desde 2019)" tip="Somatório das notas reembolsadas pela cota, por CNPJ/CPF.">
+        <p className="mb-2 text-sm"><Link className="link font-semibold" to="/empresas-contratadas">Ver por tipo de gasto e quem contratou cada empresa</Link></p>
         <DataTable rows={r.fornecedores} columns={colsForn} pageSize={20} exportName="fornecedores-cota" rowKey={(f, i) => `${f.cnpjCpf}-${i}`} search={(f) => `${f.nome} ${f.cnpjCpf}`} />
       </Card>
     </div>

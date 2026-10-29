@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { dataPath, type Beneficiados } from "@emenda/contracts";
 import { Card, ErrorState, ExternalLink, Section, Skeleton, Stat, StatGrid, useApi } from "@/ui";
 import { formatBRL } from "@/lib/format";
@@ -46,6 +47,7 @@ export default function QuemRecebePage() {
             <Card><ListaBeneficiados itens={b.fundos} /></Card>
           </Section>
 
+          <p className="mt-6 text-sm">Quer ver as empresas que os políticos contratam para passagens, propaganda e carro? <Link className="link font-semibold" to="/empresas-contratadas">Empresas contratadas</Link></p>
           <p className="text-xs text-muted">Soma de todos os pagamentos de cada um desde o início dos dados. Oficialmente: favorecidos de emendas parlamentares. Fonte: <ExternalLink href="https://portaldatransparencia.gov.br/emendas">Portal da Transparência</ExternalLink>.</p>
         </>
       )}

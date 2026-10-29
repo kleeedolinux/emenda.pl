@@ -440,3 +440,34 @@ fn quem_recebe_has_seo_page_and_og_card() {
         "{labels:?}"
     );
 }
+
+#[test]
+fn empresas_contratadas_has_seo_page_and_og_card() {
+    let Some(seo::SeoRoute::Page { page: p, .. }) =
+        seo::route("GET", "/empresas-contratadas", None)
+    else {
+        panic!("rota SEO")
+    };
+    assert_eq!(p.kind, PageKind::EmpresasContratadas);
+    assert_eq!(
+        seo::pages::sources(&p, "2026-10-28")[1],
+        seo::Source::Data("v1/gastos/fornecedores.json".into())
+    );
+    let f = json!({ "grupos": [
+        { "grupo": "passagens", "valor": 30_000_000_000_i64, "fornecedores": [
+            { "cnpjCpf": "1", "nome": "Cia Aérea - TAM", "valor": 16_000_000_000_i64, "n": 9, "parlamentares": 1037, "contratantes": [] }
+        ] },
+        { "grupo": "divulgacao", "valor": 10_000_000_000_i64, "fornecedores": [] }
+    ] });
+    let s = spec(&p, vec![ok(json!({})), ok(f.clone())], vec![]);
+    assert_eq!(s.numero, "R$ 400 mi");
+    assert_eq!(s.frase, "pagos pelos políticos a empresas com a cota");
+    let doc = seo::pages::build(&p, &[ok(json!({})), ok(f)], "2026-10-28T12:00-03:00");
+    assert!(
+        doc.description.contains("Cia Aérea - TAM"),
+        "{}",
+        doc.description
+    );
+    let h: Vec<&str> = doc.sections.iter().map(|s| s.heading.as_str()).collect();
+    assert!(h.contains(&"Passagens e voos"), "{h:?}");
+}

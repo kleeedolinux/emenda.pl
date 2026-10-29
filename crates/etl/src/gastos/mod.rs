@@ -10,10 +10,12 @@
 //! Valores em centavos.
 
 pub mod camara;
+pub mod grupos;
 pub mod senado;
 
 use crate::write;
 use anyhow::Result;
+pub use grupos::{grupo, Grupo};
 use serde::Serialize;
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
@@ -318,6 +320,7 @@ pub struct Acc {
     por_mes: BTreeMap<(u16, u8), i64>,
     cat_ano: BTreeMap<(u16, String), (i64, u32)>,
     forn: HashMap<String, FornAcc>,
+    forn_grupo: HashMap<(Grupo, String), (String, i64, u32)>,
     itens: Vec<((u16, u8), Item)>,
     n: usize,
 }
@@ -358,6 +361,15 @@ impl Acc {
         }
         f.valor += d.valor;
         f.n += 1;
+        let fg = self
+            .forn_grupo
+            .entry((grupo(&d.categoria), chave_forn(&d.cnpj_cpf, &d.fornecedor)))
+            .or_default();
+        if fg.0.is_empty() {
+            fg.0.clone_from(&d.fornecedor);
+        }
+        fg.1 += d.valor;
+        fg.2 += 1;
         self.n += 1;
         self.itens.push((
             (d.ano, d.mes),
@@ -520,6 +532,7 @@ struct Saida {
     ranking: Vec<RankingParlamentar>,
     categorias: Vec<RankingCategoria>,
     forn: HashMap<String, FornAcc>,
+    por_grupo: grupos::PorGrupo,
     anos: std::collections::BTreeSet<u16>,
 }
 
@@ -550,6 +563,9 @@ fn escreve_casa(
             g.valor += f.valor;
             g.n += f.n;
             g.ids += 1;
+        }
+        for ((gr, k), v) in &a.forn_grupo {
+            s.por_grupo.soma(*gr, k, c.casa, id, v);
         }
     }
     for ((ano, cat), (valor, n, mut top)) in cats {
@@ -606,6 +622,7 @@ pub fn run(o: &Opts) -> Result<Relatorio> {
         ranking: Vec::new(),
         categorias: Vec::new(),
         forn: HashMap::new(),
+        por_grupo: Default::default(),
         anos: Default::default(),
     };
     let cam = camara::le(&o.cache.join("camara"), &mut r.despesas_camara)?;
@@ -614,6 +631,10 @@ pub fn run(o: &Opts) -> Result<Relatorio> {
     let sen = senado::le(&o.cache.join("senado"), &mut r.despesas_senado)?;
     let (ns, ate_s) = escreve_casa(&g.join("senador"), sen, leg, &mut s)?;
     r.senadores = ns;
+    write(
+        &g.join("fornecedores.json"),
+        &std::mem::take(&mut s.por_grupo).monta(),
+    )?;
     let mut forn: Vec<RankingFornecedor> = s
         .forn
         .into_iter()

@@ -7,6 +7,7 @@ export type KindParlamentar = "deputado" | "senador";
 export const gastosPath = {
   parlamentar: (kind: KindParlamentar, id: string | number) => `/data/v1/gastos/${kind}/${id}.json`,
   ranking: () => `/data/v1/gastos/ranking.json`,
+  fornecedores: () => `/data/v1/gastos/fornecedores.json`,
 } as const;
 
 export interface GastoFonte { nome: string; url: string }
@@ -99,4 +100,24 @@ export interface GastosRanking {
     top: Array<{ id: string; valor: number }>;
   }>;
   fornecedores: Array<GastoFornecedor & { parlamentares: number }>;
+}
+
+/** Tipo de gasto do dia a dia (agrupa as categorias oficiais da Câmara e do Senado). */
+export type GrupoGasto = "passagens" | "divulgacao" | "carros" | "consultorias" | "escritorio" | "hospedagem" | "seguranca" | "outros";
+
+/** v1/gastos/fornecedores.json: top 50 empresas por grupo e os 10 parlamentares que mais contrataram cada uma. */
+export interface GastosFornecedores {
+  grupos: Array<{
+    grupo: GrupoGasto;
+    valor: number;
+    fornecedores: Array<{
+      cnpjCpf: string;
+      nome: string;
+      valor: number;
+      n: number;
+      /** quantos parlamentares contrataram */
+      parlamentares: number;
+      contratantes: Array<{ casa: CasaGastos; id: string; valor: number }>;
+    }>;
+  }>;
 }

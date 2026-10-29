@@ -234,3 +234,61 @@ fn saidas_gastos() {
     assert_eq!(comb["n"], 3);
     assert_eq!(comb["top"][0], json!({"id": "220714", "valor": 100000}));
 }
+
+#[test]
+fn grupo_da_categoria() {
+    use etl::gastos::{grupo, Grupo::*};
+    let casos = [
+        ("PASSAGEM AÉREA - SIGEPA", Passagens),
+        ("Passagens aéreas, aquáticas e terrestres nacionais", Passagens),
+        ("LOCAÇÃO OU FRETAMENTO DE AERONAVES", Passagens),
+        ("DIVULGAÇÃO DA ATIVIDADE PARLAMENTAR.", Divulgacao),
+        ("Divulgação da atividade parlamentar", Divulgacao),
+        ("LOCAÇÃO OU FRETAMENTO DE VEÍCULOS AUTOMOTORES", Carros),
+        ("COMBUSTÍVEIS E LUBRIFICANTES.", Carros),
+        ("Locomoção, hospedagem, alimentação, combustíveis e lubrificantes", Carros),
+        ("SERVIÇO DE TÁXI, PEDÁGIO E ESTACIONAMENTO", Carros),
+        ("CONSULTORIAS, PESQUISAS E TRABALHOS TÉCNICOS.", Consultorias),
+        ("Contratação de consultorias, assessorias, pesquisas, trabalhos técnicos e outros serviços de apoio ao exercício do mandato parlamentar", Consultorias),
+        ("MANUTENÇÃO DE ESCRITÓRIO DE APOIO À ATIVIDADE PARLAMENTAR", Escritorio),
+        ("Aluguel de imóveis para escritório político, compreendendo despesas concernentes a eles.", Escritorio),
+        ("TELEFONIA", Escritorio),
+        ("HOSPEDAGEM ,EXCETO DO PARLAMENTAR NO DISTRITO FEDERAL.", Hospedagem),
+        ("FORNECIMENTO DE ALIMENTAÇÃO DO PARLAMENTAR", Hospedagem),
+        ("SERVIÇO DE SEGURANÇA PRESTADO POR EMPRESA ESPECIALIZADA.", Seguranca),
+        ("Serviços de Segurança Privada", Seguranca),
+        ("PARTICIPAÇÃO EM CURSO, PALESTRA OU EVENTO SIMILAR", Outros),
+    ];
+    for (c, g) in casos {
+        assert_eq!(grupo(c), g, "{c}");
+    }
+}
+
+#[test]
+fn fornecedores_por_grupo_com_quem_contratou() {
+    let g = run();
+    let f = read(g.join("fornecedores.json"));
+    let grupos = f["grupos"].as_array().unwrap();
+    let div = grupos.iter().find(|x| x["grupo"] == "divulgacao").unwrap();
+    assert_eq!(div["fornecedores"][0]["cnpjCpf"], "36678161000186");
+    assert_eq!(
+        div["fornecedores"][0]["contratantes"],
+        json!([{"casa": "camara", "id": "204379", "valor": 1500000}])
+    );
+    let carros = grupos.iter().find(|x| x["grupo"] == "carros").unwrap();
+    let posto = carros["fornecedores"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|x| x["nome"] == "POSTO VILLAGE LTDA")
+        .unwrap();
+    assert_eq!(posto["contratantes"][0]["casa"], "senado");
+    assert_eq!(posto["contratantes"][0]["id"], "5672");
+    // grupos ordenados por valor; cada fornecedor traz quantos parlamentares contrataram
+    let v: Vec<i64> = grupos
+        .iter()
+        .map(|x| x["valor"].as_i64().unwrap())
+        .collect();
+    assert!(v.windows(2).all(|w| w[0] >= w[1]), "{v:?}");
+    assert_eq!(div["fornecedores"][0]["parlamentares"], 1);
+}
