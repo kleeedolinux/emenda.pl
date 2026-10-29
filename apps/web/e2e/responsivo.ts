@@ -18,7 +18,7 @@ const FILTRO = env.ROTAS?.split(",");
 const [gk, gn] = (env.GRUPO ?? "1/1").split("/").map(Number) as [number, number];
 const rotas = ROTAS.filter((r) => !FILTRO || FILTRO.some((f) => r.path === f || r.path.startsWith(f + "/") || r.path.startsWith(f + "?")))
   .filter((_, i) => i % gn === gk - 1);
-const LIMITE_ROTA = Number(env.LIMITE_ROTA ?? 300_000);
+const LIMITE_ROTA = Number(env.LIMITE_ROTA ?? 600_000);
 const CONC = Number(env.CONC ?? 4);
 const OUT = join(homedir(), ".cache/emenda.pl/responsivo");
 const SHOTS = env.SHOTS === "1";

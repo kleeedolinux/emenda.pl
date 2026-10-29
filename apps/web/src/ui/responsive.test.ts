@@ -35,5 +35,5 @@ describe("layout móvel", () => {
     expect(m).not.toBeNull();
     expect(m![1]).toContain("local");
   });
-  test("código/URL inline quebra em vez de vazar em 280px", () => expect(css).toMatch(/:where\(code, kbd, samp\) \{ overflow-wrap: anywhere; \}/));
+  test("código/URL inline quebra em vez de vazar em 280px", () => expect(css).toMatch(/:where\(code, samp\) \{ overflow-wrap: anywhere; \}/));
 });
