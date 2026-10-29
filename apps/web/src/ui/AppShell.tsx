@@ -14,14 +14,14 @@ import { RouteTransition, ScrollProgress, Toaster, spring } from "./motion";
 /** Navegação principal. `mais: true` vai para o menu "Mais" no desktop (no móvel, tudo fica no menu lateral). */
 export const NAV = [
   { to: "/", label: "Início", end: true },
-  { to: "/emendas", label: "Emendas" },
-  { to: "/pix", label: "Emenda Pix" },
+  { to: "/emendas", label: "Pagamentos" },
+  { to: "/pix", label: "Pix" },
   { to: "/ultimas", label: "Últimas" },
   { to: "/dinheiro", label: "Dinheiro" },
   { to: "/deputados", label: "Deputados" },
   { to: "/senadores", label: "Senadores" },
-  { to: "/proposicoes", label: "Proposições" },
-  { to: "/auditar", label: "Audite seu candidato" },
+  { to: "/proposicoes", label: "Leis" },
+  { to: "/auditar", label: "Audite" },
   { to: "/novidades", label: "Novidades", mais: true },
   { to: "/bancadas", label: "Bancadas", mais: true },
   { to: "/comissoes", label: "Comissões", mais: true },
@@ -84,7 +84,7 @@ export function AppShell() {
           </Link>
           <nav aria-label="Principal" className="ml-4 hidden flex-1 items-center gap-0.5 xl:flex">
             {NAV_MAIN.map((n) => (
-              <NavLink key={n.to} to={n.to} end={"end" in n} className={({ isActive }) => clsx("relative rounded-lg px-2.5 py-1.5 text-sm font-medium transition", isActive ? "text-fg" : "text-muted hover:text-fg")}>
+              <NavLink key={n.to} to={n.to} end={"end" in n} className={({ isActive }) => clsx("relative whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium transition", isActive ? "text-fg" : "text-muted hover:text-fg")}>
                 {({ isActive }) => (
                   <>
                     {n.label}
@@ -140,7 +140,7 @@ export function AppShell() {
       <nav aria-label="Atalhos (móvel)" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line glass pb-[env(safe-area-inset-bottom)] lg:hidden">
         {[
           { to: "/", label: "Início", icon: HomeIcon, end: true },
-          { to: "/emendas", label: "Emendas", icon: FileText },
+          { to: "/emendas", label: "Pagamentos", icon: FileText },
           { to: "/dinheiro", label: "Dinheiro", icon: Banknote },
           { to: "/deputados", label: "Deputados", icon: Users },
         ].map((n) => (

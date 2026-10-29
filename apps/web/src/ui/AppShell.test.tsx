@@ -6,7 +6,8 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { setReducedMotion } from "@/test/dom";
-import { AppShell } from "./AppShell";
+import { within } from "@testing-library/react";
+import { AppShell, NAV } from "./AppShell";
 
 function setup() {
   globalThis.fetch = (async () => new Response("", { status: 404 })) as unknown as typeof fetch;
@@ -45,5 +46,17 @@ describe("AppShell: rota muda com diálogo aberto", () => {
     setup();
     const shell = screen.getByRole("main").parentElement!;
     expect(shell.className).toContain("env(safe-area-inset-bottom)");
+  });
+});
+
+describe("AppShell: cabeçalho em telas médias (~760px)", () => {
+  test("menu de cima só a partir de xl (antes vira ☰), itens numa linha, rótulos curtos, logo não encolhe", async () => {
+    setup();
+    const nav = await screen.findByRole("navigation", { name: "Principal" });
+    expect(nav.className).toMatch(/(^|\s)hidden(\s|$)/);
+    expect(nav.className).toContain("xl:flex");
+    for (const a of within(nav).getAllByRole("link")) expect(a.className).toContain("whitespace-nowrap");
+    expect(NAV.filter((n) => !("mais" in n)).every((n) => n.label.length <= 12)).toBe(true);
+    expect(screen.getByRole("link", { name: /página inicial/ }).className).toContain("shrink-0");
   });
 });
