@@ -25,8 +25,8 @@ export function LinhaRanking({ l, max, valor, i }: { l: Posicionada<Linha>; max:
       <span className="tabular text-right text-xs font-semibold text-muted">{l.posicao}º</span>
       <Avatar src={m.foto} name={m.nome} size="sm" />
       <span className="min-w-0">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <Link to={m.href} className="link truncate text-sm font-semibold">{m.nome}</Link>
+        <span className="flex min-w-0 flex-wrap items-center gap-x-1.5">
+          <Link to={m.href} className="link max-w-full truncate text-sm font-semibold">{m.nome}</Link>
           <span className="hidden shrink-0 sm:inline"><PartyBadge sigla={m.partido} link={false} /></span>
           <span className="shrink-0 text-xs text-muted">{casaLabel(m.casa)} · {m.uf}</span>
         </span>
