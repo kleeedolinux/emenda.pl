@@ -279,7 +279,7 @@ function EmpresasContratadas() {
             <li key={g.grupo}>
               <Link to={`/empresas-contratadas?tipo=${g.grupo}`} className="card group flex h-full flex-col gap-1 p-4 hover:border-accent">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted">{GRUPOS[g.grupo].rotulo}</span>
-                <b className="leading-tight [overflow-wrap:anywhere]">{nomeLeigo(f.nome)}</b>
+                <b className="leading-tight break-words">{nomeLeigo(f.nome)}</b>
                 <span className="font-display text-2xl font-bold tabular">{brl(f.valor)}</span>
                 <span className="mt-auto flex items-center justify-between text-sm text-muted">contratada por {f.parlamentares} políticos<ArrowRight className="size-4 text-accent transition group-hover:translate-x-0.5" aria-hidden /></span>
               </Link>

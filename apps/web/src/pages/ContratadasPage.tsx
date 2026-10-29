@@ -45,25 +45,27 @@ export default function ContratadasPage() {
               <p className="mb-2 text-sm text-muted">{GRUPOS[atual.grupo].linha}</p>
               <ListaVerMais key={atual.grupo} itens={fornecedores} inicial={10} passo={20} chave={(f) => f.cnpjCpf || f.nome} className="divide-y divide-line" render={(f, i) => (
                 <div className="py-3">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-2 sm:gap-3">
                     <span className="w-6 shrink-0 pt-0.5 text-right text-xs text-muted tabular">{i + 1}</span>
                     <span className="min-w-0 flex-1">
-                      <b className="block [overflow-wrap:anywhere]">{nomeLeigo(f.nome)}</b>
-                      <span className="text-xs text-muted">contratada por {formatNumber(f.parlamentares)} {f.parlamentares === 1 ? "político" : "políticos"} · {formatNumber(f.n)} notas</span>
+                      <b className="block break-words">{nomeLeigo(f.nome)}</b>
+                      <span className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs text-muted">
+                        <span>contratada por {formatNumber(f.parlamentares)} {f.parlamentares === 1 ? "político" : "políticos"} · {formatNumber(f.n)} notas</span>
+                        <b className="text-sm text-fg tabular">{brl(f.valor)}</b>
+                      </span>
                     </span>
-                    <b className="shrink-0 tabular">{brl(f.valor)}</b>
                   </div>
-                  <details className="ml-9 mt-1 text-sm">
+                  <details className="mt-1 text-sm sm:ml-9">
                     <summary className="flex min-h-11 cursor-pointer items-center font-semibold text-accent">Quem mais contratou</summary>
                     <ul className="space-y-1">
                       {comNomes(f, rk.data).map((c) => (
                         <li key={`${c.casa}-${c.id}`}>
                           <Link to={`${c.href}#gastos`} className="flex min-h-11 items-center gap-2 hover:text-accent">
                             <Avatar src={c.casa === "camara" ? fotoDeputado(c.id) : fotoSenador(c.id)} name={c.nome} size="sm" />
-                            <span className="min-w-0 flex-1 truncate">{c.nome}</span>
-                            {c.partido && <PartyBadge sigla={c.partido} />}
-                            {c.uf && <span className="text-xs text-muted">{c.uf}</span>}
-                            <b className="tabular">{brl(c.valor)}</b>
+                            <span className="min-w-0 flex-1">
+                              <span className="block break-words">{c.nome}</span>
+                              <span className="flex flex-wrap items-center gap-1 text-xs text-muted">{c.partido && <PartyBadge sigla={c.partido} />}{c.uf}<b className="ml-auto text-sm text-fg tabular">{brl(c.valor)}</b></span>
+                            </span>
                           </Link>
                         </li>
                       ))}

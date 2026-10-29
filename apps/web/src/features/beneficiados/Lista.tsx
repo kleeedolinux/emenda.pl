@@ -14,14 +14,16 @@ export function LinhaBeneficiado({ x, i }: { x: Beneficiado | Privado; i: number
   const Icone = ICONE[grupo];
   const onde = [x.municipio && nomeLeigo(x.municipio), x.uf].filter(Boolean).join(" - ");
   return (
-    <div className="flex items-center gap-3 py-2">
-      <span className="w-6 shrink-0 text-right text-xs text-muted tabular">{i + 1}</span>
-      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-surface-2 text-accent" title={grupo === "fundo" ? "Fundo público" : ROTULO_GRUPO[grupo]}><Icone className="size-4" aria-hidden /></span>
+    <div className="flex items-start gap-2 py-2 sm:gap-3">
+      <span className="w-6 shrink-0 pt-0.5 text-right text-xs text-muted tabular">{i + 1}</span>
+      <span className="hidden size-8 shrink-0 place-items-center rounded-full bg-surface-2 text-accent sm:grid" aria-hidden><Icone className="size-4" /></span>
       <span className="min-w-0 flex-1">
-        <span className="block font-medium [overflow-wrap:anywhere]">{nomeLeigo(x.nome)}</span>
-        <span className="block text-xs text-muted">{grupo === "fundo" ? "Fundo público" : ROTULO_GRUPO[grupo]}{onde ? ` · ${onde}` : ""}</span>
+        <span className="block font-medium break-words">{nomeLeigo(x.nome).replace(/,(?=\S)/g, ", ")}</span>
+        <span className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs text-muted">
+          <span>{grupo === "fundo" ? "Fundo público" : ROTULO_GRUPO[grupo]}{onde ? ` · ${onde}` : ""}</span>
+          <b className="text-sm text-fg tabular">{brl(x.valor)}</b>
+        </span>
       </span>
-      <b className="shrink-0 tabular">{brl(x.valor)}</b>
     </div>
   );
 }
