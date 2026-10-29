@@ -19,9 +19,13 @@ export function CountUp({ value, format = (n) => formatNumber(Math.round(n)), du
     const c = animate(cur.current, value, { duration, ease: easing.expo, onUpdate: (n) => { cur.current = n; setV(n); } });
     return () => c.stop();
   }, [inView, value, reduce, duration]);
+  const final = format(value);
+  // Fantasma invisível com o valor final reserva a largura: sem tremor nem corte durante a animação.
+  // Sem nowrap: só quebra entre número e unidade ("194,6 | bilhões"), nunca dentro dos dígitos.
   return (
-    <span ref={ref} className={`tabular ${className ?? ""}`} aria-label={format(value)} role="text">
-      <span aria-hidden>{format(v)}</span>
+    <span ref={ref} data-num className={`tabular inline-grid align-baseline ${className ?? ""}`} aria-label={final} role="text">
+      <span aria-hidden className="invisible col-start-1 row-start-1">{final}</span>
+      <span aria-hidden className="col-start-1 row-start-1">{format(v)}</span>
     </span>
   );
 }
@@ -34,16 +38,16 @@ const DIGITS = "0123456789";
  */
 export function NumberRoll({ text, className }: { text: string; className?: string }) {
   const reduce = useReducedMotion();
-  if (reduce) return <span className={`tabular ${className ?? ""}`}>{text}</span>;
+  if (reduce) return <span data-num className={`tabular whitespace-nowrap ${className ?? ""}`}>{text}</span>;
   const chars = [...text];
   return (
-    <span className={`tabular inline-flex items-start leading-[1.15em] ${className ?? ""}`} aria-label={text} role="text">
+    <span data-num className={`tabular inline-flex items-start whitespace-nowrap leading-[1.15em] ${className ?? ""}`} aria-label={text} role="text">
       {chars.map((ch, i) => {
         const key = chars.length - i; // alinhado pela direita: casas estáveis
         const d = DIGITS.indexOf(ch);
-        if (d < 0) return <span key={`c${key}`} aria-hidden className="inline-block h-[1.15em] whitespace-pre">{ch}</span>;
+        if (d < 0) return <span key={`c${key}`} aria-hidden className="inline-block h-[1.15em] shrink-0 whitespace-pre">{ch}</span>;
         return (
-          <span key={`d${key}`} aria-hidden className="relative inline-block h-[1.15em] overflow-hidden leading-[1.15em]" style={{ width: "1ch" }}>
+          <span key={`d${key}`} aria-hidden data-clip-ok className="relative inline-block h-[1.15em] shrink-0 overflow-hidden leading-[1.15em]" style={{ width: "1ch" }}>
             <span
               className="absolute inset-x-0 top-0 flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
               style={{ transform: `translateY(${-d * 10}%)` }}

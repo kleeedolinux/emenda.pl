@@ -95,6 +95,12 @@
   h1, h2, h3 { @apply font-display tracking-tight; }
   :focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; border-radius: 4px; }
   a { text-underline-offset: 3px; }
+  /* Carrosséis (snap-x): só rolam na horizontal. Sobra vertical de sombras/hover viraria
+     uma rolagem vertical aninhada que prende o dedo no iOS. Utilitários (ex.: md:overflow-visible) vencem. */
+  .snap-x { overflow-y: hidden; overscroll-behavior-x: contain; }
+  /* Itens de grid com min-width:auto alargam a trilha implícita até o min-content e empurram
+     números/selos para fora da tela no celular. Especificidade zero: min-w-* continua vencendo. */
+  :where(.grid, .inline-grid) > * { min-width: 0; }
   ::selection { background: color-mix(in oklab, var(--color-amarelo) 60%, transparent); color: #0b1220; }
 
   /* View Transitions: título compartilhado voa do cartão para o cabeçalho; raiz cruza rápido. */

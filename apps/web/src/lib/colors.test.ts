@@ -35,4 +35,11 @@ describe("sequentialScale", () => {
 describe("contrastText", () => {
   test("fundo claro -> texto escuro", () => expect(contrastText("#ffdf00")).toBe("#0b1220"));
   test("fundo escuro -> texto claro", () => expect(contrastText("#002776")).toBe("#ffffff"));
+  // Regressão: tons médios (laranja) ficavam com branco (contraste < 3).
+  test("tom médio -> texto com mais contraste", () => expect(contrastText("#f97316")).toBe("#0b1220"));
+  // Regressão: hsl() (partidos sem cor fixa) era ignorado.
+  test("aceita hsl()", () => {
+    expect(contrastText("hsl(60 70% 45%)")).toBe("#0b1220");
+    expect(contrastText("hsl(240 70% 30%)")).toBe("#ffffff");
+  });
 });

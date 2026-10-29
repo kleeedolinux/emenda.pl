@@ -39,8 +39,14 @@ export function sequentialScale([min, max]: [number, number]) {
 
 function rgb(c: string): [number, number, number] {
   const h = c.replace("#", "");
-  if (h.length === 6) return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
+  if (/^[0-9a-f]{6}$/i.test(h)) return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
   const m = c.match(/\d+(\.\d+)?/g)?.map(Number) ?? [0, 0, 0];
+  if (/^\s*hsl/i.test(c)) {
+    const [H = 0, S = 0, L = 0] = m;
+    const s = S / 100, l = L / 100, k = (n: number) => (n + H / 30) % 12;
+    const f = (n: number) => 255 * (l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)));
+    return [f(0), f(8), f(4)];
+  }
   return [m[0] ?? 0, m[1] ?? 0, m[2] ?? 0];
 }
 
@@ -51,7 +57,8 @@ export function contrastText(bg: string): "#0b1220" | "#ffffff" {
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
   }) as [number, number, number];
   const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return L > 0.4 ? "#0b1220" : "#ffffff";
+  // Escolhe o texto de maior razão de contraste (WCAG): branco 1.05/(L+.05) vs. #0b1220 (L≈0.0063).
+  return (L + 0.05) / 0.0563 > 1.05 / (L + 0.05) ? "#0b1220" : "#ffffff";
 }
 
 /** Paleta categórica institucional (verde, azul, amarelo...) para gráficos. */

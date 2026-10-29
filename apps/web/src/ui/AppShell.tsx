@@ -56,10 +56,11 @@ export function AppShell() {
     window.addEventListener(SEARCH_EVENT, onOpen);
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener(SEARCH_EVENT, onOpen); };
   }, []);
-  useEffect(() => setDrawer(false), [loc.pathname]);
+  // Mudou de rota (link, voltar/avançar): fecha menu e busca — diálogo aberto deixaria o scroll-lock ativo (iOS travado).
+  useEffect(() => { setDrawer(false); setSearch(false); }, [loc.pathname]);
 
   return (
-    <div className="flex min-h-dvh flex-col overflow-x-clip pb-16 lg:pb-0">
+    <div className="flex min-h-dvh flex-col overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
       <a href="#conteudo" className="sr-only z-[200] rounded-lg bg-surface px-3 py-2 focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Pular para o conteúdo</a>
       <div className="h-1 bandeira" aria-hidden />
       <ScrollProgress />

@@ -7,6 +7,9 @@ import { formatNumber, formatPct } from "@/lib/format";
 
 export interface DonutDatum { label: string; value: number; color?: string; highlight?: boolean }
 
+/** Fonte do valor central: cabe no furo do donut (≈ 100 unidades) seja qual for o comprimento. */
+export const centerSize = (s: string) => Math.min(15, 100 / Math.max(1, s.length * 0.6));
+
 export function Donut({ data, format = (n) => formatNumber(n), centerLabel = "Total" }: { data: DonutDatum[]; format?: (n: number) => string; centerLabel?: string }) {
   const reduce = useReducedMotion();
   const [hover, setHover] = useState<number | null>(null);
@@ -17,6 +20,7 @@ export function Donut({ data, format = (n) => formatNumber(n), centerLabel = "To
   const a = arc<(typeof arcs)[number]>().innerRadius(R * 0.62).outerRadius(R).cornerRadius(3);
   const aHover = arc<(typeof arcs)[number]>().innerRadius(R * 0.62).outerRadius(R + 5).cornerRadius(3);
   const cur = hover !== null ? rows[hover] : null;
+  const centerText = format(cur ? cur.value : total);
   const mid = R * 0.81, mask = `dn-${useId().replace(/:/g, "")}`;
   return (
     <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
@@ -47,15 +51,15 @@ export function Donut({ data, format = (n) => formatNumber(n), centerLabel = "To
         ))}
         </g>
         <text textAnchor="middle" y={-6} className="fill-muted text-[10px]">{cur ? cur.label.slice(0, 22) : centerLabel}</text>
-        <text textAnchor="middle" y={12} className="fill-fg font-display text-[15px] font-bold">{format(cur ? cur.value : total)}</text>
+        <text textAnchor="middle" y={12} className="fill-fg font-display font-bold tabular" fontSize={centerSize(centerText)}>{centerText}</text>
       </svg>
       <ul className="w-full min-w-0 space-y-1.5 text-sm">
         {rows.map((d, i) => (
-          <li key={d.label} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} className={`flex items-center gap-2 rounded-md px-1.5 py-0.5 ${d.highlight ? "bg-amarelo/15" : ""}`}>
+          <li key={d.label} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} className={`flex items-baseline gap-2 rounded-md px-1.5 py-0.5 ${d.highlight ? "bg-amarelo/15" : ""}`}>
             <span className="size-2.5 shrink-0 rounded-sm" style={{ background: d.color ?? corCategoria(i) }} aria-hidden />
-            <span className="min-w-0 flex-1 truncate">{d.label}</span>
-            <span className="shrink-0 text-xs text-muted tabular">{formatPct(total ? d.value / total : 0)}</span>
-            <span className="shrink-0 font-semibold tabular">{format(d.value)}</span>
+            <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">{d.label}</span>
+            <span data-num className="shrink-0 whitespace-nowrap text-xs text-muted tabular">{formatPct(total ? d.value / total : 0)}</span>
+            <span data-num className="shrink-0 whitespace-nowrap font-semibold tabular">{format(d.value)}</span>
           </li>
         ))}
       </ul>

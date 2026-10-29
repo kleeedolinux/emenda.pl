@@ -51,7 +51,7 @@ export function PageHeader({
             {subtitle && <p className="mt-2 max-w-3xl text-base text-muted text-pretty">{subtitle}</p>}
           </div>
         </div>
-        {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
+        {actions && <div className="flex min-w-0 flex-wrap gap-2 sm:max-w-[55%] sm:justify-end">{actions}</div>}
       </motion.div>
     </header>
   );
@@ -63,14 +63,14 @@ export function Card({
   return (
     <motion.section variants={fadeUp} className={clsx("card relative min-w-0 p-5", className)}>
       {(title || actions) && (
-        <header className="mb-4 flex items-start justify-between gap-3">
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
           {title && (
-            <h2 className="flex items-center gap-1.5 text-base font-semibold">
+            <h2 className="flex min-w-0 items-center gap-1.5 text-base font-semibold text-pretty">
               {title}
               <MaybeTip tip={tip} />
             </h2>
           )}
-          {actions && <div className="flex shrink-0 gap-2">{actions}</div>}
+          {actions && <div className="ml-auto flex shrink-0 flex-wrap justify-end gap-2">{actions}</div>}
         </header>
       )}
       {children}
@@ -81,9 +81,9 @@ export function Card({
 export function Section({ title, tip, children, id }: { title: ReactNode; tip?: TipProp; children: ReactNode; id?: string }) {
   return (
     <section id={id} className="mt-12 scroll-mt-24 first:mt-0">
-      <h2 className="mb-4 flex items-center gap-2 text-xl font-bold sm:text-2xl">
-        <span className="h-5 w-1 rounded-full bandeira" aria-hidden />
-        {title}
+      <h2 className="mb-4 flex min-w-0 items-center gap-2 text-xl font-bold text-pretty sm:text-2xl">
+        <span className="h-5 w-1 shrink-0 rounded-full bandeira" aria-hidden />
+        <span className="min-w-0">{title}</span>
         <MaybeTip tip={tip} />
       </h2>
       {children}
@@ -92,25 +92,32 @@ export function Section({ title, tip, children, id }: { title: ReactNode; tip?: 
 }
 
 // ---------- Números ----------
+/**
+ * KPI. O valor nunca é truncado: a fonte escala com a largura do cartão (container query)
+ * e o rótulo quebra linha. `Money`/`NumberFmt` dentro do valor são atômicos (sem quebra).
+ */
 export function Stat({ label, value, hint, tip }: { label: ReactNode; value: ReactNode; hint?: ReactNode; tip?: TipProp }) {
   return (
     <motion.div
       variants={fadeUp}
       whileHover={{ y: -3 }}
       transition={spring.lift}
-      className="card group relative overflow-hidden p-4 transition-shadow hover:shadow-[0_0_0_1px_var(--color-accent),0_10px_40px_-10px_var(--color-glow)] sm:p-5"
+      className="card group @container relative min-w-0 p-4 transition-shadow hover:shadow-[0_0_0_1px_var(--color-accent),0_10px_40px_-10px_var(--color-glow)] sm:p-5"
     >
-      <div className="pointer-events-none absolute -right-10 -top-10 size-28 rounded-full bg-verde/10 blur-2xl transition group-hover:bg-verde/20" aria-hidden />
-      <dt className="flex items-center gap-1 text-[13px] font-medium text-muted">
-        {label}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" aria-hidden>
+        <div className="absolute -right-10 -top-10 size-28 rounded-full bg-verde/10 blur-2xl transition group-hover:bg-verde/20" />
+      </div>
+      <dt className="relative flex min-w-0 items-start gap-1 text-[13px] font-medium leading-snug text-muted">
+        <span className="min-w-0 text-pretty">{label}</span>
         <MaybeTip tip={tip} />
       </dt>
-      <dd className="mt-1.5 font-display text-2xl font-bold tabular leading-none tracking-tight sm:text-[1.75rem]">{value}</dd>
-      {hint && <dd className="mt-1.5 text-xs text-muted">{hint}</dd>}
+      <dd data-num className="relative mt-1.5 min-w-0 font-display text-[clamp(1.125rem,12cqi,1.75rem)] font-bold leading-[1.1] tracking-tight text-balance tabular">{value}</dd>
+      {hint && <dd className="relative mt-1.5 min-w-0 text-xs text-muted text-pretty">{hint}</dd>}
     </motion.div>
   );
 }
 
+/** Grade de KPIs: colunas automáticas com largura mínima (2 no celular, até 4+ no desktop). */
 export function StatGrid({ children, className }: { children: ReactNode; className?: string }) {
   const reduce = useReducedMotion();
   return (
@@ -118,7 +125,7 @@ export function StatGrid({ children, className }: { children: ReactNode; classNa
       initial={reduce ? false : "hidden"}
       animate="show"
       variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
-      className={clsx("grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4", className)}
+      className={clsx("grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-3 sm:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] sm:gap-4", className)}
     >
       {children}
     </motion.dl>
@@ -137,7 +144,7 @@ export type Tone = keyof typeof TONES;
 
 export function Badge({ tone = "neutro", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
   return (
-    <span className={clsx("inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset", TONES[tone], className)}>
+    <span className={clsx("inline-flex max-w-full shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold leading-tight text-balance tabular ring-1 ring-inset [overflow-wrap:anywhere]", TONES[tone], className)}>
       {children}
     </span>
   );
@@ -147,14 +154,14 @@ export function PartyBadge({ sigla, link = true }: { sigla: string; link?: boole
   const bg = partyColor(sigla);
   const el = (
     <span
-      className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-bold tracking-wide"
-      style={{ background: bg, color: contrastText(bg.startsWith("#") ? bg : "#333") }}
+      className="inline-flex shrink-0 items-center whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-bold tracking-wide"
+      style={{ background: bg, color: contrastText(bg) }}
       title={`Partido: ${sigla}`}
     >
       {sigla || "S/PART"}
     </span>
   );
-  return link && sigla ? <Link to={`/partido/${encodeURIComponent(sigla)}`} className="rounded-md">{el}</Link> : el;
+  return link && sigla ? <Link to={`/partido/${encodeURIComponent(sigla)}`} className="inline-flex shrink-0 rounded-md">{el}</Link> : el;
 }
 
 const VOTO_TONE: Record<string, Tone> = { sim: "verde", "não": "vermelho", nao: "vermelho", "abstenção": "amarelo", abstencao: "amarelo", obstrução: "azul", obstrucao: "azul", "art. 17": "neutro" };
@@ -225,20 +232,23 @@ export function EmptyState({ title, hint }: { title: ReactNode; hint?: ReactNode
 // ---------- Conteúdo ----------
 export function KeyValue({ items }: { items: Array<[ReactNode, ReactNode, TipProp?]> }) {
   return (
-    <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-[max-content_1fr]">
+    <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-[fit-content(45%)_minmax(0,1fr)]">
       {items.map(([k, v, tip], i) => (
         <div key={i} className="contents">
-          <dt className="flex items-center gap-1 text-sm text-muted">{k}<MaybeTip tip={tip} /></dt>
-          <dd className="-mt-2 text-sm font-medium break-words sm:mt-0">{v ?? "—"}</dd>
+          <dt className="flex min-w-0 items-start gap-1 text-sm text-muted text-pretty">{k}<MaybeTip tip={tip} /></dt>
+          <dd className="-mt-2 min-w-0 text-sm font-medium break-words sm:mt-0">{v ?? "—"}</dd>
         </div>
       ))}
     </dl>
   );
 }
 
+/** Texto só com dígitos/pontuação (CNPJ, nº de processo): atômico. */
+const numerico = (c: ReactNode) => typeof c === "string" && /\d/.test(c) && !/\p{L}{2,}/u.test(c);
+
 export function ExternalLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={clsx("link inline-flex items-center gap-0.5", className)}>
+    <a href={href} target="_blank" rel="noopener noreferrer" className={clsx("link inline-flex max-w-full items-center gap-0.5", numerico(children) && "whitespace-nowrap tabular", className)}>
       {children}
       <ArrowUpRight className="size-3.5 shrink-0" aria-hidden />
       <span className="sr-only"> (abre em nova aba)</span>

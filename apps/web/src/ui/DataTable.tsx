@@ -100,7 +100,7 @@ export function DataTable<T>({
               />
             </label>
           )}
-          <span className="text-xs text-muted tabular" aria-live="polite">
+          <span className="shrink-0 whitespace-nowrap text-xs text-muted tabular" aria-live="polite">
             {formatNumber(sorted.length)} {sorted.length === 1 ? "registro" : "registros"}
           </span>
           {exportName && (
@@ -113,7 +113,7 @@ export function DataTable<T>({
       {!sorted.length ? (
         typeof empty === "string" || !empty ? <EmptyState title={empty ?? "Nenhum registro encontrado."} /> : empty
       ) : (
-        <div className="max-h-[70vh] overflow-auto rounded-xl border border-line">
+        <div className="overflow-x-auto overscroll-x-contain rounded-xl border border-line lg:max-h-[70vh] lg:overflow-y-auto">
           <table className="w-full border-collapse text-sm">
             {caption && <caption className="sr-only">{caption}</caption>}
             <thead className="sticky top-0 z-10 glass">
@@ -158,7 +158,7 @@ export function DataTable<T>({
       )}
       {pages > 1 && (
         <nav aria-label="Paginação" className="mt-3 flex items-center justify-end gap-2 text-sm">
-          <span className="mr-auto text-xs text-muted tabular">Página {p + 1} de {formatNumber(pages)}</span>
+          <span className="mr-auto whitespace-nowrap text-xs text-muted tabular">Página {p + 1} de {formatNumber(pages)}</span>
           <button type="button" aria-label="Página anterior" disabled={p === 0} onClick={() => setPage(p - 1)} className="press rounded-lg border border-line p-1.5 hover:bg-surface-2 disabled:opacity-40"><ChevronLeft className="size-4" /></button>
           <button type="button" aria-label="Próxima página" disabled={p >= pages - 1} onClick={() => setPage(p + 1)} className="press rounded-lg border border-line p-1.5 hover:bg-surface-2 disabled:opacity-40"><ChevronRight className="size-4" /></button>
         </nav>

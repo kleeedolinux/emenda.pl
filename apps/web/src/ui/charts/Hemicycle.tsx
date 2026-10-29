@@ -67,8 +67,8 @@ export function Hemicycle({ seats }: { seats: Seat[] }) {
       </svg>
       <figcaption className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
         {groups.map((g) => (
-          <span key={g.group} className="inline-flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full" style={{ background: g.color }} aria-hidden />
+          <span key={g.group} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <span className="size-2.5 shrink-0 rounded-full" style={{ background: g.color }} aria-hidden />
             {g.group} <b className="tabular">{g.n}</b>
           </span>
         ))}
