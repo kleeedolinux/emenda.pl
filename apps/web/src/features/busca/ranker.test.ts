@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { detectarLei, filtrosDaUrl, filtrosParaUrl, hrefLei, lerRecentes, normalizar, rankear, salvarRecente, type ItemBusca } from "./ranker";
+import { destacar, agrupar } from "./ranker";
 
 const it = (id: string, tipo: ItemBusca["tipo"], titulo: string, peso = 0, extra = ""): ItemBusca => ({ id, tipo, titulo, href: `/${id}`, peso, extra });
 
@@ -119,5 +120,21 @@ describe("recentes", () => {
     expect(lerRecentes(ruim)).toEqual([]);
     expect(() => salvarRecente(ruim, it("a", "cidade", "A"))).not.toThrow();
     expect(lerRecentes({ getItem: () => "{lixo", setItem: () => {} })).toEqual([]);
+  });
+});
+
+describe("destacar (texto que casou em negrito)", () => {
+  test.each([
+    ["São Paulo", "sao pa", [["São", true], [" ", false], ["Pa", true], ["ulo", false]]],
+    ["Nikolas Ferreira", "ferr", [["Nikolas ", false], ["Ferr", true], ["eira", false]]],
+    ["Iraquara", "xyz", [["Iraquara", false]]],
+  ] as const)("%s / %s", (t, q, r) => expect(destacar(t, q)).toEqual(r.map(([texto, casou]) => ({ texto, casou }))));
+});
+
+describe("agrupar (modo Tudo)", () => {
+  test("ordem Cidades, Pessoas, Leis, Partidos; mantém a ordem dentro do grupo", () => {
+    const it = (id: string, tipo: string) => ({ id, tipo, titulo: id, href: "/" }) as ItemBusca;
+    const g = agrupar([it("p", "partido"), it("d", "deputado"), it("c", "cidade"), it("l", "lei"), it("s", "senador"), it("e", "estado")]);
+    expect(g.map((x) => [x.grupo, x.itens.map((i) => i.id)])).toEqual([["Cidades e estados", ["c", "e"]], ["Pessoas", ["d", "s"]], ["Leis", ["l"]], ["Partidos", ["p"]]]);
   });
 });

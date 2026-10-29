@@ -1,3 +1,4 @@
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import { Link } from "react-router";
 import { UFS, type SiglaUf } from "@emenda/contracts";
 import { Badge, Bars, Card, DataTable, ExternalLink, PageHeader, Section, Stat, StatGrid, Term, formatNumber, type Column } from "@/ui";
@@ -22,10 +23,8 @@ const cols: Column<Linha>[] = [
 export default function EstaduaisPage() {
   return (
     <>
-      <PageHeader
-        eyebrow="Assembleias Legislativas"
-        title="Deputados estaduais e distritais"
-        subtitle={<>Os <Term k="deputado estadual">deputados estaduais</Term> fazem as leis do estado e fiscalizam o governador. Diferente da Câmara e do Senado, não existe uma base nacional única com os dados das 27 casas.</>}
+      <CabecalhoPagina
+        c={CABECALHOS.estaduais}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Estaduais" }]}
       />
       <div className="card mb-6 border-l-4 border-l-amarelo p-4 text-sm">

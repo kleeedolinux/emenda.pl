@@ -2,13 +2,15 @@ import { UFS } from "@emenda/contracts";
 
 // Busca universal: normalização, ranqueamento tolerante a acento/erro, leis por "PL 2630/2020" e recentes. Puro.
 
-export type TipoBusca = "cidade" | "estado" | "deputado" | "senador" | "partido" | "lei" | "autor";
+export type TipoBusca = "cidade" | "estado" | "deputado" | "senador" | "partido" | "lei" | "autor" | "prefeito";
 
 export interface ItemBusca {
   id: string;
   tipo: TipoBusca;
   titulo: string;
   href: string;
+  /** Outro nome que vale como título (apelido de lei: "PL das Fake News"). */
+  apelido?: string;
   /** Texto auxiliar que também casa (UF, partido, nome completo). */
   extra?: string;
   /** Linha secundária exibida. */
@@ -65,7 +67,7 @@ export function pontuar(item: ItemBusca, q: string): number {
   const desempate = (item.peso ?? 0) * 0.5 - nt.length * 0.1;
   if (nt === nq) return 1000 + desempate;
   if (nt.startsWith(nq)) return 800 + desempate;
-  const palavras = nt.split(" ");
+  const palavras = item.apelido ? [...nt.split(" "), ...normalizar(item.apelido).split(" ")] : nt.split(" ");
   const extra = item.extra ? normalizar(item.extra).split(" ") : [];
   let soma = 0, noTitulo = false;
   for (const t of nq.split(" ")) {
@@ -92,7 +94,7 @@ export function rankear(itens: readonly ItemBusca[], q: string, o: { tipos?: rea
 }
 
 // ---------- Filtros (modo + estado) na URL ----------
-export const MODOS_BUSCA = ["tudo", "cidade", "estado", "deputado", "senador", "partido", "lei"] as const;
+export const MODOS_BUSCA = ["tudo", "cidade", "estado", "deputado", "senador", "prefeito", "partido", "lei"] as const;
 export type ModoBusca = (typeof MODOS_BUSCA)[number];
 export interface FiltrosBusca { q: string; modo: ModoBusca; uf: string | null }
 
@@ -150,4 +152,39 @@ export function salvarRecente(s: Armazenamento | null | undefined, item: ItemBus
   } catch {
     /* modo privado / cota cheia: recentes são só conveniência */
   }
+}
+
+// ---------- Destaque e grupos (lista de sugestões) ----------
+const base = (c: string) => c.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/** Partes do título com o trecho que casou com a busca marcado (início das palavras, sem acento). */
+export function destacar(titulo: string, q: string): Array<{ texto: string; casou: boolean }> {
+  const termos = normalizar(q).split(" ").filter(Boolean);
+  const out: Array<{ texto: string; casou: boolean }> = [];
+  const push = (texto: string, casou: boolean) => {
+    if (!texto) return;
+    const u = out.at(-1);
+    if (u && u.casou === casou) u.texto += texto; else out.push({ texto, casou });
+  };
+  for (const parte of titulo.split(/(\s+)/)) {
+    if (!parte.trim()) { push(parte, false); continue; }
+    const n = [...parte].map(base).join("");
+    const t = termos.filter((x) => n.startsWith(x)).sort((a, b) => b.length - a.length)[0];
+    if (!t) { push(parte, false); continue; }
+    const chars = [...parte];
+    push(chars.slice(0, t.length).join(""), true);
+    push(chars.slice(t.length).join(""), false);
+  }
+  return out;
+}
+
+const GRUPOS: Array<[string, readonly TipoBusca[]]> = [
+  ["Cidades e estados", ["cidade", "estado"]],
+  ["Pessoas", ["deputado", "senador", "prefeito", "autor"]],
+  ["Leis", ["lei"]],
+  ["Partidos", ["partido"]],
+];
+/** Modo Tudo: resultados em grupos com título, na ordem fixa; dentro do grupo, a ordem do ranqueamento. */
+export function agrupar<T extends { tipo: TipoBusca }>(itens: readonly T[]): Array<{ grupo: string; itens: T[] }> {
+  return GRUPOS.map(([grupo, tipos]) => ({ grupo, itens: itens.filter((i) => tipos.includes(i.tipo)) })).filter((g) => g.itens.length);
 }

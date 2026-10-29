@@ -1,3 +1,5 @@
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
+import { BuscaUniversal } from "@/features/busca";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { UFS } from "@emenda/contracts";
@@ -69,14 +71,12 @@ export default function SenadoresPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Senado Federal"
-        title="Senadores"
-        subtitle={<>Os 81 <Term k="senador">senadores</Term> em exercício (3 por estado e DF), com mandatos de 8 anos. Veja há quanto tempo cada um está na Casa e quanto indicou em emendas.</>}
+      <CabecalhoPagina
+        c={CABECALHOS.senadores}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Senadores" }]}
       />
       <div className="card mb-6 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Campo label="Nome"><input className={inputCls} type="search" value={f.q} onChange={(e) => set("q", e.target.value)} placeholder="Buscar senador(a)…" /></Campo>
+        <div className="sm:col-span-2"><Campo label="Nome"><BuscaUniversal variante="hero" compacto fixo modoInicial="senador" ufInicial={f.uf || null} /></Campo></div>
         <Campo label="Estado (UF)">
           <select className={selectCls} value={f.uf} onChange={(e) => set("uf", e.target.value)}>
             <option value="">Todos</option>{Object.entries(UFS).map(([s, n]) => <option key={s} value={s}>{s} — {n}</option>)}

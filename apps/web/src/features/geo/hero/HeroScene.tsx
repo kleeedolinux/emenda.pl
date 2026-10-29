@@ -53,7 +53,7 @@ export default function HeroScene({ section, anchor, pesoPorUf, onUf, nomeUf }: 
     const vals = raw.map((s) => pesoPorUf?.[s.key] ?? 0);
     const max = Math.max(1, ...vals);
     const far = Math.max(...raw.map((s) => Math.hypot(s.c[0] - hub[0], s.c[1] - hub[1])));
-    const states: MapState[] = raw.map((s, i) => ({ ...s, level: Math.sqrt(vals[i]! / max), dist: Math.hypot(s.c[0] - hub[0], s.c[1] - hub[1]) / far }));
+    const states: MapState[] = raw.map((s, i) => ({ ...s, level: Math.sqrt(vals[i]! / max), dist: Math.hypot(s.c[0] - hub[0], s.c[1] - hub[1]) / far, valor: vals[i] || undefined }));
     return { states, hub, outline: states.map((s) => s.d).join("") };
   }, [pesoPorUf]);
 

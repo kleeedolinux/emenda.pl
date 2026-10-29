@@ -1,3 +1,5 @@
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
+import { FiltroBusca } from "@/features/busca";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { X } from "lucide-react";
@@ -67,10 +69,8 @@ export default function ProposicoesPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Câmara dos Deputados · busca"
-        title="Proposições"
-        subtitle={<>Todos os projetos, propostas de emenda, medidas provisórias e requerimentos apresentados na Câmara. Filtre por tipo, número, ano, palavras, autor ou tema. <Term k="tramitação">Como uma proposta vira lei?</Term></>}
+      <CabecalhoPagina
+        c={CABECALHOS.proposicoes}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Proposições" }]}
       />
 
@@ -96,7 +96,7 @@ export default function ProposicoesPage() {
         </fieldset>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <Campo label="Palavras-chave" tip="Procura na ementa e na indexação. Ex.: saúde, combustível, escola."><input className={inputCls} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="ex.: vacina" /></Campo>
-          <Campo label="Autor" tip="Nome (ou parte) de deputado, senador ou órgão autor."><input className={inputCls} type="search" value={autor} onChange={(e) => setAutor(e.target.value)} placeholder="ex.: Tabata" /></Campo>
+          <Campo label="Quem propôs" tip="Deputado ou senador que apresentou a proposta."><FiltroBusca valor={autor} onValor={setAutor} modoInicial="deputado" /></Campo>
           <Campo label="Número"><input className={inputCls} inputMode="numeric" value={f.numero} onChange={(e) => update({ numero: e.target.value.replace(/\D/g, "") })} placeholder="ex.: 2630" /></Campo>
           <Campo label="Ano" tip="Ano de apresentação. Sem ano, buscamos desde a data abaixo.">
             <select className={selectCls} value={f.ano} onChange={(e) => update({ ano: e.target.value })}>

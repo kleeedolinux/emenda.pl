@@ -1,8 +1,9 @@
 import { dataPath, UFS, type SiglaUf, type Uf } from "@emenda/contracts";
 import { useMemo } from "react";
+import { useLembrarLocal } from "@/features/home/home";
 import { useParams } from "react-router";
 import { POPULACAO_UF } from "@/features/emendas/populacao";
-import { BarraTipos, fraseChegou, ListaVerMais, ModoDetalhado, porMorador, QuemMandou } from "@/features/linguagem";
+import { BarraTipos, fraseChegou, ListaVerMais, ModoDetalhado, porMorador, QuemMandou, cabecalhoUf } from "@/features/linguagem";
 import { bandeiraUf } from "@/lib/cdn";
 import { AutoresTable, MunicipiosTable } from "@/features/emendas/tables";
 import { Choropleth } from "@/features/geo/Choropleth";
@@ -29,6 +30,7 @@ function UfView({ uf }: { uf: SiglaUf }) {
   const q = useApi<Uf>(dataPath.uf(uf));
   const d = q.data;
   const nome = UFS[uf];
+  useLembrarLocal(d ? { tipo: "uf", id: uf, nome, uf } : null);
   const values = useMemo(() => Object.fromEntries((d?.municipios ?? []).map((m) => [m.ibge, m.pago])), [d]);
   const byIbge = useMemo(() => new Map((d?.municipios ?? []).map((m) => [m.ibge, m])), [d]);
   const mun = useApi<Array<{ id: number; nome: string }>>(`/api/ibge/v1/localidades/estados/${uf}/municipios`);
@@ -45,6 +47,7 @@ function UfView({ uf }: { uf: SiglaUf }) {
       <PageHeader
         eyebrow="Estado"
         title={nome}
+        subtitle={cabecalhoUf(nome).subtitulo}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: nome }]}
         actions={<ShareButton fab kind="uf" title={nome} url={`/uf/${uf}`} ogId={uf} text={frase ? `${frase} Veja sua cidade:` : undefined} metric={d ? { value: d.totais.pago, format: "brl", label: "mandados por políticos" } : undefined} bars={d && cidades.slice(0, 5).map((m) => ({ label: nomeMun.get(m.ibge) ?? m.nome, value: m.pago }))} />}
         media={<img src={bandeiraUf(uf)} alt={`Bandeira de ${nome}`} className="h-12 w-auto rounded-md shadow ring-1 ring-line" onError={(e) => { e.currentTarget.style.display = "none"; }} />}

@@ -1,3 +1,4 @@
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { Landmark, Search } from "lucide-react";
@@ -50,10 +51,8 @@ export default function ComissoesPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Congresso Nacional"
-        title="Comissões"
-        subtitle="Antes de chegar ao plenário, quase toda proposta passa por comissões temáticas. Veja quem as comanda, quem são os membros e o que entra em pauta."
+      <CabecalhoPagina
+        c={CABECALHOS.comissoes}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Comissões" }]}
         actions={<ShareButton kind="pagina" title="Comissões do Congresso" subtitle="Quem comanda, quem participa e o que está em pauta" url="/comissoes" />}
       />

@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { buildFluxoSankey } from "@/features/emendas/fluxo";
 import { COR_TIPO, nomeTipoCurto } from "@/features/emendas/tipos";
 import { TotaisGrid } from "@/features/emendas/Totais";
-import { BarraTipos, topUfPorTipo } from "@/features/linguagem";
+import { BarraTipos, topUfPorTipo, CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import { useApi } from "@/lib/data";
 import { formatBRL } from "@/lib/format";
 import { Bars, NextSteps, Card, ErrorState, LineArea, PageHeader, Sankey, Section, Skeleton, Term } from "@/ui";
@@ -22,10 +22,8 @@ export default function DinheiroPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Dinheiro"
-        title="Para onde vai o dinheiro que os políticos mandam"
-        subtitle={<>Siga da esquerda para a direita: de que jeito foi mandado, em que área foi gasto (<Term k="função orçamentária">função</Term>) e em qual estado chegou. Só o que foi <Term k="pago">pago</Term>.</>}
+      <CabecalhoPagina
+        c={CABECALHOS.dinheiro}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Dinheiro" }]}
       />
       {q.isError ? <ErrorState error={q.error} retry={() => q.refetch()} /> : d ? <TotaisGrid t={d.totais} /> : <Skeleton className="h-28" />}

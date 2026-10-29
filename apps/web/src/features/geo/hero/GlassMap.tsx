@@ -1,11 +1,11 @@
 // Brasil "de vidro": malha real do IBGE (d3-geo), tingida pelo valor pago por UF.
 import { formatBRL } from "@/lib/format";
 import { CountUp } from "@/ui/motion/numbers";
-import { forwardRef, type Ref } from "react";
+import { forwardRef, useState, type Ref } from "react";
 import type { Pt } from "./flow";
 
 export const MAP = { w: 560, h: 520 } as const;
-export interface MapState { key: string; d: string; c: Pt; level: number; dist: number }
+export interface MapState { key: string; d: string; c: Pt; level: number; dist: number; /** R$ recebido (centavos) */ valor?: number }
 export interface Chip { key: string; side: -1 | 1; valor: number }
 
 interface Props { states: MapState[]; outline: string; hub: Pt; chips: Chip[]; chipRef: (key: string) => Ref<HTMLSpanElement>; animate: boolean; onUf?: (uf: string) => void; nomeUf?: (uf: string) => string }
@@ -15,6 +15,10 @@ export const GlassMap = forwardRef<SVGSVGElement, Props>(function GlassMap({ sta
   const byKey = new Map(states.map((s) => [s.key, s]));
   const pct = (p: Pt) => ({ left: `${(p[0] / MAP.w) * 100}%`, top: `${(p[1] / MAP.h) * 100}%` });
   const LEAD = 22;
+  // Estado em destaque (passar o mouse, foco do teclado ou toque): rótulo com nome e R$.
+  const [ativo, setAtivo] = useState<string | null>(null);
+  const sAtivo = ativo ? byKey.get(ativo) : undefined;
+  const rotulo = (s: MapState) => `${nomeUf?.(s.key) ?? s.key}${s.valor ? `: ${formatBRL(s.valor, true)} recebidos` : ""}`;
   return (
     <div className={`absolute inset-0 ${animate ? "map-in" : ""}`}>
       {/* sombra de profundidade (sem filtro: gradiente) */}
@@ -93,12 +97,18 @@ export const GlassMap = forwardRef<SVGSVGElement, Props>(function GlassMap({ sta
       {onUf && (
         <svg viewBox={`0 0 ${MAP.w} ${MAP.h}`} className="absolute inset-0 size-full overflow-visible" role="group" aria-label="Estados: escolha um para ver quanto recebeu">
           {states.map((s) => (
-            <a key={s.key} href={`/uf/${s.key}`} aria-label={nomeUf?.(s.key) ?? s.key} onClick={(e) => { e.preventDefault(); onUf(s.key); }} className="group/uf cursor-pointer outline-none">
-              <title>{`${nomeUf?.(s.key) ?? s.key}: ver quanto recebeu`}</title>
-              <path d={s.d} fill="#fff" fillOpacity="0" className="transition-[fill-opacity] group-hover/uf:[fill-opacity:0.35] group-focus-visible/uf:[fill-opacity:0.45]" stroke="none" />
+            <a key={s.key} href={`/uf/${s.key}`} aria-label={rotulo(s)} onClick={(e) => { e.preventDefault(); onUf(s.key); }} className="group/uf cursor-pointer outline-none"
+              onPointerEnter={() => setAtivo(s.key)} onPointerDown={() => setAtivo(s.key)} onPointerLeave={() => setAtivo((a) => (a === s.key ? null : a))}
+              onFocus={() => setAtivo(s.key)} onBlur={() => setAtivo((a) => (a === s.key ? null : a))}>
+              <path d={s.d} fill="#fff" fillOpacity={ativo === s.key ? 0.4 : 0} className="transition-[fill-opacity] group-hover/uf:[fill-opacity:0.35] group-focus-visible/uf:[fill-opacity:0.45]" stroke={ativo === s.key ? "#fff" : "none"} strokeWidth="1.5" />
             </a>
           ))}
         </svg>
+      )}
+      {sAtivo && (
+        <span role="status" className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-[calc(100%+10px)] whitespace-nowrap rounded-xl bg-fg px-2.5 py-1.5 text-xs font-semibold text-bg shadow-xl" style={pct(sAtivo.c)}>
+          {nomeUf?.(sAtivo.key) ?? sAtivo.key}{sAtivo.valor ? <> · {formatBRL(sAtivo.valor, true)}</> : null} <span className="font-normal opacity-75">· toque para ver</span>
+        </span>
       )}
       <span className="pointer-events-none absolute -translate-x-[calc(100%+10px)] -translate-y-[150%] whitespace-nowrap rounded-full bg-azul px-2 py-0.5 font-display text-[11px] font-bold text-white shadow-lg sm:text-xs dark:bg-amarelo dark:text-azul" style={pct(hub)}>
         Brasília

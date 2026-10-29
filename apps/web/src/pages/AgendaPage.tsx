@@ -1,3 +1,4 @@
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
@@ -78,10 +79,8 @@ export default function AgendaPage() {
 
   return (
     <div>
-      <PageHeader
-        eyebrow="Congresso Nacional"
-        title="Agenda do Congresso"
-        subtitle={<>O que Câmara e Senado votam, em <Tip content={TIPS.plenario}>Plenário</Tip> e <Tip content={TIPS.comissao}>comissões</Tip>. Horários de Brasília.</>}
+      <CabecalhoPagina
+        c={CABECALHOS.agenda}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Agenda" }]}
         actions={<ShareButton fab {...semanaShare(votarao, semana.inicio)} />}
       />

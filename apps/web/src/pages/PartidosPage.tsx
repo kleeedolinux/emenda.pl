@@ -1,3 +1,4 @@
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import { useMemo } from "react";
 import { Link } from "react-router";
 import { Bars, Card, DataTable, ErrorState, Hemicycle, Money, PageHeader, PartyBadge, Section, Skeleton, Stat, StatGrid, formatNumber, partyColor, type Column } from "@/ui";
@@ -47,7 +48,7 @@ export default function PartidosPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Congresso Nacional" title="Partidos" subtitle="Quantos deputados e senadores cada partido tem hoje e quanto sua bancada atual já indicou em emendas pagas."
+      <CabecalhoPagina c={CABECALHOS.partidos}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Partidos" }]} />
       {partidos.isError ? <ErrorState error={partidos.error} retry={() => partidos.refetch()} /> : (
         <>

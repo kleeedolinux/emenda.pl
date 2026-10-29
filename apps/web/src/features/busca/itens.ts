@@ -1,7 +1,9 @@
 // Índice compacto (v1/busca.json) -> itens da busca. Puro.
 import { UFS, type IndiceBusca, type SiglaUf } from "@emenda/contracts";
 import { tipoAutor } from "@/features/linguagem/linguagem";
-import { bandeiraUf } from "@/lib/cdn";
+import { bandeiraUf, fotoPrefeito } from "@/lib/cdn";
+import { nomeLeigo } from "@/lib/nomes";
+import type { Pauta } from "@/features/legislativo/pautas";
 import type { ItemBusca } from "./ranker";
 
 export const fotoCamara = (id: number | string) => `https://www.camara.leg.br/internet/deputado/bandep/${id}.jpg`;
@@ -16,7 +18,12 @@ export function itensEstados(): ItemBusca[] {
 }
 
 export function itensDoIndice(i: IndiceBusca): ItemBusca[] {
+  const cidade = new Map(i.cidades.map(([id, nome, uf]) => [id, { nome, uf }]));
   return [
+    ...(i.prefeitos ?? []).flatMap(([ibge, nome, partido]): ItemBusca[] => {
+      const c = cidade.get(ibge);
+      return c ? [{ id: `pf:${ibge}`, tipo: "prefeito", titulo: nomeLeigo(nome), extra: `${partido} ${c.nome}`, sub: `Prefeito(a) de ${c.nome} · ${partido}-${c.uf}`, href: `/municipio/${ibge}`, img: fotoPrefeito(ibge), selo: partido, uf: c.uf, peso: 0 }] : [];
+    }),
     ...itensEstados(),
     ...i.cidades.map(([id, nome, uf, pago]): ItemBusca => ({
       id: `m:${id}`, tipo: "cidade", titulo: nome, extra: `${uf} ${UFS[uf as SiglaUf] ?? ""}`, sub: `Cidade · ${uf}`, href: `/municipio/${id}`, selo: uf, uf, valor: pago, peso: 0,
@@ -34,4 +41,13 @@ export function itensDoIndice(i: IndiceBusca): ItemBusca[] {
       id: `a:${cod}`, tipo: "autor", titulo: nome, sub: SUB_AUTOR[tipoAutor(nome)], href: `/autor/${encodeURIComponent(cod)}`, valor: pago || undefined, peso: 5,
     })),
   ];
+}
+
+/** Leis de grande repercussão (curadoria em features/legislativo/pautas): número, apelido e tema. */
+export function itensLeis(pautas: readonly Pauta[]): ItemBusca[] {
+  return pautas.map((p) => ({
+    id: `lei:${p.camaraId}`, tipo: "lei", titulo: `${p.sigla} ${p.numero}/${p.ano}`,
+    apelido: p.apelido, extra: `${p.tema} ${p.resumo}`, sub: `${p.apelido.replace(/[“”]/g, "")} · ${p.tema}`,
+    href: `/proposicao/${p.camaraId}`, peso: 40,
+  }));
 }

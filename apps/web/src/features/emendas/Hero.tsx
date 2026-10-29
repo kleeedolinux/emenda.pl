@@ -1,3 +1,4 @@
+import { HERO } from "@/features/linguagem/cabecalhos";
 // Abertura do /emendas: total animado, explicação de uma linha, busca.
 import type { Meta } from "@emenda/contracts";
 import { ArrowRight, Search } from "lucide-react";
@@ -23,22 +24,25 @@ export function HeroEmendas({ meta }: { meta: Meta | undefined }) {
       <div className="grid gap-8 lg:grid-cols-[1.35fr_1fr] lg:items-end">
         <div className="min-w-0">
           <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface-2/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-accent sm:text-[11px] sm:tracking-[0.16em]">
-            <span className="size-1.5 rounded-full bg-verde" aria-hidden />Emendas parlamentares · desde {anos}
+            <span className="size-1.5 rounded-full bg-verde" aria-hidden />{HERO.eyebrow} {anos}
           </p>
           <RevealText as="h1" className="mt-4 text-lg font-semibold text-muted sm:text-xl" step={0.05}>
-            {"Dinheiro que deputados e senadores mandaram, já pago"}
+            {HERO.rotulo}
           </RevealText>
           <div id="emendas-titulo" className="mt-1 min-h-[6rem] font-display text-[2.9rem] font-bold leading-[1.02] tracking-[-0.035em] sm:min-h-0 sm:whitespace-nowrap sm:text-[clamp(3rem,6vw,4.4rem)]">
             {t ? (
-              <CountUp value={t.pago} format={(n) => valorExtenso(n)} className="bg-gradient-to-r from-verde via-[#1fa24f] to-azul bg-clip-text text-transparent dark:from-[#3ddc84] dark:via-amarelo dark:to-[#8fb4ff]" />
+              <Link to="/dinheiro" className="hover:opacity-90" aria-label={`${valorExtenso(t.pago)}: ver para onde foi`}>
+                <CountUp value={t.pago} format={(n) => valorExtenso(n)} className="bg-gradient-to-r from-verde via-[#1fa24f] to-azul bg-clip-text text-transparent dark:from-[#3ddc84] dark:via-amarelo dark:to-[#8fb4ff]" />
+              </Link>
             ) : <Skeleton className="h-[0.95em] w-[9ch] rounded-2xl" />}
           </div>
           <p className="mt-4 max-w-2xl text-base text-fg/85 text-pretty sm:text-lg">
-            Cada deputado e senador escolhe para onde vai uma parte do dinheiro público: uma obra, um hospital, a prefeitura da sua cidade. <span className="text-muted">(Isso se chama <Term k="emenda">emenda parlamentar</Term>.)</span>
+            {HERO.linha}
+            <span className="mt-1 block text-xs text-muted"><Term k="emenda">{HERO.oficial}</Term> · <Link className="link" to="/entenda">Entenda em 2 min</Link></span>
           </p>
 
           <div className="mt-6 max-w-xl rounded-2xl border border-line bg-surface/90 p-2.5 shadow-[0_18px_40px_-24px_rgb(0_39_118/0.5)] backdrop-blur">
-            <BuscaUniversal variante="hero" modoInicial="tudo" onFocoMovel={(q, m) => abrirBusca(q, m)} />
+            <BuscaUniversal variante="hero" modoInicial="cidade" onFocoMovel={(q, m) => abrirBusca(q, m)} />
           </div>
         </div>
 

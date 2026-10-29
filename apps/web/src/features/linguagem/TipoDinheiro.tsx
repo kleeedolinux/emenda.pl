@@ -144,7 +144,10 @@ function PainelTipo({ f, d, verMais, onFechar }: { f: Fatia; d?: DetalheTipo; ve
           </ol>
         </>
       )}
-      {verMais && <Link to={verMais} className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent">Ver mais <ArrowRight className="size-4" aria-hidden /></Link>}
+      <div className="mt-2 flex flex-wrap gap-x-4">
+        {f.tipo === "relator" && <Link to="/orcamento-secreto" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent">A história do orçamento secreto <ArrowRight className="size-4" aria-hidden /></Link>}
+        {verMais && <Link to={verMais} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent">Ver mais <ArrowRight className="size-4" aria-hidden /></Link>}
+      </div>
     </section>
   );
 }

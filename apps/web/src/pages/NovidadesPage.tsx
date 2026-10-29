@@ -1,3 +1,4 @@
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useLocation, useSearchParams } from "react-router";
@@ -16,10 +17,8 @@ const CINCO_MIN = 5 * 60_000;
 export default function NovidadesPage() {
   return (
     <>
-      <PageHeader
-        eyebrow="Atualizado todo dia"
-        title="Novidades"
-        subtitle="O que mudou desde a última atualização: votações no Plenário, leis publicadas, novas propostas, pagamentos de emendas, gastos da cota e trocas de partido. Gerado automaticamente a partir de dados oficiais, com a fonte em cada item."
+      <CabecalhoPagina
+        c={CABECALHOS.novidades}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Novidades" }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">

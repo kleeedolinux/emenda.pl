@@ -1,3 +1,4 @@
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import { Link } from "react-router";
 import { Handshake } from "lucide-react";
 import { Badge, Bars, Card, Money, PageHeader, PartyBadge, Section, Skeleton, Stat, StatGrid, Tip, formatDate, formatNumber, partyColor } from "@/ui";
@@ -21,10 +22,8 @@ export default function FederacoesPage() {
   const totSen = bancadas?.reduce((s, b) => s + b.senadores.length, 0);
   return (
     <>
-      <PageHeader
-        eyebrow="Partidos"
-        title="Federações partidárias"
-        subtitle="Partidos que se uniram para atuar como um só por pelo menos quatro anos. Veja quem são, o tamanho das bancadas e as emendas dos seus parlamentares."
+      <CabecalhoPagina
+        c={CABECALHOS.federacoes}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Partidos", to: "/partidos" }, { label: "Federações" }]}
         actions={<ShareButton kind="pagina" title="Federações partidárias" subtitle="Quem se uniu a quem, e o peso de cada federação no Congresso" url="/federacoes" />}
       />

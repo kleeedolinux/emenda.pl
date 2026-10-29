@@ -10,8 +10,8 @@ import { formatBRL, formatNumber, formatPct } from "@/lib/format";
 import { Campo, inputCls, selectCls } from "@/features/legislativo/components";
 import { filtrarPix, opcoesPix, partePix } from "@/features/pix/pix";
 import { temaPorSlug } from "@/features/entenda/temas";
-import { BuscaUniversal, abrirBusca } from "@/features/busca";
-import { ListaVerMais, ModoDetalhado, QuemMandou } from "@/features/linguagem";
+import { BuscaUniversal, FiltroBusca, abrirBusca } from "@/features/busca";
+import { ListaVerMais, ModoDetalhado, QuemMandou, CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import { ShareButton } from "@/features/share";
 
 const brl = (n: number) => formatBRL(Math.round(n), true);
@@ -30,10 +30,8 @@ export default function PixPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow={<span className="inline-flex items-center gap-1"><Zap className="size-3.5" aria-hidden />Emenda Pix (transferência especial)</span>}
-        title="Dinheiro mandado sem dizer para quê"
-        subtitle="O político manda direto para o caixa da prefeitura ou do estado, sem dizer em quê vai ser usado. É rápido, mas muito mais difícil de fiscalizar."
+      <CabecalhoPagina
+        c={CABECALHOS.pix}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Sem dizer para quê" }]}
         actions={p ? <ShareButton fab kind="pagina" title="Dinheiro mandado sem dizer para quê" text={`${brl(total)} foram mandados por políticos direto para prefeituras, sem dizer para quê. Veja se sua cidade recebeu:`} url="/pix" /> : undefined}
       />
@@ -150,8 +148,8 @@ function ListaPix({ anos }: { anos: number[] }) {
             <option value="">Todos</option>{op.autores.map((a) => <option key={a.codigo} value={a.codigo}>{a.nome}</option>)}
           </select>
         </Campo>
-        <Campo label="Buscar">
-          <input className={inputCls} value={f.q} placeholder="Cidade, autor ou código" onChange={(e) => set("q", e.target.value)} />
+        <Campo label="Cidade">
+          <FiltroBusca valor={f.q} onValor={(v) => set("q", v)} modoInicial="cidade" />
         </Campo>
       </div>
       {q.isError ? <ErrorState error={q.error} retry={() => q.refetch()} /> : !q.data ? <Skeleton className="h-64" /> : (

@@ -11,7 +11,9 @@ import { COR_TIPO, nomeTipoCurto } from "@/features/emendas/tipos";
 import { cam, mapSenadores, sen, type DeputadoLista, type SenadorResumo } from "@/features/legislativo/api";
 import { useCamaraTodas, useSenado } from "@/features/legislativo/hooks";
 import { Segmentado } from "@/features/legislativo/components";
-import { JANELA_ROTULO, mesCurto, mesLongo, rankingPorPartido } from "./feed";
+import { JANELA_ROTULO, mesLongo, rankingPorPartido } from "./feed";
+import { TipoChip } from "@/features/linguagem/TipoDinheiro";
+import { nomeLeigo } from "@/lib/nomes";
 
 export function PagamentoCard({ p, i = 0 }: { p: Pagamento; i?: number }) {
   const reduce = useReducedMotion();
@@ -25,30 +27,28 @@ export function PagamentoCard({ p, i = 0 }: { p: Pagamento; i?: number }) {
       className={clsx("card relative flex flex-col gap-2 p-4", pix && "ring-2 ring-amarelo/70")}
     >
       <div className="flex items-start justify-between gap-3">
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: COR_TIPO[p.tipo] }}>
-          {pix ? <Zap className="size-3.5" aria-hidden /> : <span className="size-2 rounded-full" style={{ background: COR_TIPO[p.tipo] }} aria-hidden />}
-          {nomeTipoCurto(p.tipo)}
-        </span>
+        <TipoChip tipo={p.tipo} />
         <span className="text-right">
           <span className="block font-display text-lg font-bold tabular"><Money centavos={p.valor} /></span>
-          <span className="text-xs text-muted">{mesCurto(p.mes)}</span>
+          <span className="text-xs text-muted">pago em {mesLongo(p.mes)}</span>
         </span>
       </div>
       <p className="flex items-start gap-1.5 text-sm">
         <Building2 className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
-        <span><b>{p.favorecido.nome || "Favorecido não informado"}</b>
-          {p.favorecido.documento && <span className="ml-1 text-xs text-muted tabular">{formatDocumento(p.favorecido.documento)}</span>}</span>
+        <span><span className="text-xs text-muted">Quem recebeu: </span><b>{p.favorecido.nome ? nomeLeigo(p.favorecido.nome) : "Não informado"}</b>
+          {p.favorecido.documento && <span className="ml-1 text-xs text-muted tabular" title="CNPJ ou CPF de quem recebeu">{formatDocumento(p.favorecido.documento)}</span>}</span>
       </p>
       <p className="flex items-center gap-1.5 text-sm">
         <MapPin className="size-4 shrink-0 text-muted" aria-hidden />
-        {p.municipio.ibge ? <Link className="link" to={`/municipio/${p.municipio.ibge}`}>{p.municipio.nome}</Link> : <span>{p.municipio.nome || "—"}</span>}
+        {p.municipio.ibge ? <Link className="link" to={`/municipio/${p.municipio.ibge}`}>{nomeLeigo(p.municipio.nome)}</Link> : <span>{nomeLeigo(p.municipio.nome) || "—"}</span>}
         {p.municipio.uf && <Link className="text-xs text-muted hover:underline" to={`/uf/${p.municipio.uf}`}>{p.municipio.uf}</Link>}
       </p>
       <p className="flex items-center gap-1.5 text-sm">
         <User className="size-4 shrink-0 text-muted" aria-hidden />
-        {/^[A-Za-z0-9]+$/.test(p.autor.codigo) ? <Link className="link" to={`/autor/${p.autor.codigo}`}>{p.autor.nome}</Link> : <span>{p.autor.nome}</span>}
+        <span className="text-xs text-muted">Quem mandou:</span>
+        {/^[A-Za-z0-9]+$/.test(p.autor.codigo) ? <Link className="link" to={`/autor/${p.autor.codigo}`}>{nomeLeigo(p.autor.nome)}</Link> : <span>{nomeLeigo(p.autor.nome)}</span>}
       </p>
-      <p className="mt-auto text-xs"><ExternalLink href={externo.emenda(p.codigoEmenda)}>Emenda {p.codigoEmenda} no Portal</ExternalLink></p>
+      <p className="mt-auto text-xs"><ExternalLink href={externo.emenda(p.codigoEmenda)}>Ver no Portal da Transparência</ExternalLink></p>
     </motion.li>
   );
 }
@@ -83,25 +83,25 @@ export function RankingsRecentes({ compacto = false }: { compacto?: boolean }) {
   const fmt = (n: number) => formatBRL(n, true);
   const limit = compacto ? 8 : 25;
   const dados = {
-    autores: j.autores.map((a) => ({ label: a.nome, value: a.valor, href: `/autor/${a.codigo}`, sub: mapa.get(chaveSemTitulo(a.chave)) })),
-    partidos: partidos.map((p) => ({ label: p.partido ?? "Não identificado", value: p.valor, href: p.partido ? `/partido/${p.partido}` : undefined, color: p.partido ? partyColor(p.partido) : "#94a3b8", sub: `${p.autores} autor(es)` })),
+    autores: j.autores.map((a) => ({ label: nomeLeigo(a.nome), value: a.valor, href: `/autor/${a.codigo}`, sub: mapa.get(chaveSemTitulo(a.chave)) })),
+    partidos: partidos.map((p) => ({ label: p.partido ?? "Não identificado", value: p.valor, href: p.partido ? `/partido/${p.partido}` : undefined, color: p.partido ? partyColor(p.partido) : "#94a3b8", sub: `${p.autores} ${p.autores === 1 ? "político" : "políticos"}` })),
     ufs: j.ufs.map((u) => ({ label: u.nome, value: u.valor, href: `/uf/${u.uf}` })),
-    municipios: j.municipios.map((m) => ({ label: `${m.nome} (${m.uf})`, value: m.valor, href: `/municipio/${m.ibge}` })),
+    municipios: j.municipios.map((m) => ({ label: `${nomeLeigo(m.nome)} (${m.uf})`, value: m.valor, href: `/municipio/${m.ibge}` })),
   }[visao];
   return (
     <Card
-      title={<>Quem mais teve emendas pagas · últimos {JANELA_ROTULO[jan]}</>}
-      tip="Soma dos pagamentos registrados no Portal da Transparência no período (por mês de pagamento), independentemente do ano da emenda."
+      title={<>Quem mais mandou dinheiro · últimos {JANELA_ROTULO[jan]}</>}
+      tip="Soma do que foi pago no período, não importa em que ano o político indicou o dinheiro. Fonte: Portal da Transparência."
     >
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Segmentado label="Janela" value={jan} onChange={setJan} options={(["1m", "3m", "6m", "12m"] as const).map((k) => ({ value: k, label: JANELA_ROTULO[k] }))} />
+        <Segmentado label="Período" value={jan} onChange={setJan} options={(["1m", "3m", "6m", "12m"] as const).map((k) => ({ value: k, label: JANELA_ROTULO[k] }))} />
         <Segmentado label="Agrupar por" value={visao} onChange={setVisao} options={[
-          { value: "autores", label: "Autor" }, { value: "partidos", label: "Partido" }, { value: "ufs", label: "Estado" }, { value: "municipios", label: "Município" },
+          { value: "autores", label: "Político" }, { value: "partidos", label: "Partido" }, { value: "ufs", label: "Estado" }, { value: "municipios", label: "Cidade" },
         ]} />
       </div>
       <p className="mb-3 text-sm text-muted">
         {mesLongo(j.desde)} a {mesLongo(j.ate)}: <b className="text-fg">{fmt(j.valor)}</b> em {formatNumber(j.pagamentos)} pagamentos.
-        {visao === "partidos" && <> <Tip content="Cruzamos o nome do autor com deputados da 57ª legislatura e senadores em exercício. Bancadas, comissões, relatores e ex-parlamentares aparecem como “Não identificado”. Partido = o atual, não o da época da emenda." /></>}
+        {visao === "partidos" && <> <Tip content="Cruzamos o nome do autor com deputados da 57ª legislatura e senadores em exercício. Grupos do estado, comissões, orçamento secreto e ex-políticos aparecem como “Não identificado”. É o partido de hoje, não o da época." /></>}
       </p>
       {visao === "partidos" && carregando ? <Skeleton className="h-60" /> : dados.length ? <Bars data={dados} format={fmt} limit={limit} /> : <EmptyState title="Sem pagamentos no período." />}
       {visao === "autores" && !compacto && j.tipos.length > 0 && (

@@ -219,7 +219,7 @@ describe("parlamentares", () => {
 describe("nomeProprio", () => {
   test.each([
     ["EDUARDO BRAGA", "Eduardo Braga"], ["NELSINHO TRAD FILHO", "Nelsinho Trad Filho"],
-    ["VENEZIANO VITAL DO REGO", "Veneziano Vital do Rego"], ["BANCADA DE SAO PAULO", "Bancada de Sao Paulo"], ["COMISSAO - CAS", "Comissao - CAS"],
+    ["VENEZIANO VITAL DO REGO", "Veneziano Vital do Rego"], ["BANCADA DE SAO PAULO", "Bancada de São Paulo"], ["COMISSAO - CAS", "Comissão - CAS"],
   ] as const)("%s", (de, para) => expect(nomeProprio(de)).toBe(para));
 });
 

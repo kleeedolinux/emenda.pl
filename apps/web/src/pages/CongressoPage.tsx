@@ -1,3 +1,4 @@
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import { useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { UFS } from "@emenda/contracts";
@@ -33,10 +34,8 @@ export default function CongressoPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Congresso Nacional"
-        title="O Congresso em números"
-        subtitle="Quem ocupa as 594 cadeiras, quanto usam da cota, quanto indicaram em emendas, se comparecem às votações e o que está sendo votado — tudo calculado a partir de dados oficiais."
+      <CabecalhoPagina
+        c={CABECALHOS.congresso}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Congresso" }]}
         actions={<ShareButton kind="pagina" title={`O Congresso em números${recorte ? ` — ${recorte}` : ""}`} url={url} subtitle="Câmara e Senado com dados oficiais" />}
       />

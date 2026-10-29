@@ -12,7 +12,7 @@ import { partyColor } from "@/lib/colors";
 import { formatBRL } from "@/lib/format";
 import { Avatar, PartyBadge } from "@/ui/primitives";
 import { useIndiceBusca, useValorCidades } from "./indice";
-import { detectarLei, filtrosParaUrl, hrefLei, lerRecentes, rankear, salvarRecente, type FiltrosBusca, type ItemBusca, type ModoBusca, type TipoBusca } from "./ranker";
+import { agrupar, destacar, detectarLei, filtrosParaUrl, hrefLei, lerRecentes, rankear, salvarRecente, type FiltrosBusca, type ItemBusca, type ModoBusca, type TipoBusca } from "./ranker";
 
 export type { ModoBusca };
 
@@ -22,13 +22,14 @@ export const MODOS: Array<{ id: ModoBusca; rotulo: string; ph: string; tipos?: T
   { id: "estado", rotulo: "Estado", ph: "Digite o estado. Ex.: Minas", tipos: ["estado"] },
   { id: "deputado", rotulo: "Deputado", ph: "Nome do deputado. Ex.: Tabata", tipos: ["deputado"] },
   { id: "senador", rotulo: "Senador", ph: "Nome do senador. Ex.: Otto", tipos: ["senador"] },
+  { id: "prefeito", rotulo: "Prefeito", ph: "Nome do prefeito ou da cidade", tipos: ["prefeito"] },
   { id: "partido", rotulo: "Partido", ph: "Sigla ou nome. Ex.: PT, PL", tipos: ["partido"] },
-  { id: "lei", rotulo: "Lei", ph: "Tema ou número. Ex.: PL 2630/2020", tipos: [] },
+  { id: "lei", rotulo: "Lei", ph: "Número ou apelido. Ex.: 2630, fake news", tipos: ["lei"] },
 ];
 
-const TODOS: TipoBusca[] = ["cidade", "estado", "deputado", "senador", "partido", "autor"];
+const TODOS: TipoBusca[] = ["cidade", "estado", "deputado", "senador", "prefeito", "partido", "autor", "lei"];
 const storage = () => { try { return window.localStorage; } catch { return null; } };
-const ROTULO_TIPO: Record<TipoBusca, string> = { cidade: "Cidade", estado: "Estado", deputado: "Deputado(a)", senador: "Senador(a)", partido: "Partido", lei: "Lei", autor: "Quem mandou" };
+const ROTULO_TIPO: Record<TipoBusca, string> = { cidade: "Cidade", estado: "Estado", deputado: "Deputado(a)", senador: "Senador(a)", partido: "Partido", lei: "Lei", autor: "Quem mandou", prefeito: "Prefeito(a)" };
 
 function useDebounced<T>(v: T, ms: number): T {
   const [d, setD] = useState(v);
@@ -38,7 +39,7 @@ function useDebounced<T>(v: T, ms: number): T {
 
 function Imagem({ it }: { it: ItemBusca }) {
   const [erro, setErro] = useState(false);
-  if (it.tipo === "deputado" || it.tipo === "senador") return <Avatar src={it.img} name={it.titulo} size="md" />;
+  if (it.tipo === "deputado" || it.tipo === "senador" || it.tipo === "prefeito") return <Avatar src={it.img} name={it.titulo} size="md" />;
   if (it.tipo === "estado" && it.img && !erro)
     return <span className="grid size-12 shrink-0 place-items-center"><img src={it.img} alt="" width={40} height={28} loading="lazy" onError={() => setErro(true)} className="h-7 w-10 rounded-[3px] object-cover ring-1 ring-line" /></span>;
   if (it.tipo === "partido" && it.selo && !erro)
@@ -84,9 +85,13 @@ interface Props {
   modos?: ModoBusca[];
   /** Troca o destino de um resultado (ex.: boletim em vez do perfil). */
   hrefDe?: (it: ItemBusca) => string;
+  /** Modo filtro: escolher um resultado chama isto em vez de navegar (ex.: filtrar a lista da página). */
+  onEscolher?: (it: ItemBusca) => void;
+  /** Altura de campo de formulário (filtros). */
+  compacto?: boolean;
 }
 
-export function BuscaUniversal({ variante = "painel", modoInicial = "tudo", ufInicial = null, fixo, consultaInicial = "", autoFocus, onIr, onFocoMovel, onFiltros, limite, className, modos, hrefDe }: Props) {
+export function BuscaUniversal({ variante = "painel", modoInicial = "tudo", ufInicial = null, fixo, consultaInicial = "", autoFocus, onIr, onFocoMovel, onFiltros, limite, className, modos, hrefDe, onEscolher, compacto }: Props) {
   const [modo, setModo] = useState<ModoBusca>(modoInicial);
   const [uf, setUf] = useState<string | null>(ufInicial);
   const [q, setQ] = useState(consultaInicial);
@@ -105,22 +110,25 @@ export function BuscaUniversal({ variante = "painel", modoInicial = "tudo", ufIn
 
   useEffect(() => { onFiltros?.({ q: dq, modo, uf }); }, [dq, modo, uf]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hits = useMemo<Array<ItemBusca & { outro?: boolean }>>(() => {
+  const hits = useMemo<Array<ItemBusca & { outro?: boolean; grupo?: string }>>(() => {
     const t = dq.trim();
-    const out: Array<ItemBusca & { outro?: boolean }> = [];
+    const out: Array<ItemBusca & { outro?: boolean; grupo?: string }> = [];
     if (!t) {
       if (uf) out.push({ id: `abrir:${uf}`, tipo: "estado", titulo: `Abrir ${UFS[uf as SiglaUf]}`, sub: "Quanto o estado recebeu e quem mandou", href: `/uf/${uf}`, img: bandeiraUf(uf, 64), selo: uf, uf });
       out.push(...recentes.filter((r) => (!cfg.tipos || cfg.tipos.includes(r.tipo)) && (!uf || !r.uf || r.uf === uf)));
       return out;
     }
     const lei = modo === "tudo" || modo === "lei" ? detectarLei(t) : null;
-    if (lei) out.push({ id: `l:${lei.sigla}${lei.numero}${lei.ano ?? ""}`, tipo: "lei", titulo: `${lei.sigla} ${lei.numero}${lei.ano ? `/${lei.ano}` : ""}`, sub: "Abrir proposta de lei", href: hrefLei(lei) });
-    if (modo !== "lei") {
-      const n = limite ?? (modo === "tudo" ? 8 : 10);
-      const r = rankear(itens, t, { tipos: cfg.tipos ?? TODOS, limite: n, uf });
-      out.push(...(r.length || modo === "tudo" ? r : rankear(itens, t, { tipos: TODOS, limite: 5, uf }).map((x) => ({ ...x, outro: true }))));
-    }
-    if (modo === "lei" || modo === "tudo") out.push({ id: `l:q:${t}`, tipo: "lei", titulo: `Leis sobre “${t}”`, sub: "Buscar propostas na Câmara", href: `/proposicoes?q=${encodeURIComponent(t)}` });
+    const n = limite ?? 10;
+    const r = rankear(itens, t, { tipos: cfg.tipos ?? TODOS, limite: n, uf });
+    const achados: Array<ItemBusca & { outro?: boolean }> = r.length || modo === "tudo" || modo === "lei" ? r : rankear(itens, t, { tipos: TODOS, limite: 5, uf }).map((x) => ({ ...x, outro: true }));
+    // Número exato ("PL 2630/2020") que não está na lista curada: link direto.
+    if (lei && !achados.some((x) => x.tipo === "lei" && x.titulo.startsWith(`${lei.sigla} ${lei.numero}/`)) && lei.ano)
+      achados.push({ id: `l:${lei.sigla}${lei.numero}${lei.ano}`, tipo: "lei", titulo: `${lei.sigla} ${lei.numero}/${lei.ano}`, sub: "Abrir proposta de lei", href: hrefLei(lei) });
+    if (modo === "lei" || modo === "tudo") achados.push({ id: `l:q:${t}`, tipo: "lei", titulo: `Leis sobre “${t}”`, sub: "Buscar todas as propostas na Câmara", href: `/proposicoes?q=${encodeURIComponent(t)}` });
+    // Tudo: grupos com título (Cidades, Pessoas, Leis, Partidos).
+    if (modo === "tudo") for (const g of agrupar(achados)) g.itens.forEach((x, i) => out.push(i === 0 ? { ...x, grupo: g.grupo } : x));
+    else out.push(...achados);
     return out;
   }, [dq, itens, modo, cfg, recentes, uf, limite]);
   const valores = useValorCidades(hits);
@@ -140,6 +148,7 @@ export function BuscaUniversal({ variante = "painel", modoInicial = "tudo", ufIn
       setUf(h.uf); setQ(""); setModo("tudo"); inputRef.current?.focus();
       return;
     }
+    if (onEscolher && !h.id.startsWith("abrir:")) { onEscolher(h); setQ(""); setAberto(variante === "painel"); return; }
     if (!h.id.startsWith("l:q:") && !h.id.startsWith("abrir:")) { salvarRecente(storage(), { ...h, valor: h.valor ?? valores.get(h.id) }); setRecentes(lerRecentes(storage())); }
     setAberto(variante === "painel");
     onIr?.();
@@ -164,13 +173,14 @@ export function BuscaUniversal({ variante = "painel", modoInicial = "tudo", ufIn
       {hits.map((h, i) => {
         const valor = h.valor || valores.get(h.id);
         return [
+          h.grupo ? <li role="presentation" key={`g:${h.grupo}`} className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-muted first:pt-1">{h.grupo}</li> : null,
           h.outro && i === 0 ? <li role="presentation" key="outros" className="px-2 pb-1 pt-1.5 text-xs text-muted">Nenhum resultado em “{cfg.rotulo}”{uf ? ` de ${uf}` : ""}. Achamos em outras categorias:</li> : null,
           <li key={h.id} id={`${listaId}-${i}`} role="option" aria-selected={sel === i}
             onPointerMove={() => setSel(i)} onPointerDown={(e) => e.preventDefault()} onClick={() => ir(h)}
             className={clsx("flex min-h-14 cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5", sel === i && "bg-verde/10")}>
             <Imagem it={h} />
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold">{h.titulo}</span>
+              <span className="block truncate font-semibold">{dq.trim() && !h.id.startsWith("l:q:") ? destacar(h.titulo, dq).map((p, k) => p.casou ? <mark key={k} className="bg-transparent text-accent">{p.texto}</mark> : <span key={k} className="font-medium">{p.texto}</span>) : h.titulo}</span>
               <Linha2 it={h} />
             </span>
             {valor ? (
@@ -206,8 +216,8 @@ export function BuscaUniversal({ variante = "painel", modoInicial = "tudo", ufIn
           ))}
         </div>
       )}
-      <div className={clsx("flex items-center gap-2 rounded-2xl bg-surface-2 pl-3.5 pr-2 focus-within:ring-2 focus-within:ring-accent", hero ? "h-14 sm:h-16" : "h-12")}>
-        <Search className={clsx("shrink-0 text-muted", hero ? "size-6" : "size-5")} aria-hidden />
+      <div className={clsx("flex items-center gap-2 rounded-2xl bg-surface-2 pl-3.5 pr-2 focus-within:ring-2 focus-within:ring-accent", hero && !compacto ? "h-14 sm:h-16" : compacto ? "h-11" : "h-12")}>
+        <Search className={clsx("shrink-0 text-muted", hero && !compacto ? "size-6" : "size-5")} aria-hidden />
         {uf && (
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface py-1 pl-1.5 pr-1 text-sm font-semibold ring-1 ring-line">
             <img src={bandeiraUf(uf, 64)} alt="" width={20} height={14} className="h-3.5 w-5 rounded-[2px] object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
@@ -225,6 +235,8 @@ export function BuscaUniversal({ variante = "painel", modoInicial = "tudo", ufIn
           onFocus={(e) => {
             if (hero && onFocoMovel && matchMedia("(max-width: 639px)").matches) { e.currentTarget.blur(); onFocoMovel(q, modo); return; }
             setAtivo(true); setAberto(true);
+            // Celular: sobe o campo para o topo, para a lista caber acima do teclado.
+            if (matchMedia("(max-width: 639px)").matches) { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: "start", behavior: "smooth" }), 250); }
           }}
           onKeyDown={onKey}
           placeholder={ph}
@@ -237,7 +249,7 @@ export function BuscaUniversal({ variante = "painel", modoInicial = "tudo", ufIn
           enterKeyHint="search"
           autoComplete="off"
           spellCheck={false}
-          className={clsx("h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted/80", hero ? "text-lg font-medium sm:text-xl" : "text-base")}
+          className={clsx("h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted/80", hero && !compacto ? "text-lg font-medium sm:text-xl" : "text-base")}
         />
         {q && (
           <button type="button" onClick={() => { setQ(""); inputRef.current?.focus(); }} aria-label="Limpar" className="grid size-10 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg">
@@ -249,4 +261,16 @@ export function BuscaUniversal({ variante = "painel", modoInicial = "tudo", ufIn
       {!hero && !dq.trim() && hits.length === 0 && <p className="px-3 py-4 text-sm text-muted">Escolha acima o que procura e comece a digitar. Dica: em “Estado”, escolha um estado para buscar só cidades e políticos dele.</p>}
     </div>
   );
+}
+
+/** Campo de filtro com a mesma busca: mostra o filtro escolhido como chip removível. */
+export function FiltroBusca({ valor, onValor, ...p }: Omit<Props, "onEscolher" | "variante"> & { valor: string; onValor: (v: string) => void }) {
+  if (valor)
+    return (
+      <span className="inline-flex min-h-11 max-w-full items-center gap-1 rounded-xl bg-surface-2 py-1 pl-3 pr-1 text-sm font-semibold ring-1 ring-line">
+        <span className="truncate">{valor}</span>
+        <button type="button" onClick={() => onValor("")} aria-label={`Remover filtro ${valor}`} className="grid size-9 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg"><X className="size-4" aria-hidden /></button>
+      </span>
+    );
+  return <BuscaUniversal {...p} fixo compacto variante="hero" onEscolher={(it) => onValor(it.titulo)} />;
 }

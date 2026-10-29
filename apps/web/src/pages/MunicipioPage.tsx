@@ -2,7 +2,7 @@ import { dataPath, UFS, type Municipio, type Prefeito, type SiglaUf } from "@eme
 import { Building, Landmark } from "lucide-react";
 import { useParams } from "react-router";
 import { ConveniosTable, EmendasTable, FavorecidosTable, type Convenio, type FavorecidoExt } from "@/features/emendas/tables";
-import { AreasGasto, BarraTipos, fraseChegou, ListaVerMais, ModoDetalhado, porMorador, QuemMandou, QuemMandouSkeleton, topPorTipo, usePopulacao } from "@/features/linguagem";
+import { AreasGasto, BarraTipos, fraseChegou, ListaVerMais, ModoDetalhado, porMorador, QuemMandou, QuemMandouSkeleton, topPorTipo, usePopulacao, cabecalhoMunicipio } from "@/features/linguagem";
 import { nomeProprio } from "@/features/emendas/historias";
 import { ufDoMunicipio, useApi, type IbgeMunicipio } from "@/lib/data";
 import { formatBRL, formatCNPJ, formatNumber, isCNPJ } from "@/lib/format";
@@ -10,6 +10,7 @@ import { fotoPrefeito } from "@/lib/cdn";
 import { EmblemaMunicipio } from "@/features/emblemas/EmblemaMunicipio";
 import { Avatar, CountUp, EmptyState, ErrorState, ExternalLink, NextSteps, PageHeader, PartyBadge, Skeleton, Tabs, Tip } from "@/ui";
 import { ShareButton } from "@/features/share";
+import { useLembrarLocal } from "@/features/home/home";
 
 /** Campos opcionais que o ETL pode publicar além do contrato mínimo. */
 type MunicipioExt = Municipio & { vice?: Prefeito | null; convenios?: Convenio[]; favorecidos: FavorecidoExt[]; populacao?: number };
@@ -28,6 +29,7 @@ export default function MunicipioPage() {
   const nomeUf = UFS[uf as SiglaUf] ?? uf;
   const nome = d?.nome ?? info.data?.nome ?? `Município ${ibgeId}`;
   const populacao = d?.populacao ?? pop.data?.populacao;
+  useLembrarLocal(d ? { tipo: "municipio", id: d.ibge, nome: nomeProprio(d.nome), uf: d.uf } : null);
   const pago = d?.totais.pago ?? 0;
   const pix = d?.porTipo.filter((t) => t.tipo === "pix").reduce((s, t) => s + t.pago, 0) ?? 0;
   const politicos = d?.autores.filter((a) => a.pago > 0).length ?? 0;
@@ -40,6 +42,7 @@ export default function MunicipioPage() {
         eyebrow={uf ? `Cidade · ${nomeUf}` : "Cidade"}
         media={uf ? <EmblemaMunicipio ibge={ibgeId} uf={uf} nome={nome} size={56} credito /> : undefined}
         title={nome}
+        subtitle={<>{cabecalhoMunicipio(nome).subtitulo}</>}
         breadcrumbs={[{ label: "Início", to: "/" }, ...(uf ? [{ label: nomeUf, to: `/uf/${uf}` }] : []), { label: nome }]}
         actions={<ShareButton fab kind="municipio" title={nome} subtitle={nomeUf || undefined} url={`/municipio/${ibgeId}`} ogId={ibgeId}
           text={d ? `${fraseChegou({ nome, pago, politicos, pctPix: pago ? pix / pago : 0 })} Veja quem mandou:` : undefined}

@@ -3,7 +3,7 @@
 // Uso: bun scripts/busca-indice.ts [--out data/out]
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { montarIndiceBusca, type AutorResumo, type Uf } from "../packages/contracts/src/index";
+import { montarIndiceBusca, type AutorResumo, type Municipio, type Uf } from "../packages/contracts/src/index";
 
 const args = process.argv.slice(2);
 const out = args[args.indexOf("--out") + 1] && args.includes("--out") ? args[args.indexOf("--out") + 1]! : "data/out";
@@ -43,7 +43,13 @@ async function partidos() {
 }
 
 const ufs = readdirSync(join(v1, "uf")).filter((f) => f.endsWith(".json")).map((f) => ler<Uf>(join(v1, "uf", f)));
+// Prefeito(a) eleito(a) em 2024 de cada cidade (v1/municipio/<ibge>.json), para achar a cidade pelo nome do prefeito.
+const prefeitos = readdirSync(join(v1, "municipio")).filter((f) => f.endsWith(".json")).flatMap((f) => {
+  const m = ler<Municipio>(join(v1, "municipio", f));
+  return m.prefeito ? [{ ibge: m.ibge, nome: m.prefeito.nome, partido: m.prefeito.partido }] : [];
+});
 const indice = montarIndiceBusca({
+  prefeitos,
   geradoEm: new Date().toISOString(),
   municipios: ler<Array<[number, string, string]>>(join(raiz, "apps/web/public/geo/municipios.json")),
   ufs,
@@ -53,4 +59,4 @@ const indice = montarIndiceBusca({
   autores: ler<AutorResumo[]>(join(v1, "autores.json")),
 });
 writeFileSync(join(v1, "busca.json"), JSON.stringify(indice));
-console.log(`ok: ${join(v1, "busca.json")} (${indice.cidades.length} cidades, ${indice.deputados.length} deputados, ${indice.senadores.length} senadores)`);
+console.log(`ok: ${join(v1, "busca.json")} (${indice.cidades.length} cidades, ${indice.deputados.length} deputados, ${indice.senadores.length} senadores, ${prefeitos.length} prefeitos)`);

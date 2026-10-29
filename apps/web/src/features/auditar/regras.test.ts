@@ -137,6 +137,12 @@ describe("pontosDeAtencao (regras neutras)", () => {
     const g = pontosDeAtencao({ ...vazio, gastos: { valor: 300, media: 200, n: 500, posicao: 12 } }).find((x) => x.id === "gastos")!;
     expect(g.texto).toBe("Gastou 50% acima da média da Câmara na cota parlamentar (12º de 500).");
   });
+  test("cota zerada (fora do mandato) não vira 100% abaixo da média; título neutro", () => {
+    const g = pontosDeAtencao({ ...vazio, gastos: { valor: 0, media: 200, n: 514, posicao: 514 } }).find((x) => x.id === "gastos")!;
+    expect(g.status).toBe("sem-dados");
+    expect(g.texto).toBe("Nenhum gasto da cota registrado no mandato atual.");
+    expect(g.titulo).toBe("Gastos da cota parlamentar");
+  });
 });
 
 describe("parseComparar / serializarComparar", () => {

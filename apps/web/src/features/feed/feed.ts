@@ -3,6 +3,8 @@ import { semAcento, type JanelaRanking, type MesResumo, type Pagamento, type Tip
 
 const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 export const mesLongo = (m: number) => `${MESES[(m % 100) - 1] ?? "?"} de ${Math.floor(m / 100)}`;
+/** Para títulos: "Outubro de 2026". */
+export const mesTitulo = (m: number) => { const t = mesLongo(m); return t.charAt(0).toUpperCase() + t.slice(1); };
 export const mesCurto = (m: number) => `${(MESES[(m % 100) - 1] ?? "?").slice(0, 3)}/${Math.floor(m / 100)}`;
 
 export const JANELA_ROTULO: Record<JanelaRanking, string> = { "1m": "1 mês", "3m": "3 meses", "6m": "6 meses", "12m": "12 meses" };

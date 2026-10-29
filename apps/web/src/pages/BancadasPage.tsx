@@ -1,3 +1,4 @@
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { UFS, type SiglaUf } from "@emenda/contracts";
@@ -23,10 +24,8 @@ export default function BancadasPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Congresso · 57ª legislatura (2023–2027)"
-        title="Bancadas"
-        subtitle="Quem forma a bancada evangélica, a ruralista, a da segurança pública e outras: membros, partidos, o que cada frente diz defender e como seus membros votaram."
+      <CabecalhoPagina
+        c={CABECALHOS.bancadas}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Bancadas" }]}
         actions={<ShareButton kind="pagina" title="Bancadas temáticas do Congresso" url="/bancadas" subtitle="Membros, partidos e votos de cada bancada" />}
       />

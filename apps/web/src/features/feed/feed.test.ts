@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Pagamento } from "@emenda/contracts";
-import { agruparPorMes, filtrarPagamentos, mesLongo, mesCurto, opcoesFiltro, proximoMes, rankingPorPartido, JANELA_ROTULO } from "./feed";
+import { agruparPorMes, filtrarPagamentos, mesLongo, mesTitulo, mesCurto, opcoesFiltro, proximoMes, rankingPorPartido, JANELA_ROTULO } from "./feed";
 
 const p = (mes: number, tipo: Pagamento["tipo"], uf: string, autor: string, valor: number): Pagamento => ({
   mes, codigoEmenda: `${mes}${autor}`, autor: { codigo: autor, nome: `AUTOR ${autor}` }, tipo,
@@ -9,6 +9,7 @@ const p = (mes: number, tipo: Pagamento["tipo"], uf: string, autor: string, valo
 const itens = [p(202610, "pix", "SP", "1", 10), p(202610, "bancada", "RJ", "2", 30), p(202609, "pix", "RJ", "1", 5)];
 
 describe("feed", () => {
+  test("mesTitulo: só a 1ª letra maiúscula", () => expect(mesTitulo(202610)).toBe("Outubro de 2026"));
   test.each([[202610, "outubro de 2026"], [202501, "janeiro de 2025"]] as const)("mesLongo(%p)", (m, s) => expect(mesLongo(m)).toBe(s));
   test("mesCurto", () => expect(mesCurto(202603)).toBe("mar/2026"));
   test("filtros combinados", () => {

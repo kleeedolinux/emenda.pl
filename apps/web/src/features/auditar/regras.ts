@@ -134,9 +134,10 @@ export function pontosDeAtencao(i: Indicadores): Ponto[] {
 
   const g = i.gastos;
   out.push({
-    id: "gastos", titulo: `Cota parlamentar acima da média ${casa === "Câmara" ? "da Câmara" : "do Senado"}`,
-    status: !g ? "sem-dados" : g.valor > g.media ? "atencao" : "ok",
+    id: "gastos", titulo: "Gastos da cota parlamentar",
+    status: !g || g.valor <= 0 ? "sem-dados" : g.valor > g.media ? "atencao" : "ok",
     texto: !g ? "Sem dados de cota parlamentar para esta legislatura."
+      : g.valor <= 0 ? "Nenhum gasto da cota registrado no mandato atual."
       : g.valor > g.media ? `Gastou ${pct(g.valor / g.media - 1)} acima da média da ${casa} na cota parlamentar (${g.posicao}º de ${g.n}).`
       : `Gastou ${g.media ? pct(1 - g.valor / g.media) : "0%"} abaixo da média da ${casa} na cota parlamentar (${g.posicao}º de ${g.n}).`,
     formula: `Total da cota (CEAP) na legislatura atual comparado à média de todos os parlamentares em exercício na ${casa}. Atenção se for maior que a média.`,

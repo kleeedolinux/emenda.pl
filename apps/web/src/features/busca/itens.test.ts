@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { IndiceBusca } from "@emenda/contracts";
-import { itensDoIndice } from "./itens";
+import { itensDoIndice, itensLeis } from "./itens";
+import { PAUTAS } from "@/features/legislativo/pautas";
 import { rankear } from "./ranker";
 
 const idx: IndiceBusca = {
@@ -10,6 +11,7 @@ const idx: IndiceBusca = {
   senadores: [["3795", "Otto Alencar", "PSD", "BA", 900]],
   partidos: [["PL", "Partido Liberal"]],
   autores: [["8100", "RELATOR GERAL", 70]],
+  prefeitos: [[2914406, "NINO COUTINHO", "PSD"]],
 };
 
 describe("itensDoIndice", () => {
@@ -31,4 +33,18 @@ describe("itensDoIndice", () => {
     expect(rankear(itens, "sao paulo").map((x) => x.id)).toEqual(["uf:SP", "m:3550308"]);
     expect(itens.find((x) => x.id === "a:8100")?.sub).toBe("Orçamento secreto");
   });
+});
+
+describe("prefeitos e leis", () => {
+  const itens = [...itensDoIndice(idx), ...itensLeis(PAUTAS)];
+  test("nome do prefeito acha a cidade", () => {
+    const r = rankear(itens, "nino coutinho")[0]!;
+    expect(r).toMatchObject({ tipo: "prefeito", href: "/municipio/2914406", uf: "BA" });
+    expect(r.sub).toContain("Iraquara");
+  });
+  test.each(["2630", "PL 2630", "fake news"])("%s -> PL 2630/2020 primeiro", (q) => {
+    expect(rankear(itens, q)[0]).toMatchObject({ tipo: "lei", titulo: "PL 2630/2020" });
+  });
+  test("PEC 45 -> reforma tributária", () => expect(rankear(itens, "PEC 45")[0]?.sub).toContain("Reforma tributária"));
+  test("reforma tributaria (sem acento) acha a PEC 45", () => expect(rankear(itens, "reforma tributaria").map((x) => x.titulo)).toContain("PEC 45/2019"));
 });

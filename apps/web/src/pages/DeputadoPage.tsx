@@ -22,7 +22,7 @@ import { GastosParlamentar, GastosResumo, useGastosParlamentar } from "@/feature
 import { FileText, HandCoins, Repeat, Vote, Wallet } from "lucide-react";
 import { contarSim, perfilEmendas, resumoSimples, trocasCamara } from "@/features/perfil/resumo";
 import { BlocoEmendas, ResumoSimplesCard, SecaoLeiga, TilesPerfil } from "@/features/perfil/CardsPerfil";
-import { ModoDetalhado } from "@/features/linguagem";
+import { ModoDetalhado, cabecalhoPolitico } from "@/features/linguagem";
 import { totalCota } from "@/features/gastos/gastos";
 import { CardPautas, usePautasDeputado } from "@/features/perfil/Pautas";
 import { CardTrocas } from "@/features/perfil/Trocas";
@@ -58,6 +58,7 @@ export default function DeputadoPage() {
       <PageHeader
         eyebrow={<>Deputado(a) federal{s ? ` · ${UFS[s.siglaUf as SiglaUf] ?? s.siglaUf}` : ""} <Term k="deputado federal">o que faz?</Term></>}
         title={d ? nome : <Skeleton className="h-9 w-64" />}
+        subtitle={cabecalhoPolitico(nome, "deputado").subtitulo}
         media={<Avatar src={s?.urlFoto} name={nome} size="xl" />}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Deputados", to: "/deputados" }, { label: nome }]}
         actions={d && (

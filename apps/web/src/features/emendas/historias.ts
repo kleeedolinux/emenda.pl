@@ -1,5 +1,6 @@
 // Histórias do explorador /emendas: dados resumidos + filtros -> números prontos para cartões. Puro.
 // Cada resultado lista os filtros que o dado não consegue separar (`ignorados`), para o cartão avisar.
+import { nomeLeigo } from "@/lib/nomes";
 import {
   chaveNome, UFS,
   type Abertas, type AutorResumo, type Brasil, type JanelaRanking, type Pagamento, type Rankings, type SiglaUf, type TipoEmenda, type Totais, type Uf,
@@ -200,15 +201,8 @@ export function parlamentarDe(idx: IndiceParlamentares, chave: string): Parlamen
 }
 
 // ---------- Texto ----------
-const MINUSCULAS = new Set(["DA", "DAS", "DE", "DO", "DOS", "E"]);
-/** "VENEZIANO VITAL DO REGO" -> "Veneziano Vital do Rego". Siglas curtas após hífen ficam (CAS). */
-export function nomeProprio(s: string): string {
-  return s.split(/\s+/).map((w, i, ws) => {
-    if (i > 0 && MINUSCULAS.has(w)) return w.toLowerCase();
-    if (ws[i - 1] === "-" && w.length <= 4) return w;
-    return w.charAt(0) + w.slice(1).toLowerCase();
-  }).join(" ");
-}
+/** "VENEZIANO VITAL DO REGO" -> "Veneziano Vital do Rego". Mesmo formatador de todo o site (`lib/nomes`). */
+export const nomeProprio = (s: string): string => nomeLeigo(s);
 
 /** Centavos -> "R$ 194,6 bilhões" (leitura em voz alta, sem abreviação). */
 export function valorExtenso(centavos: number): string {

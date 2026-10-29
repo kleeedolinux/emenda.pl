@@ -1,12 +1,14 @@
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
+import { FiltroBusca } from "@/features/busca";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
 import { Zap } from "lucide-react";
-import { dataPath, TIPOS_EMENDA, type Feed, type FeedMes, type Pagamento, type TipoEmenda } from "@emenda/contracts";
-import { EmptyState, ErrorState, Money, NextSteps, PageHeader, Skeleton, Spinner, Tabs, Term, fetchJson, formatNumber, useApi } from "@/ui";
+import { dataPath, TIPOS_EMENDA, UFS, type SiglaUf, type Feed, type FeedMes, type Pagamento, type TipoEmenda } from "@emenda/contracts";
+import { EmptyState, ErrorState, Money, NextSteps, PageHeader, Skeleton, Spinner, Tabs, Term, Tip, fetchJson, formatNumber, useApi } from "@/ui";
 import { nomeTipoCurto } from "@/features/emendas/tipos";
 import { Campo, inputCls, selectCls } from "@/features/legislativo/components";
-import { agruparPorMes, filtrarPagamentos, mesLongo, opcoesFiltro, proximoMes } from "@/features/feed/feed";
+import { agruparPorMes, filtrarPagamentos, mesLongo, mesTitulo, opcoesFiltro, proximoMes } from "@/features/feed/feed";
 import { PagamentoCard, RankingsRecentes } from "@/features/feed/components";
 import { ShareButton } from "@/features/share";
 
@@ -15,21 +17,19 @@ const POR_GRUPO = 60;
 export default function UltimasPage() {
   return (
     <>
-      <PageHeader
-        eyebrow="Atualizado com o Portal da Transparência"
-        title="Dinheiro que acabou de chegar"
-        subtitle={<>Os últimos pagamentos de dinheiro mandado por deputados e senadores (<Term k="emenda">emendas</Term>): quem mandou, para onde e quem recebeu. Em amarelo: mandado sem dizer para quê.</>}
+      <CabecalhoPagina
+        c={CABECALHOS.ultimas}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Últimas" }]}
-        actions={<ShareButton fab kind="pagina" title="Últimas emendas parlamentares pagas" text="💸 Quem mandou dinheiro de emenda para onde, pagamento a pagamento. Veja as últimas emendas pagas:" url="/ultimas" />}
+        actions={<ShareButton fab kind="pagina" title="Dinheiro que acabou de ser pago" text="💸 Quem mandou dinheiro público para onde, pagamento a pagamento. Veja o que acabou de ser pago:" url="/ultimas" />}
       />
       <Tabs tabs={[
-        { id: "feed", label: "Pagamentos recentes", content: <FeedLista /> },
-        { id: "rankings", label: "Quem mais enviou", content: <RankingsRecentes /> },
+        { id: "feed", label: "Pago agora", content: <FeedLista /> },
+        { id: "rankings", label: "Quem mais mandou", content: <RankingsRecentes /> },
       ]} />
       <NextSteps items={[
-        { to: "/pix", label: "Emenda Pix", desc: "O que é e para onde vai." },
-        { to: "/entenda/ciclo-do-dinheiro", label: "Ciclo do dinheiro", desc: "Empenho, liquidação e pagamento." },
-        { to: "/entenda/o-que-esta-aberto", label: "O que está aberto", desc: "Empenhado e ainda não pago." },
+        { to: "/pix", label: "Dinheiro sem dizer para quê", desc: "O que é e para onde vai." },
+        { to: "/entenda/ciclo-do-dinheiro", label: "Do prometido ao pago", desc: "Os passos até o dinheiro chegar." },
+        { to: "/entenda/o-que-esta-aberto", label: "Prometido e ainda não pago", desc: "Quanto falta chegar." },
       ]} />
     </>
   );
@@ -69,29 +69,28 @@ function FeedLista() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-end gap-3">
-        <Campo label="Tipo">
+        <Campo label="Tipo de dinheiro">
           <select className={selectCls} value={f.tipo} onChange={(e) => set("tipo", e.target.value)}>
             <option value="">Todos</option>
             {(Object.keys(TIPOS_EMENDA) as TipoEmenda[]).map((t) => <option key={t} value={t}>{nomeTipoCurto(t)}</option>)}
           </select>
         </Campo>
-        <Campo label="UF">
+        <Campo label="Estado">
           <select className={selectCls} value={f.uf} onChange={(e) => set("uf", e.target.value)}>
-            <option value="">Todas</option>
-            {opcoes.ufs.map((u) => <option key={u}>{u}</option>)}
+            <option value="">Todos</option>
+            {opcoes.ufs.map((u) => <option key={u} value={u}>{UFS[u as SiglaUf] ?? u}</option>)}
           </select>
         </Campo>
-        <Campo label="Autor" tip="Parte do nome do parlamentar, bancada ou comissão.">
-          <input className={inputCls} list="feed-autores" value={f.autor} placeholder="Ex.: Silva" onChange={(e) => set("autor", e.target.value)} />
-          <datalist id="feed-autores">{opcoes.autores.slice(0, 500).map((a) => <option key={a} value={a} />)}</datalist>
+        <Campo label="Quem mandou" tip="Digite parte do nome do político, do grupo do estado (bancada) ou da comissão.">
+          <FiltroBusca valor={f.autor} onValor={(v) => set("autor", v)} modoInicial="tudo" ufInicial={f.uf || null} />
         </Campo>
         {f.tipo !== "pix" && (
           <button type="button" onClick={() => set("tipo", "pix")} className="press inline-flex items-center gap-1.5 rounded-xl border border-amarelo/70 px-3 py-2 text-sm font-semibold">
-            <Zap className="size-4 text-amarelo" aria-hidden />Só Emenda Pix
+            <Zap className="size-4 text-[#a36f00]" aria-hidden />Só Pix (sem dizer para quê)
           </button>
         )}
       </div>
-      <p className="mb-4 text-xs text-muted">Mostramos os maiores pagamentos de cada mês ({formatNumber(500)} nos últimos 6 meses; mais ao rolar). Pagamentos repetidos da mesma emenda ao mesmo favorecido no mês foram somados.</p>
+      <p className="mb-4 text-sm text-muted">Os maiores pagamentos de cada mês. Role para ver meses anteriores. <Tip content={`Até ${formatNumber(500)} pagamentos por mês nos últimos 6 meses. Vários pagamentos da mesma indicação para o mesmo recebedor no mês aparecem somados.`} /></p>
 
       {grupos.length === 0 && !carregando && <EmptyState title="Nenhum pagamento com esses filtros nos meses carregados." hint={proximo ? "Role para carregar meses anteriores." : undefined} />}
       {grupos.map((g) => {
@@ -99,9 +98,9 @@ function FeedLista() {
         return (
           <section key={g.mes} className="mb-10" aria-labelledby={`mes-${g.mes}`}>
             <header className="sticky top-16 z-10 -mx-2 mb-3 flex flex-wrap items-baseline justify-between gap-2 rounded-xl bg-bg/85 px-2 py-2 backdrop-blur">
-              <h2 id={`mes-${g.mes}`} className="text-xl font-bold capitalize">{mesLongo(g.mes)}</h2>
+              <h2 id={`mes-${g.mes}`} className="text-xl font-bold">{mesTitulo(g.mes)}</h2>
               <p className="text-sm text-muted">
-                {r ? <>Total do mês: <b className="text-fg"><Money centavos={r.valor} compact /></b> em {formatNumber(r.n)} pagamentos</> : null}
+                {r ? <>Pago no mês: <b className="text-fg"><Money centavos={r.valor} compact /></b> em {formatNumber(r.n)} pagamentos</> : null}
                 {f.tipo || f.uf || f.autor ? <> · filtrado: <Money centavos={g.total} compact /></> : null}
               </p>
             </header>
@@ -115,7 +114,7 @@ function FeedLista() {
       <div ref={sentinela} className="flex justify-center py-6">
         {carregando ? <Spinner label="Carregando mês anterior…" /> : proximo ? (
           <button type="button" className="press rounded-xl border border-line px-4 py-2 text-sm" onClick={() => setExtras((x) => [...x, proximo])}>Carregar {mesLongo(proximo)}</button>
-        ) : <p className="text-sm text-muted">Fim dos últimos 24 meses publicados.</p>}
+        ) : <p className="text-sm text-muted">Isso é tudo: os últimos 24 meses publicados.</p>}
       </div>
     </div>
   );

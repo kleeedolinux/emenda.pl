@@ -15,7 +15,7 @@ import { categoriaVoto } from "@/features/legislativo/votacao";
 import { ShareButton } from "@/features/share";
 import { GastosParlamentar, GastosResumo, useGastosParlamentar } from "@/features/gastos";
 import { totalCota } from "@/features/gastos/gastos";
-import { ModoDetalhado } from "@/features/linguagem";
+import { ModoDetalhado, cabecalhoPolitico } from "@/features/linguagem";
 import { formatBRL } from "@/lib/format";
 import { FileText, HandCoins, Repeat, Vote, Wallet } from "lucide-react";
 import { useAutor } from "@/features/legislativo/hooks";
@@ -67,6 +67,7 @@ export default function SenadorPage() {
       <PageHeader
         eyebrow={<>Senador(a){s ? ` · ${UFS[s.uf as SiglaUf] ?? s.uf}` : ""} <Term k="senador">o que faz?</Term></>}
         title={s ? nome : <Skeleton className="h-9 w-64" />}
+        subtitle={cabecalhoPolitico(nome, "senador").subtitulo}
         media={<Avatar src={s?.foto} name={nome} size="xl" />}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Senadores", to: "/senadores" }, { label: nome }]}
         actions={s && (

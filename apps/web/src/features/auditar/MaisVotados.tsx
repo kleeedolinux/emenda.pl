@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { nomeLeigo } from "@/lib/nomes";
 import { Link } from "react-router";
 import { Avatar, Card, PartyBadge, Skeleton, Tip, formatNumber, useApi } from "@/ui";
 import { cam, dedupeDeputados, mapSenadores, sen, type DeputadoLista, type SenadorResumo } from "@/features/legislativo/api";
@@ -41,7 +42,7 @@ export function MaisVotados({ limite = 12 }: { limite?: number }) {
                 <span className="w-6 shrink-0 text-right font-semibold tabular-nums text-muted">{i + 1}</span>
                 <Avatar src={m.foto} name={m.nome} size="sm" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{m.nome}</span>
+                  <span className="block truncate font-medium">{nomeLeigo(m.nome)}</span>
                   <span className="flex items-center gap-1 text-xs text-muted"><PartyBadge sigla={m.partidoAtual ?? m.partido} link={false} /> {m.uf}</span>
                 </span>
                 <span className="shrink-0 whitespace-nowrap text-right text-sm font-semibold tabular-nums">{formatNumber(m.votos)}<span className="block text-xs font-normal text-muted">votos</span></span>

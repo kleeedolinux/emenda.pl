@@ -1,13 +1,13 @@
+import { CABECALHOS, CabecalhoPagina } from "@/features/linguagem";
 import { BuscaUniversal } from "@/features/busca";
 import clsx from "clsx";
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { Plus, Printer, Search, X } from "lucide-react";
-import { semAcento } from "@emenda/contracts";
+import { Plus, Printer, X } from "lucide-react";
 import { Avatar, Badge, Card, EmptyState, PageHeader, PartyBadge, Skeleton, Tip, formatNumber } from "@/ui";
 import { cam, dedupeDeputados, mapSenadores, sen, type DeputadoLista, type SenadorResumo } from "@/features/legislativo/api";
 import { useCamaraTodas, useSenado } from "@/features/legislativo/hooks";
-import { Campo, inputCls, selectCls } from "@/features/legislativo/components";
+import { Campo, selectCls } from "@/features/legislativo/components";
 import { ShareButton } from "@/features/share";
 import { BoletimView } from "@/features/auditar/Boletim";
 import { MaisVotados } from "@/features/auditar/MaisVotados";
@@ -34,10 +34,8 @@ export default function AuditarPage() {
   return (
     <>
       <style>{PRINT_CSS}</style>
-      <PageHeader
-        eyebrow="Audite seu candidato"
-        title={unico ? "Boletim do parlamentar" : comparar.length ? "Comparar parlamentares" : "Audite seu candidato"}
-        subtitle="Antes de votar, veja o boletim do seu deputado ou senador: dinheiro que mandou, como votou, quanto gastou e o que propôs. Só números oficiais, sem opinião."
+      <CabecalhoPagina
+        c={{ ...CABECALHOS.auditar, titulo: unico ? "Boletim do político" : comparar.length ? "Comparar políticos" : CABECALHOS.auditar.titulo }}
         breadcrumbs={[{ label: "Início", to: "/" }, { label: "Audite seu candidato", to: "/auditar" }, ...(unico ? [{ label: "Boletim" }] : [])]}
       />
       {unico ? <Unico alvo={unico} /> : comparar.length ? (
@@ -113,12 +111,10 @@ function Comparar({ alvos, onChange }: { alvos: Alvo[]; onChange: (as: Alvo[]) =
 
 // ---------- busca ----------
 interface Opcao { casa: CasaParam; id: string; nome: string; partido: string; uf: string; foto: string }
-const k = (s: string) => semAcento(s).toLowerCase();
 
 function Seletor({ comparar, onComparar }: { comparar: Alvo[]; onComparar: (as: Alvo[]) => void }) {
   const deps = useCamaraTodas<DeputadoLista>(cam.deputados({}));
   const sens = useSenado<SenadorResumo[]>(sen.listaAtual(), mapSenadores);
-  const [q, setQ] = useState("");
   const [uf, setUf] = useState("");
   const [partido, setPartido] = useState("");
   const [casa, setCasa] = useState<"" | CasaParam>("");
@@ -128,34 +124,27 @@ function Seletor({ comparar, onComparar }: { comparar: Alvo[]; onComparar: (as: 
   ].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")), [deps.data, sens.data]);
   const ufs = useMemo(() => [...new Set(opcoes.map((o) => o.uf))].filter(Boolean).sort(), [opcoes]);
   const partidos = useMemo(() => [...new Set(opcoes.map((o) => o.partido))].filter(Boolean).sort(), [opcoes]);
-  const t = k(q.trim());
-  const res = opcoes.filter((o) => (!t || k(o.nome).includes(t)) && (!uf || o.uf === uf) && (!partido || o.partido === partido) && (!casa || o.casa === casa));
-  const filtrando = !!(t || uf || partido || casa);
+    const res = opcoes.filter((o) => (!uf || o.uf === uf) && (!partido || o.partido === partido) && (!casa || o.casa === casa));
+  const filtrando = !!(uf || partido || casa);
   const naLista = (o: Opcao) => comparar.some((a) => a.casa === o.casa && a.id === o.id);
 
   return (
     <Card className="print:hidden">
       <BuscaUniversal variante="hero" modoInicial="deputado" modos={["deputado", "senador"]} className="mb-5"
         hrefDe={(it) => (it.tipo === "deputado" ? `/auditar/deputado/${it.id.slice(2)}` : it.tipo === "senador" ? `/auditar/senador/${it.id.slice(2)}` : it.href)} />
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Ou filtre e compare até {MAX_COMPARAR}</p>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]">
-        <Campo label="Nome">
-          <span className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden />
-            <input className={clsx(inputCls, "pl-9")} placeholder="Filtrar por nome" value={q} onChange={(e) => setQ(e.target.value)} />
-          </span>
-        </Campo>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Ou escolha por estado e partido para comparar até {MAX_COMPARAR}</p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Campo label="Estado"><select className={selectCls} value={uf} onChange={(e) => setUf(e.target.value)}><option value="">Todos</option>{ufs.map((u) => <option key={u}>{u}</option>)}</select></Campo>
         <Campo label="Partido"><select className={selectCls} value={partido} onChange={(e) => setPartido(e.target.value)}><option value="">Todos</option>{partidos.map((u) => <option key={u}>{u}</option>)}</select></Campo>
-        <Campo label="Casa">
+        <Campo label="Cargo">
           <select className={selectCls} value={casa} onChange={(e) => setCasa(e.target.value as "" | CasaParam)}>
-            <option value="">Câmara e Senado</option><option value="deputado">Deputados</option><option value="senador">Senadores</option>
+            <option value="">Deputados e senadores</option><option value="deputado">Só deputados</option><option value="senador">Só senadores</option>
           </select>
         </Campo>
       </div>
       {comparar.length > 0 && <p className="mt-3 text-sm text-muted">Selecionados para comparar: {comparar.length} de {MAX_COMPARAR}.</p>}
       {deps.isPending || sens.isPending ? <Skeleton className="mt-4 h-40" /> : !filtrando ? (
-        <p className="mt-4 text-sm text-muted">{formatNumber(opcoes.length)} parlamentares em exercício. Busque pelo nome ou filtre por estado e partido.</p>
+        <p className="mt-4 text-sm text-muted">{formatNumber(opcoes.length)} deputados e senadores no cargo. Busque pelo nome acima ou escolha estado e partido.</p>
       ) : res.length === 0 ? <EmptyState title="Ninguém encontrado com esses filtros." /> : (
         <ul className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {res.slice(0, 8).map((o) => (
