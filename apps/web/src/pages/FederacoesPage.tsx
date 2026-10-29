@@ -66,7 +66,7 @@ export default function FederacoesPage() {
                 <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-accent"><Handshake className="size-4" aria-hidden />Desde {formatDate(f.deferimento)}</p>
                 <Link to={`/federacao/${f.id}`} className="mt-1 text-lg font-bold leading-snug hover:underline after:absolute after:inset-0 after:content-['']">{f.nome}</Link>
                 <p className="relative z-10 mt-2 flex flex-wrap gap-1.5">{f.partidos.map((p) => <PartyBadge key={p} sigla={p} />)}</p>
-                <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
+                <dl className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(6rem,1fr))] gap-2 text-center">
                   <div className="rounded-xl bg-surface-2 p-2"><dt className="text-[11px] text-muted">Deputados</dt><dd className="font-display text-xl font-bold tabular">{b ? b.deputados.length : <Skeleton className="mx-auto h-6 w-8" />}</dd></div>
                   <div className="rounded-xl bg-surface-2 p-2"><dt className="text-[11px] text-muted">Senadores</dt><dd className="font-display text-xl font-bold tabular">{b ? b.senadores.length : <Skeleton className="mx-auto h-6 w-8" />}</dd></div>
                   <div className="rounded-xl bg-surface-2 p-2"><dt className="text-[11px] text-muted">Dinheiro mandado</dt><dd className="font-display text-base font-bold tabular leading-7">{b?.pago != null ? <Money centavos={b.pago} compact /> : autores.isError ? "—" : <Skeleton className="mx-auto h-6 w-12" />}</dd></div>

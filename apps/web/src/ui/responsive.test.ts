@@ -18,7 +18,7 @@ describe("layout móvel", () => {
     expect(m).not.toBeNull();
     const bloco = m![1]!;
     expect(bloco).toContain("calc((100% - 44px) / 2)");
-    expect(bloco).toContain("calc((100% - 24px) / 2)");
+    expect(bloco).toContain("calc((100% - 28px) / 2)"); // 24px + folga: WebKit arredonda o inset para baixo
     // não quebra o padrão "link esticado" (after:absolute after:inset-0) nem o sheen
     expect(bloco).toContain(':not([class*="after:"])');
     // campos (sem pseudo-elemento) ganham altura mínima real
@@ -35,5 +35,5 @@ describe("layout móvel", () => {
     expect(m).not.toBeNull();
     expect(m![1]).toContain("local");
   });
+  test("código/URL inline quebra em vez de vazar em 280px", () => expect(css).toMatch(/:where\(code, kbd, samp\) \{ overflow-wrap: anywhere; \}/));
 });
-

@@ -14,7 +14,11 @@ const env = process.env;
 const ENGINES = (env.ENGINES ?? "chromium,webkit").split(",");
 const WIDTHS = env.WIDTHS ? env.WIDTHS.split(",").map(Number) : LARGURAS;
 const FILTRO = env.ROTAS?.split(",");
-const rotas = ROTAS.filter((r) => !FILTRO || FILTRO.some((f) => r.path.startsWith(f)));
+// GRUPO=k/n roda só a k-ésima fatia das rotas (lotes curtos; some os relatórios).
+const [gk, gn] = (env.GRUPO ?? "1/1").split("/").map(Number) as [number, number];
+const rotas = ROTAS.filter((r) => !FILTRO || FILTRO.some((f) => r.path === f || r.path.startsWith(f + "/") || r.path.startsWith(f + "?")))
+  .filter((_, i) => i % gn === gk - 1);
+const LIMITE_ROTA = Number(env.LIMITE_ROTA ?? 300_000);
 const CONC = Number(env.CONC ?? 4);
 const OUT = join(homedir(), ".cache/emenda.pl/responsivo");
 const SHOTS = env.SHOTS === "1";
@@ -52,12 +56,13 @@ function chromiumPath(): string | undefined {
   return c;
 }
 
-interface Tarefa { engine: string; largura: number; tema: "claro" | "escuro"; rotas: typeof rotas }
+interface Tarefa { engine: string; largura: number; tema: "claro" | "escuro"; rota: (typeof rotas)[number] }
 interface Linha { engine: string; largura: number; tema: string; rota: string; estado: string; check: string; msg: string }
 
 async function rolarTudo(p: Page) {
   const h = await p.evaluate(() => document.body.scrollHeight);
-  for (let y = 0; y < h; y += 700) { await p.evaluate((y) => window.scrollTo(0, y), y); await p.waitForTimeout(50); }
+  // no máximo ~20 passos: páginas longas (feed) não estouram o tempo
+  for (let y = 0, passo = Math.max(700, Math.ceil(h / 20)); y < h; y += passo) { await p.evaluate((y) => window.scrollTo(0, y), y); await p.waitForTimeout(50); }
   await p.waitForTimeout(700);
   await p.evaluate(() => window.scrollTo(0, 0));
   await p.waitForTimeout(250);
@@ -111,7 +116,7 @@ async function expandir(p: Page): Promise<number> {
     let n = 0;
     for (const b of document.querySelectorAll<HTMLElement>("main button, main summary")) {
       const t = (b.textContent ?? "").trim();
-      if (/^(ver|mostrar) (mais|tudo|todos|todas)|^\+ ?\d+ /i.test(t) && b.getAttribute("aria-expanded") !== "true") { b.click(); n++; }
+      if (n < 12 && /^(ver|mostrar) (mais|tudo|todos|todas)|^\+ ?\d+ /i.test(t) && b.getAttribute("aria-expanded") !== "true") { b.click(); n++; }
     }
     return n;
   });
@@ -132,7 +137,8 @@ async function rodar(b: Browser, base: string, t: Tarefa): Promise<Linha[]> {
   const reg = (rota: string, estado: string, achados: Achado[]) => {
     for (const a of achados) linhas.push({ engine: t.engine, largura: t.largura, tema: t.tema, rota, estado, ...a });
   };
-  for (const r of t.rotas) {
+  {
+    const r = t.rota;
     const t0 = Date.now();
     try {
       if (t.tema === "claro" && LARGURAS_CARREGANDO.includes(t.largura)) {
@@ -185,24 +191,36 @@ async function pool<T, R>(itens: T[], n: number, f: (t: T) => Promise<R>): Promi
 
 const { base, parar } = await servidor();
 const inicio = Date.now();
-const metade = Math.ceil(rotas.length / 2);
-const blocos = rotas.length > 12 ? [rotas.slice(0, metade), rotas.slice(metade)] : [rotas];
 const todas: Linha[] = [];
+// Uma página por (motor, largura, tema, rota), com teto de tempo; navegador que cai é relançado.
+async function abrir(engine: string) {
+  return engine === "webkit" ? webkit.launch() : chromium.launch({ executablePath: chromiumPath() });
+}
 try {
   await Promise.all(ENGINES.map(async (engine) => {
-    const b = engine === "webkit" ? await webkit.launch() : await chromium.launch({ executablePath: chromiumPath() });
+    let b = await abrir(engine);
     const tarefas: Tarefa[] = [];
-    for (const largura of WIDTHS) {
-      for (const rs of blocos) tarefas.push({ engine, largura, tema: "claro", rotas: rs });
-      if (LARGURAS_TEMA_ESCURO.includes(largura)) for (const rs of blocos) tarefas.push({ engine, largura, tema: "escuro", rotas: rs });
-    }
+    for (const largura of WIDTHS)
+      for (const tema of ["claro", ...(LARGURAS_TEMA_ESCURO.includes(largura) ? ["escuro"] : [])] as const)
+        for (const rota of rotas) tarefas.push({ engine, largura, tema, rota });
     let feitas = 0;
-    for (const ls of await pool(tarefas, CONC, async (t) => {
-      const ls = await rodar(b, base, t);
-      console.error(`[${engine}] ${++feitas}/${tarefas.length} ${t.largura}px ${t.tema}: ${ls.length}`);
+    await pool(tarefas, CONC, async (t) => {
+      let ls: Linha[];
+      try {
+        if (!b.isConnected()) b = await abrir(engine);
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        ls = await Promise.race([
+          rodar(b, base, t),
+          new Promise<Linha[]>((_, rej) => { timer = setTimeout(() => rej(new Error(`rota passou de ${LIMITE_ROTA}ms`)), LIMITE_ROTA); }),
+        ]).finally(() => clearTimeout(timer));
+      } catch (e) {
+        ls = [{ engine, largura: t.largura, tema: t.tema, rota: t.rota.path, estado: "base", check: "AUDIT-ERROR", msg: String(e).slice(0, 160) }];
+      }
+      todas.push(...ls);
+      if (++feitas % 25 === 0 || feitas === tarefas.length) console.error(`[${engine}] ${feitas}/${tarefas.length}`);
       return ls;
-    })) todas.push(...ls);
-    await b.close();
+    });
+    await b.close().catch(() => {});
   }));
 } finally {
   parar();

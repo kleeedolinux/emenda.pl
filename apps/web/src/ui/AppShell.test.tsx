@@ -68,4 +68,13 @@ describe("AppShell: cabeçalho em 320px", () => {
     expect(svg.getAttribute("class")).toContain("h-6");
     expect(svg.getAttribute("class")).toContain("min-[360px]:h-8");
   });
+
+  test("abaixo de 340px (Galaxy Fold 280px) só o símbolo da marca", () => {
+    setup();
+    const [full, mark] = [...screen.getByRole("link", { name: /página inicial/ }).querySelectorAll("svg")];
+    expect(full!.getAttribute("class")).toMatch(/(^|\s)hidden(\s|$)/);
+    expect(full!.getAttribute("class")).toContain("min-[340px]:block");
+    expect(mark!.getAttribute("viewBox")).toBe("0 0 64 64");
+    expect(mark!.getAttribute("class")).toContain("min-[340px]:hidden");
+  });
 });

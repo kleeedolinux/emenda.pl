@@ -133,6 +133,13 @@ describe("DataTable", () => {
       expect(screen.getByRole("columnheader", { name: /Valor/ }).className).toContain("pointer-coarse:py-3.5");
     });
 
+    test("cartões ignoram largura mínima de coluna (min-w-*) para caber em 280px", () => {
+      const cols = c4.map((c) => (c.key === "partido" ? { ...c, className: "min-w-56" } : c));
+      const { container } = render(<DataTable rows={r4} columns={cols} />);
+      const td = container.querySelector('td[data-label="Partido"]')!;
+      expect(td.className).toContain("max-md:min-w-0");
+    });
+
     test("stack={false} força tabela", () => {
       const { container } = render(<DataTable rows={r4} columns={c4} stack={false} />);
       expect(container.querySelector("td[data-label]")).toBeNull();

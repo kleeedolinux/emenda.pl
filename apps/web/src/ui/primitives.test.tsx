@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from "bun:test";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { partyColor } from "@/lib/colors";
-import { Avatar, Badge, Card, EmptyState, ErrorState, ExternalLink, KeyValue, PartyBadge, Stat, StatGrid, VoteBadge } from "./primitives";
+import { Avatar, Badge, Card, PageHeader, EmptyState, ErrorState, ExternalLink, KeyValue, PartyBadge, Stat, StatGrid, VoteBadge } from "./primitives";
 
 const inRouter = (ui: React.ReactNode) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
@@ -201,3 +201,14 @@ describe("ExternalLink", () => {
     expect(screen.getByRole("link").className.includes("whitespace-nowrap")).toBe(nowrap);
   });
 });
+
+describe("PageHeader", () => {
+  test("título cabe em 280px: fonte escala com a tela e nunca mais largo que a coluna", () => {
+    render(<PageHeader title="Partido dos Trabalhadores" />);
+    const h1 = screen.getByRole("heading", { level: 1 }).className;
+    expect(h1).toContain("text-[clamp(1.25rem,7.5vw,1.875rem)]");
+    expect(h1).toContain("max-w-full");
+    expect(h1).toContain("break-words");
+  });
+});
+

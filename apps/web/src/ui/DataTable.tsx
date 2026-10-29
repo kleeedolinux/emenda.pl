@@ -172,7 +172,7 @@ export function DataTable<T>({
                   {columns.map((c, j) => {
                     const label = stack && j > 0 && typeof c.header === "string" ? c.header : undefined;
                     return (
-                    <td key={c.key} data-label={label} className={clsx("px-3 py-2.5 align-top", c.align === "right" && "text-right tabular whitespace-nowrap", c.align === "center" && "text-center", stack && "max-md:px-0 max-md:py-1", stack && (label && c.align === "right" ? NUMERO_EMPILHADO : "max-md:block"), stack && c.align === "center" && "max-md:text-left", label && CELULA_ROTULO, label && c.align !== "right" && "max-md:before:block", c.className)}>
+                    <td key={c.key} data-label={label} className={clsx("px-3 py-2.5 align-top", c.align === "right" && "text-right tabular whitespace-nowrap", c.align === "center" && "text-center", stack && "max-md:min-w-0 max-md:px-0 max-md:py-1", stack && (label && c.align === "right" ? NUMERO_EMPILHADO : "max-md:block"), stack && c.align === "center" && "max-md:text-left", label && CELULA_ROTULO, label && c.align !== "right" && "max-md:before:block", c.className)}>
                       {c.cell ? c.cell(r) : (raw(r, c.key) as ReactNode) ?? "—"}
                     </td>
                     );

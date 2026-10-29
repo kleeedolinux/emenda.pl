@@ -101,6 +101,7 @@
   /* Itens de grid com min-width:auto alargam a trilha implícita até o min-content e empurram
      números/selos para fora da tela no celular. Especificidade zero: min-w-* continua vencendo. */
   :where(.grid, .inline-grid) > * { min-width: 0; }
+  :where(code, kbd, samp) { overflow-wrap: anywhere; }
   /* Toque: alvo mínimo de 44px (controles) e 24px (links) via ::after, sem mudar o layout.
      Quem já usa after: (link esticado, sheen) fica de fora. Campos não têm pseudo-elemento: altura real. */
   @media (pointer: coarse) {
@@ -109,7 +110,7 @@
       content: ""; position: absolute; inset: min(0px, calc((100% - 44px) / 2));
     }
     :where(a[href]):not([class*="after:"]):not(.sheen):not([role])::after {
-      content: ""; position: absolute; inset: min(0px, calc((100% - 24px) / 2));
+      content: ""; position: absolute; inset: min(0px, calc((100% - 28px) / 2));
     }
     :where(select, input:not([type=checkbox], [type=radio], [type=hidden])) { min-height: 44px; }
     :where(.sheen) { min-height: 44px; }

@@ -48,7 +48,7 @@ export function PageHeader({
           {media}
           <div className="min-w-0">
             {eyebrow && <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-accent">{eyebrow}</p>}
-            <h1 {...sharedTitleProps} className="w-fit text-3xl font-bold leading-tight text-balance sm:text-4xl">{title}</h1>
+            <h1 {...sharedTitleProps} className="w-fit max-w-full break-words text-[clamp(1.25rem,7.5vw,1.875rem)] font-bold leading-tight text-balance sm:text-4xl">{title}</h1>
             {subtitle && <p className="mt-2 max-w-3xl text-base text-muted text-pretty">{subtitle}</p>}
           </div>
         </div>

@@ -80,7 +80,8 @@ export function AppShell() {
       <header className="sticky top-0 z-50 border-b border-line glass">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
           <Link to="/" className="flex shrink-0 items-center rounded-lg" aria-label="emenda.pl — página inicial">
-            <Logo variant="full" className="h-6 w-auto min-[360px]:h-8" />
+            <Logo variant="full" className="hidden h-6 w-auto min-[340px]:block min-[360px]:h-8" />
+            <Logo variant="mark" className="size-8 min-[340px]:hidden" />
           </Link>
           <nav aria-label="Principal" className="ml-4 hidden flex-1 items-center gap-0.5 xl:flex">
             {NAV_MAIN.map((n) => (

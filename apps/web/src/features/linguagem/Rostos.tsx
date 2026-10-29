@@ -39,7 +39,7 @@ export function QuemMandou({ autores, inicial = 3, valor = (a) => a.pago }: { au
             </span>
             <span className="relative min-w-0 flex-1">
               <span className="block truncate font-semibold group-hover:text-accent">{nome}</span>
-              <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+              <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
                 {p ? <><PartyBadge sigla={p.partido} link={false} /><span>{p.uf} · {p.casa === "Senado" ? "Senador(a)" : "Deputado(a)"}</span></> : <span>{k !== "pessoa" ? ROTULO_GRUPO[k] : "Político"}</span>}
               </span>
             </span>

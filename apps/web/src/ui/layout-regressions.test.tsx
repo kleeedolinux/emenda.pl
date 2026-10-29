@@ -6,6 +6,7 @@ import { MemoryRouter } from "react-router";
 import type { Pagamento } from "@emenda/contracts";
 import { PagamentoCard } from "@/features/feed/components";
 import { Donut } from "./charts/Donut";
+import { TipoChip } from "@/features/linguagem/TipoDinheiro";
 
 const p: Pagamento = {
   mes: 202610, codigoEmenda: "202637870001", tipo: "individual", valor: 449615205,
@@ -43,3 +44,13 @@ describe("Donut", () => {
     expect(container.firstElementChild!.firstElementChild!.className).toContain("@md:flex-row");
   });
 });
+
+describe("TipoChip em 280px", () => {
+  test("rótulo longo quebra dentro do selo (não empurra a dica para fora do cartão)", () => {
+    render(<MemoryRouter><TipoChip tipo="bancada" /></MemoryRouter>);
+    const rot = screen.getByText(/grupo do estado/);
+    expect(rot.className).toContain("min-w-0");
+    expect(rot.className).toContain("whitespace-normal");
+  });
+});
+

@@ -127,10 +127,10 @@ function Barras({ l }: { l: ReturnType<typeof comparar>["linhas"][number] }) {
   );
   return (
     <>
-      <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
-        <b className="tabular" style={{ color: COR_A }}>{fmt(l.a)}</b>
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted">{l.label}</span>
-        <b className="tabular text-azul dark:text-[#a9c3ff]">{fmt(l.b)}</b>
+      <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
+        <b className="whitespace-nowrap tabular" style={{ color: COR_A }}>{fmt(l.a)}</b>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted max-sm:order-first max-sm:basis-full max-sm:text-center">{l.label}</span>
+        <b className="whitespace-nowrap tabular text-azul dark:text-[#a9c3ff]">{fmt(l.b)}</b>
       </div>
       <div className="flex gap-1.5">{lado(l.a, COR_A, "l")}{lado(l.b, COR_B, "r")}</div>
     </>

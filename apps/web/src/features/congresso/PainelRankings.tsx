@@ -203,8 +203,8 @@ export function Partidos({ membros, d }: { membros: Membro[]; d: DadosRankings }
       {cards.map((c) => (
         <li key={c.partido} className="card relative overflow-hidden p-4">
           <span className="absolute inset-x-0 top-0 h-1" style={{ background: partyColor(c.partido) }} aria-hidden />
-          <div className="flex items-center justify-between gap-2">
-            <Link to={`/partido/${encodeURIComponent(c.partido)}`} className="text-lg font-black hover:underline">{c.partido}</Link>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Link to={`/partido/${encodeURIComponent(c.partido)}`} className="min-w-0 text-lg font-black hover:underline">{c.partido}</Link>
             <PartyBadge sigla={c.partido} link={false} />
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2" aria-hidden><span className="block h-full rounded-full" style={{ width: `${(c.total / maxTotal) * 100}%`, background: partyColor(c.partido) }} /></div>

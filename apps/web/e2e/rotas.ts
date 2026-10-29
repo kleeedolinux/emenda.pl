@@ -54,7 +54,7 @@ export const ROTAS: Rota[] = [
   { padrao: "*", path: "/nao-existe-esta-pagina", nota: "404" },
 ];
 
-export const LARGURAS = [320, 360, 390, 430, 640, 768, 900, 1024, 1280, 1440, 1920];
+export const LARGURAS = [280, 320, 360, 390, 430, 640, 768, 900, 1024, 1280, 1440, 1920];
 /** Larguras em que o tema escuro também é auditado (layout igual; pega contrastes/fundos de sticky). */
 export const LARGURAS_TEMA_ESCURO = [390, 1280];
 /** Até aqui: celular (toque, `isMobile`), com checagem de alvo de toque. */

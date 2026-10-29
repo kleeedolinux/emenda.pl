@@ -47,6 +47,13 @@ describe("Bars", () => {
 });
 
 describe("Donut", () => {
+  test("legenda em 280px: valores descem de linha em vez de partir o nome", () => {
+    render(<Donut data={[{ label: "REPUBLICANOS", value: 10 }, { label: "PT", value: 5 }]} />);
+    const nome = screen.getByText("REPUBLICANOS");
+    expect(nome.parentElement!.className).toContain("flex-wrap");
+    expect(nome.className).toMatch(/flex-\[1_1_\d+rem\]/);
+  });
+
   test("nome acessível lista as fatias; legenda com % e valor", () => {
     render(<Donut data={[{ label: "Pix", value: 75 }, { label: "Bancada", value: 25 }]} />);
     expect(screen.getByRole("img").getAttribute("aria-label")).toBe("Pix: 75; Bancada: 25");

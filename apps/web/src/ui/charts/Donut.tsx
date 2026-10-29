@@ -55,10 +55,10 @@ export function Donut({ data, format = (n) => formatNumber(n), centerLabel = "To
       </svg>
       <ul className="w-full min-w-0 space-y-1.5 text-sm">
         {rows.map((d, i) => (
-          <li key={d.label} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} className={`flex items-baseline gap-2 rounded-md px-1.5 py-0.5 ${d.highlight ? "bg-amarelo/15" : ""}`}>
+          <li key={d.label} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} className={`flex flex-wrap items-baseline gap-x-2 rounded-md px-1.5 py-0.5 ${d.highlight ? "bg-amarelo/15" : ""}`}>
             <span className="size-2.5 shrink-0 rounded-sm" style={{ background: d.color ?? corCategoria(i) }} aria-hidden />
-            <span className="min-w-0 flex-1 break-words">{d.label}</span>
-            <span data-num className="shrink-0 whitespace-nowrap text-xs text-muted tabular">{formatPct(total ? d.value / total : 0)}</span>
+            <span className="flex-[1_1_6rem] break-words">{d.label}</span>
+            <span data-num className="ml-auto shrink-0 whitespace-nowrap text-xs text-muted tabular">{formatPct(total ? d.value / total : 0)}</span>
             <span data-num className="shrink-0 whitespace-nowrap font-semibold tabular">{format(d.value)}</span>
           </li>
         ))}

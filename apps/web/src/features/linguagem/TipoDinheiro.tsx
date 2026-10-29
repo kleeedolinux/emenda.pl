@@ -23,10 +23,10 @@ export function TipoChip({ tipo, tip = true, className }: { tipo: TipoEmenda; ti
   const t = TIPO_DINHEIRO[tipo];
   const Icon = ICONE_TIPO[tipo];
   return (
-    <span className={clsx("inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset", className)}
+    <span className={clsx("inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-[0.875rem] px-2 py-0.5 text-xs font-semibold ring-1 ring-inset", className)}
       style={{ background: `${t.cor}1a`, color: "var(--color-fg)", boxShadow: `inset 0 0 0 1px ${t.cor}55` }}>
       <span className="grid size-4 shrink-0 place-items-center rounded-full text-white" style={{ background: t.cor }}><Icon className="size-2.5" aria-hidden /></span>
-      {t.rotulo}
+      <span className="min-w-0 whitespace-normal text-balance">{t.rotulo}</span>
       {tip && <Tip content={<Explicacao tipo={tipo} />} label={`O que é “${t.rotulo}”?`} />}
     </span>
   );
