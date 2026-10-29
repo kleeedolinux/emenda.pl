@@ -18,7 +18,7 @@ export function Bars({ data, format = (n) => formatNumber(n), max: maxProp, limi
         const delay = staggerDelay(i, staggerStep.tight * 1.4, 0.5);
         const label = (
           <span className="flex min-w-0 items-baseline justify-between gap-3 text-sm">
-            <span className="min-w-0 font-medium break-words transition-colors [overflow-wrap:anywhere]">
+            <span className="min-w-0 font-medium break-words transition-colors">
               <span data-shared-source>{d.label}</span>
               {d.sub && <span className="ml-1.5 inline-block whitespace-nowrap text-xs font-normal text-muted">{d.sub}</span>}
             </span>

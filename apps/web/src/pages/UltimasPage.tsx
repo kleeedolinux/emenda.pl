@@ -97,7 +97,7 @@ function FeedLista() {
         const r = resumoMes.get(g.mes);
         return (
           <section key={g.mes} className="mb-10" aria-labelledby={`mes-${g.mes}`}>
-            <header className="sticky top-16 z-10 -mx-2 mb-3 flex flex-wrap items-baseline justify-between gap-2 rounded-xl bg-bg/85 px-2 py-2 backdrop-blur">
+            <header className="sticky top-16 z-20 -mx-2 mb-3 flex flex-wrap items-baseline justify-between gap-2 rounded-xl border-b border-line bg-bg px-2 py-2">
               <h2 id={`mes-${g.mes}`} className="text-xl font-bold">{mesTitulo(g.mes)}</h2>
               <p className="text-sm text-muted">
                 {r ? <>Pago no mês: <b className="text-fg"><Money centavos={r.valor} compact /></b> em {formatNumber(r.n)} pagamentos</> : null}

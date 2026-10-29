@@ -23,7 +23,7 @@ export function Donut({ data, format = (n) => formatNumber(n), centerLabel = "To
   const centerText = format(cur ? cur.value : total);
   const mid = R * 0.81, mask = `dn-${useId().replace(/:/g, "")}`;
   return (
-    <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
+    <div className="@container"><div className="flex flex-col items-center gap-5 @md:flex-row @md:items-center">
       <svg viewBox="-100 -100 200 200" className="w-48 shrink-0" role="img" aria-label={rows.map((d) => `${d.label}: ${format(d.value)}`).join("; ")}>
         {/* Varredura: máscara circular desenhada via pathLength (sentido horário a partir do topo). */}
         <mask id={mask}>
@@ -57,12 +57,12 @@ export function Donut({ data, format = (n) => formatNumber(n), centerLabel = "To
         {rows.map((d, i) => (
           <li key={d.label} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} className={`flex items-baseline gap-2 rounded-md px-1.5 py-0.5 ${d.highlight ? "bg-amarelo/15" : ""}`}>
             <span className="size-2.5 shrink-0 rounded-sm" style={{ background: d.color ?? corCategoria(i) }} aria-hidden />
-            <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">{d.label}</span>
+            <span className="min-w-0 flex-1 break-words">{d.label}</span>
             <span data-num className="shrink-0 whitespace-nowrap text-xs text-muted tabular">{formatPct(total ? d.value / total : 0)}</span>
             <span data-num className="shrink-0 whitespace-nowrap font-semibold tabular">{format(d.value)}</span>
           </li>
         ))}
       </ul>
-    </div>
+    </div></div>
   );
 }

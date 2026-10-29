@@ -24,29 +24,31 @@ export function PagamentoCard({ p, i = 0 }: { p: Pagamento; i?: number }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "0px 0px -40px 0px" }}
       transition={{ duration: 0.35, delay: Math.min(i, 8) * 0.03 }}
-      className={clsx("card relative flex flex-col gap-2 p-4", pix && "ring-2 ring-amarelo/70")}
+      className={clsx("card @container relative flex min-w-0 flex-col gap-2 p-4", pix && "ring-2 ring-amarelo/70")}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
         <TipoChip tipo={p.tipo} />
-        <span className="text-right">
-          <span className="block font-display text-lg font-bold tabular"><Money centavos={p.valor} /></span>
-          <span className="text-xs text-muted">pago em {mesLongo(p.mes)}</span>
+        <span className="ml-auto min-w-0 text-right">
+          <span className="block font-display text-[clamp(1rem,7.5cqi,1.125rem)] font-bold leading-tight tabular"><Money centavos={p.valor} /></span>
+          <span className="block whitespace-nowrap text-xs text-muted">pago em {mesLongo(p.mes)}</span>
         </span>
       </div>
       <p className="flex items-start gap-1.5 text-sm">
         <Building2 className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
-        <span><span className="text-xs text-muted">Quem recebeu: </span><b>{p.favorecido.nome ? nomeLeigo(p.favorecido.nome) : "Não informado"}</b>
-          {p.favorecido.documento && <span className="ml-1 text-xs text-muted tabular" title="CNPJ ou CPF de quem recebeu">{formatDocumento(p.favorecido.documento)}</span>}</span>
+        <span className="min-w-0"><span className="block text-xs text-muted">Quem recebeu: </span><b className="break-words">{p.favorecido.nome ? nomeLeigo(p.favorecido.nome) : "Não informado"}</b>
+          {p.favorecido.documento && <span className="block whitespace-nowrap text-xs text-muted tabular" title="CNPJ ou CPF de quem recebeu">{formatDocumento(p.favorecido.documento)}</span>}</span>
       </p>
       <p className="flex items-center gap-1.5 text-sm">
         <MapPin className="size-4 shrink-0 text-muted" aria-hidden />
         {p.municipio.ibge ? <Link className="link" to={`/municipio/${p.municipio.ibge}`}>{nomeLeigo(p.municipio.nome)}</Link> : <span>{nomeLeigo(p.municipio.nome) || "—"}</span>}
         {p.municipio.uf && <Link className="text-xs text-muted hover:underline" to={`/uf/${p.municipio.uf}`}>{p.municipio.uf}</Link>}
       </p>
-      <p className="flex items-center gap-1.5 text-sm">
-        <User className="size-4 shrink-0 text-muted" aria-hidden />
-        <span className="text-xs text-muted">Quem mandou:</span>
-        {/^[A-Za-z0-9]+$/.test(p.autor.codigo) ? <Link className="link" to={`/autor/${p.autor.codigo}`}>{nomeLeigo(p.autor.nome)}</Link> : <span>{nomeLeigo(p.autor.nome)}</span>}
+      <p className="flex items-start gap-1.5 text-sm">
+        <User className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
+        <span className="min-w-0">
+          <span className="block text-xs text-muted">Quem mandou:</span>
+          {/^[A-Za-z0-9]+$/.test(p.autor.codigo) ? <Link className="link break-words" to={`/autor/${p.autor.codigo}`}>{nomeLeigo(p.autor.nome)}</Link> : <span className="break-words">{nomeLeigo(p.autor.nome)}</span>}
+        </span>
       </p>
       <p className="mt-auto text-xs"><ExternalLink href={externo.emenda(p.codigoEmenda)}>Ver no Portal da Transparência</ExternalLink></p>
     </motion.li>

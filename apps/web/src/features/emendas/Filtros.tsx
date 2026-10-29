@@ -26,7 +26,7 @@ export function FiltrosBar({ f, set, anos, brasil, uf }: {
   return (
     <div className="z-30 -mx-4 mt-6 md:sticky md:top-16 border-y border-line bg-bg/85 px-4 py-3 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:px-4">
       <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-        <div role="radiogroup" aria-label="Tipo de emenda" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
+        <div role="radiogroup" aria-label="Tipo de emenda" className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
           <button type="button" role="radio" aria-checked={!f.tipo} onClick={() => set({ tipo: undefined })} className={chip(!f.tipo)}>Todos</button>
           {TIPOS.map((t) => (
             <button key={t} type="button" role="radio" aria-checked={f.tipo === t} onClick={() => set({ tipo: alternar(f.tipo, t) })} className={chip(f.tipo === t)}>
@@ -35,7 +35,7 @@ export function FiltrosBar({ f, set, anos, brasil, uf }: {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <label className="relative">
             <span className="sr-only">Ano</span>
             <select value={f.ano ?? ""} onChange={(e) => set({ ano: e.target.value || undefined })} className={clsx(select, f.ano && "border-fg")}>

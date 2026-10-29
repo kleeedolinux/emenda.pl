@@ -204,7 +204,7 @@ function MaisMenu() {
 }
 
 function Footer() {
-  const ext = "link text-muted hover:text-fg";
+  const ext = "link break-words text-muted hover:text-fg";
   return (
     <footer className="mt-16 border-t border-line bg-surface">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">

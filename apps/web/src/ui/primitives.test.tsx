@@ -53,18 +53,26 @@ describe("Stat", () => {
 });
 
 describe("Badge", () => {
-  test.each(["verde", "amarelo", "azul", "vermelho", "neutro"] as const)("tom %s não encolhe; nunca passa da largura do pai", (tone) => {
-    render(<Badge tone={tone}>12 votos</Badge>);
-    const el = screen.getByText("12 votos");
+  // Regressão: em tabela (layout automático) "Com destino definido" virava uma palavra por linha.
+  test.each(["verde", "amarelo", "azul", "vermelho", "neutro"] as const)("tom %s: curto fica numa linha, não encolhe, não passa do pai", (tone) => {
+    render(<Badge tone={tone}>Com destino definido</Badge>);
+    const el = screen.getByText("Com destino definido");
+    expect(el.className).toContain("whitespace-nowrap");
     expect(el.className).toContain("shrink-0");
     expect(el.className).toContain("max-w-full");
   });
   // Regressão: status longo ("Aguardando Despacho do Presidente da Câmara...") saía da tela no celular.
-  test("texto longo quebra em vez de vazar", () => {
-    render(<Badge>Aguardando Despacho do Presidente da Câmara dos Deputados</Badge>);
-    const cls = screen.getByText(/Aguardando/).className;
+  test("texto longo quebra em vez de vazar (máx. 2 linhas, resto no title)", () => {
+    const longo = "Aguardando Despacho do Presidente da Câmara dos Deputados";
+    render(<Badge>{longo}</Badge>);
+    expect(screen.getByText(longo).className).toContain("line-clamp-2");
+    expect(screen.getByTitle(longo)).toBeTruthy();
+    const cls = screen.getByTitle(longo).className;
     expect(cls).not.toContain("whitespace-nowrap");
-    expect(cls).toContain("[overflow-wrap:anywhere]");
+    // quebra só entre palavras: overflow-wrap:anywhere zera o min-content e a tabela espreme o selo ("Com desti no defin ido")
+    expect(cls).not.toContain("anywhere");
+    expect(cls).not.toContain("break-all");
+    expect(cls).toContain("max-w-full");
   });
 });
 

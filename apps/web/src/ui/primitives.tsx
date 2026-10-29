@@ -142,10 +142,12 @@ const TONES = {
 } as const;
 export type Tone = keyof typeof TONES;
 
+/** Selo. Curto: uma linha (tabelas não o espremem palavra a palavra). Longo (>28): até 2 linhas, resto no `title`; nunca passa da largura do pai. */
 export function Badge({ tone = "neutro", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
+  const longo = typeof children === "string" && children.length > 28;
   return (
-    <span className={clsx("inline-flex max-w-full shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold leading-tight text-balance tabular ring-1 ring-inset [overflow-wrap:anywhere]", TONES[tone], className)}>
-      {children}
+    <span title={longo ? (children as string) : undefined} className={clsx("inline-flex max-w-full shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold leading-tight text-balance tabular ring-1 ring-inset break-words hyphens-none", longo ? "rounded-xl" : "whitespace-nowrap", TONES[tone], className)}>
+      {longo ? <span className="line-clamp-2 min-w-0">{children}</span> : children}
     </span>
   );
 }
